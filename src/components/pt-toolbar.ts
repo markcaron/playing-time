@@ -510,6 +510,11 @@ export class PtToolbar extends LitElement {
       color: #aaa;
     }
 
+    .roster-table td.time-col.total {
+      font-weight: bold;
+      color: #e0e0e0;
+    }
+
     .add-player-label {
       border-top: 1px solid rgba(255, 255, 255, 0.15);
       padding-top: 16px;
@@ -1033,7 +1038,7 @@ export class PtToolbar extends LitElement {
                       <th>Player name</th>
                       <th class="time-col">1H</th>
                       <th class="time-col">2H</th>
-                      <th class="time-col">Total</th>
+                      <th class="time-col" style="font-weight:bold;color:#e0e0e0">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1043,7 +1048,7 @@ export class PtToolbar extends LitElement {
                         <td>${p.name}</td>
                         <td class="time-col">${formatTime(p.half1Time)}</td>
                         <td class="time-col">${formatTime(p.half2Time)}</td>
-                        <td class="time-col">${formatTime(p.half1Time + p.half2Time)}</td>
+                        <td class="time-col total">${formatTime(p.half1Time + p.half2Time)}</td>
                       </tr>
                     `)}
                   </tbody>

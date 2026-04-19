@@ -2,6 +2,8 @@ export interface RosterEntry {
   id: string;
   number: string;
   name: string;
+  half1Time: number;
+  half2Time: number;
 }
 
 export interface FieldPlayer {
@@ -27,7 +29,21 @@ export const PLAYER_RADIUS = 2.25;
 export const PLAYER_FONT_SIZE = 1.8;
 export const NAME_FONT_SIZE = 1.6;
 
+export interface StoredPlayer {
+  number: string;
+  name: string;
+  half1Time?: number;
+  half2Time?: number;
+}
+
 export interface StoredRoster {
   teamName: string;
-  players: { number: string; name: string }[];
+  players: StoredPlayer[];
+  halfLength?: number;
+}
+
+export function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }

@@ -1,7 +1,7 @@
-import { LitElement, html, css, nothing } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { LitElement, html, svg, css, nothing } from 'lit';
+import { customElement, property, state, query } from 'lit/decorators.js';
 import type { RosterEntry, FormationKey } from '../lib/types.js';
-import { FORMATION_LABELS } from '../lib/types.js';
+import { FORMATION_LABELS, formatTime } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
 
 export class RosterUpdatedEvent extends Event {
@@ -21,6 +21,34 @@ export class FormationChangedEvent extends Event {
   }
 }
 
+export class SettingsChangedEvent extends Event {
+  static readonly eventName = 'settings-changed' as const;
+  constructor(public halfLength: number) {
+    super(SettingsChangedEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class TimerTickEvent extends Event {
+  static readonly eventName = 'timer-tick' as const;
+  constructor(public half: 1 | 2) {
+    super(TimerTickEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class ResetHalfEvent extends Event {
+  static readonly eventName = 'reset-half' as const;
+  constructor(public half: 1 | 2) {
+    super(ResetHalfEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class ResetGameEvent extends Event {
+  static readonly eventName = 'reset-game' as const;
+  constructor() {
+    super(ResetGameEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
 @customElement('pt-toolbar')
 export class PtToolbar extends LitElement {
   static styles = css`
@@ -32,10 +60,6 @@ export class PtToolbar extends LitElement {
       font-family: system-ui, -apple-system, sans-serif;
     }
 
-    .bar-wrap {
-      position: relative;
-    }
-
     .bar {
       display: flex;
       gap: 8px;
@@ -44,6 +68,62 @@ export class PtToolbar extends LitElement {
       background: #16213e;
       user-select: none;
     }
+
+    .roster-disclosure {
+      position: relative;
+    }
+
+    summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: #0f3460;
+      color: #e0e0e0;
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      list-style: none;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+    summary::marker { display: none; content: ''; }
+
+    summary:hover { background: #1a4a7a; }
+
+    summary:focus-visible {
+      outline: 2px solid #4ea8de;
+      outline-offset: 2px;
+    }
+
+    details[open] > summary {
+      background: #e94560;
+      border-color: #e94560;
+      color: #fff;
+    }
+
+    .settings-disclosure { position: relative; }
+    .settings-disclosure summary { padding: 6px 10px; }
+
+    .drawer.settings-drawer {
+      right: 0;
+      left: auto;
+      min-width: 220px;
+      width: auto;
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .settings-row label { white-space: nowrap; }
+
+    .settings-number { width: 40px; }
 
     button {
       display: inline-flex;
@@ -60,22 +140,198 @@ export class PtToolbar extends LitElement {
       transition: background 0.15s, border-color 0.15s;
     }
 
-    button:hover {
-      background: #1a4a7a;
-    }
+    button:hover { background: #1a4a7a; }
 
     button:focus-visible {
       outline: 2px solid #4ea8de;
       outline-offset: 2px;
     }
 
-    button[aria-expanded="true"] {
+    button:disabled {
+      opacity: 0.35;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .spacer { flex: 1; }
+
+    .timer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .timer-display {
+      font-size: 1.1rem;
+      font-weight: bold;
+      font-variant-numeric: tabular-nums;
+      color: #e0e0e0;
+      min-width: 48px;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    .timer-display.stoppage { color: #e94560; }
+
+    .play-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid transparent;
+      background: #0f3460;
+      color: #e0e0e0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s;
+    }
+
+    .play-btn:hover { background: #1a4a7a; }
+
+    .play-btn:focus-visible {
+      outline: 2px solid #4ea8de;
+      outline-offset: 2px;
+    }
+
+    .play-btn.running {
       background: #e94560;
       border-color: #e94560;
       color: #fff;
     }
 
-    .spacer { flex: 1; }
+    .play-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .half-toggle {
+      display: flex;
+      border: 1px solid #1a4a7a;
+      border-radius: 6px;
+    }
+
+    .half-toggle button {
+      padding: 6px 8px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      color: #aaa;
+      transition: background 0.15s, color 0.15s;
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .half-toggle button:first-child {
+      border-radius: 5px 0 0 5px;
+    }
+
+    .half-toggle button:last-child {
+      border-radius: 0 5px 5px 0;
+    }
+
+    .half-toggle button.active {
+      background: #fff;
+      color: #16213e;
+    }
+
+    .half-toggle button.active:disabled {
+      opacity: 1;
+    }
+
+    .half-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4ade80;
+      flex-shrink: 0;
+    }
+
+    .reset-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid #1a4a7a;
+      background: transparent;
+      color: #aaa;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .reset-btn:hover {
+      background: #1a4a7a;
+      color: #e0e0e0;
+    }
+
+    .reset-btn:focus-visible {
+      outline: 2px solid #4ea8de;
+      outline-offset: 2px;
+    }
+
+    .reset-btn svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .confirm-dialog {
+      background: #16213e;
+      border: 1px solid #1a4a7a;
+      border-radius: 10px;
+      padding: 24px;
+      max-width: 320px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .confirm-dialog p {
+      margin: 0 0 16px;
+      font-size: 0.9rem;
+      color: #e0e0e0;
+      line-height: 1.4;
+    }
+
+    .confirm-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .confirm-actions button {
+      padding: 8px 20px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+    }
+
+    .confirm-actions .confirm-yes {
+      background: #e94560;
+      border-color: #e94560;
+      color: #fff;
+    }
+
+    .confirm-actions .confirm-yes:hover {
+      background: #d13350;
+    }
 
     select {
       appearance: none;
@@ -110,12 +366,14 @@ export class PtToolbar extends LitElement {
 
     .drawer {
       position: absolute;
-      top: 100%;
+      top: calc(100% + 8px);
       left: 0;
-      right: 0;
+      width: calc(100vw - 24px);
+      max-width: 456px;
       z-index: 200;
       background: #0f3460;
-      border-top: 1px solid #1a4a7a;
+      border: 1px solid #1a4a7a;
+      border-radius: 6px;
       padding: 12px;
       display: flex;
       flex-direction: column;
@@ -189,6 +447,11 @@ export class PtToolbar extends LitElement {
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
+    .roster-table th.time-col {
+      text-align: right;
+      width: 50px;
+    }
+
     .roster-table td {
       padding: 5px 8px 5px 0;
       color: #e0e0e0;
@@ -198,6 +461,13 @@ export class PtToolbar extends LitElement {
     .roster-table td.jersey-col {
       color: #aaa;
       width: 32px;
+    }
+
+    .roster-table td.time-col {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.8rem;
+      color: #aaa;
     }
 
     .add-player-label {
@@ -264,13 +534,8 @@ export class PtToolbar extends LitElement {
       transition: opacity 0.15s;
     }
 
-    .roster-row.dragging {
-      opacity: 0.4;
-    }
-
-    .roster-row.drag-over {
-      border-top: 2px solid #4ea8de;
-    }
+    .roster-row.dragging { opacity: 0.4; }
+    .roster-row.drag-over { border-top: 2px solid #4ea8de; }
 
     .drag-handle {
       cursor: grab;
@@ -283,9 +548,7 @@ export class PtToolbar extends LitElement {
       padding: 4px 2px;
     }
 
-    .drag-handle:active {
-      cursor: grabbing;
-    }
+    .drag-handle:active { cursor: grabbing; }
 
     .drag-handle svg {
       width: 10px;
@@ -324,9 +587,7 @@ export class PtToolbar extends LitElement {
       height: 9px;
     }
 
-    button.danger:hover {
-      background: #e9456020;
-    }
+    button.danger:hover { background: #e9456020; }
 
     .caret {
       display: inline-block;
@@ -340,7 +601,7 @@ export class PtToolbar extends LitElement {
       transition: transform 0.2s;
     }
 
-    [aria-expanded="true"] .caret {
+    details[open] > summary .caret {
       transform: rotate(180deg);
     }
   `;
@@ -348,17 +609,116 @@ export class PtToolbar extends LitElement {
   @property({ type: String }) formation: FormationKey = '4-3-3';
   @property({ type: String }) teamName = '';
   @property({ type: Array }) roster: RosterEntry[] = [];
+  @property({ type: Number }) halfLength = 45;
 
-  @state() private _drawerOpen = false;
   @state() private _editMode = false;
   @state() private _addNumber = '';
   @state() private _addName = '';
   @state() private _dragIdx: number | null = null;
   @state() private _dragOverIdx: number | null = null;
+  @state() private _elapsed = 0;
+  @state() private _running = false;
+  @state() private _half: 1 | 2 = 1;
+  @state() private _confirmAction: 'reset' | 'switch-half' | 'reset-game' | null = null;
 
-  private _toggleDrawer() {
-    this._drawerOpen = !this._drawerOpen;
+  private _timerInterval: ReturnType<typeof setInterval> | null = null;
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._stopTimer();
   }
+
+  // --- Timer ---
+
+  private _toggleTimer() {
+    if (this._running) {
+      this._stopTimer();
+    } else {
+      this._startTimer();
+    }
+  }
+
+  private _startTimer() {
+    if (this._timerInterval) return;
+    this._running = true;
+    this._timerInterval = setInterval(() => {
+      this._elapsed++;
+      this.dispatchEvent(new TimerTickEvent(this._half));
+    }, 1000);
+  }
+
+  private _stopTimer() {
+    this._running = false;
+    if (this._timerInterval) {
+      clearInterval(this._timerInterval);
+      this._timerInterval = null;
+    }
+  }
+
+  private get _timeDisplay(): string {
+    return formatTime(this._elapsed);
+  }
+
+  private get _inStoppage(): boolean {
+    return this._elapsed >= this.halfLength * 60;
+  }
+
+  // --- Half toggle ---
+
+  private _requestSwitchTo2H() {
+    this._stopTimer();
+    this._confirmAction = 'switch-half';
+  }
+
+  private _requestSwitchTo1H() {
+    this._stopTimer();
+    this._confirmAction = 'reset-game';
+  }
+
+  private _confirmSwitchHalf() {
+    this._half = 2;
+    this._elapsed = 0;
+    this._confirmAction = null;
+  }
+
+  private _confirmResetGame() {
+    this._half = 1;
+    this._elapsed = 0;
+    this.dispatchEvent(new ResetGameEvent());
+    this._confirmAction = null;
+  }
+
+  // --- Reset ---
+
+  private _requestReset() {
+    this._stopTimer();
+    this._confirmAction = 'reset';
+  }
+
+  private _confirmReset() {
+    this._elapsed = 0;
+    this.dispatchEvent(new ResetHalfEvent(this._half));
+    this._confirmAction = null;
+  }
+
+  private _cancelConfirm() {
+    this._confirmAction = null;
+  }
+
+  // --- Disclosure ---
+
+  private _onDisclosureKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      const details = (e.currentTarget as HTMLElement).closest('details') as HTMLDetailsElement;
+      if (details) {
+        details.open = false;
+        details.querySelector('summary')?.focus();
+      }
+      e.stopPropagation();
+    }
+  }
+
+  // --- Roster management ---
 
   private _onTeamNameInput(e: InputEvent) {
     const val = (e.target as HTMLInputElement).value;
@@ -368,6 +728,13 @@ export class PtToolbar extends LitElement {
   private _onFormationChange(e: Event) {
     const val = (e.target as HTMLSelectElement).value as FormationKey;
     this.dispatchEvent(new FormationChangedEvent(val));
+  }
+
+  private _onHalfLengthInput(e: InputEvent) {
+    const val = parseInt((e.target as HTMLInputElement).value, 10);
+    if (!isNaN(val) && val > 0) {
+      this.dispatchEvent(new SettingsChangedEvent(val));
+    }
   }
 
   private _onAddNumberInput(e: InputEvent) {
@@ -384,6 +751,8 @@ export class PtToolbar extends LitElement {
       id: uid('p'),
       number: this._addNumber.trim(),
       name: this._addName.trim(),
+      half1Time: 0,
+      half2Time: 0,
     };
     const updated = [...this.roster, entry];
     this._addNumber = '';
@@ -400,9 +769,7 @@ export class PtToolbar extends LitElement {
     this.dispatchEvent(new RosterUpdatedEvent(this.teamName, updated));
   }
 
-  private _onDragStart(idx: number) {
-    this._dragIdx = idx;
-  }
+  private _onDragStart(idx: number) { this._dragIdx = idx; }
 
   private _onDragOver(e: DragEvent, idx: number) {
     e.preventDefault();
@@ -420,29 +787,24 @@ export class PtToolbar extends LitElement {
     this._dragOverIdx = null;
   }
 
+  private _updatePlayer(id: string, field: 'number' | 'name', value: string) {
+    const updated = this.roster.map(p =>
+      p.id === id ? { ...p, [field]: value } : p,
+    );
+    this.dispatchEvent(new RosterUpdatedEvent(this.teamName, updated));
+  }
+
+  // --- Render ---
+
   render() {
     return html`
-      <div class="bar-wrap">
-        <div class="bar">
-          <button
-            @click="${this._toggleDrawer}"
-            aria-expanded="${this._drawerOpen}">
-            Roster${this.roster.length ? html` (${this.roster.length})` : nothing} <span class="caret"></span>
-          </button>
-          <span class="spacer"></span>
-          <span class="select-wrap">
-            <select
-              .value="${this.formation}"
-              @change="${this._onFormationChange}">
-              ${FORMATION_LABELS.map(f => html`
-                <option value="${f.key}" ?selected="${f.key === this.formation}">${f.label}</option>
-              `)}
-            </select>
+      <div class="bar">
+        <details class="roster-disclosure"
+                 @keydown="${this._onDisclosureKeydown}">
+          <summary aria-label="Roster${this.roster.length ? ` (${this.roster.length})` : ''}">
+            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px"><path d="m600 185.26c80.25 0 145.69 65.25 145.69 145.69 0 80.441-65.25 145.69-145.69 145.69s-145.69-65.25-145.69-145.69c0-80.441 65.25-145.69 145.69-145.69z" fill="currentColor"/><path d="m267.56 351.37c62.812 0 114 51.188 114 114s-51.188 114-114 114-114-51.188-114-114 51.188-114 114-114z" fill="currentColor"/><path d="m932.44 351.37c62.812 0 114 51.188 114 114s-51.188 114-114 114-114-51.188-114-114 51.188-114 114-114z" fill="currentColor"/><path d="m681.37 566.26h-162.94c-78.75 0-142.87 64.125-142.87 142.87v285.19c0 11.438 9.1875 20.625 20.625 20.625h407.26c11.438 0 20.625-9.1875 20.625-20.625v-285.19c0-78.75-64.125-142.87-142.87-142.87z" fill="currentColor"/><path d="m991.87 651.56h-132c-1.5 0-3 0.1875-4.6875 0.375 6 18 9.1875 37.125 9.1875 57.188v264.94h218.44c11.438 0 20.625-9.1875 20.625-20.625v-189.94c0-61.688-50.062-111.75-111.56-111.75z" fill="currentColor"/><path d="m208.13 651.56c-61.5 0-111.56 50.25-111.56 111.75v189.94c0 11.438 9.1875 20.625 20.625 20.625h218.44v-264.94c0-20.062 3.375-39.188 9.1875-57.188-1.5 0-3-0.375-4.6875-0.375h-132z" fill="currentColor"/></svg>
             <span class="caret"></span>
-          </span>
-        </div>
-
-        ${this._drawerOpen ? html`
+          </summary>
           <div class="drawer">
             <div class="drawer-header">
               <div class="team-name-row">
@@ -521,6 +883,9 @@ export class PtToolbar extends LitElement {
                     <tr>
                       <th>#</th>
                       <th>Player name</th>
+                      <th class="time-col">1H</th>
+                      <th class="time-col">2H</th>
+                      <th class="time-col">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -528,6 +893,9 @@ export class PtToolbar extends LitElement {
                       <tr>
                         <td class="jersey-col">${p.number}</td>
                         <td>${p.name}</td>
+                        <td class="time-col">${formatTime(p.half1Time)}</td>
+                        <td class="time-col">${formatTime(p.half2Time)}</td>
+                        <td class="time-col">${formatTime(p.half1Time + p.half2Time)}</td>
                       </tr>
                     `)}
                   </tbody>
@@ -535,16 +903,95 @@ export class PtToolbar extends LitElement {
               `}
             `}
           </div>
-        ` : nothing}
+        </details>
+        <span class="spacer"></span>
+        <div class="timer">
+          <div class="half-toggle">
+            <button class="${this._half === 1 ? 'active' : ''}"
+                    ?disabled="${this._half === 1 || this._running}"
+                    @click="${this._requestSwitchTo1H}">${this._half === 1 ? html`<span class="half-dot"></span>` : nothing}1H</button>
+            <button class="${this._half === 2 ? 'active' : ''}"
+                    ?disabled="${this._half === 2 || this._running}"
+                    @click="${this._requestSwitchTo2H}">2H${this._half === 2 ? html`<span class="half-dot"></span>` : nothing}</button>
+          </div>
+          <button class="play-btn ${this._running ? 'running' : ''}"
+                  @click="${this._toggleTimer}"
+                  aria-label="${this._running ? 'Stop' : 'Play'}">
+            ${this._running ? svg`
+              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="1" width="10" height="12" rx="1" fill="currentColor"/>
+              </svg>
+            ` : svg`
+              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 1.5v11l9-5.5z" fill="currentColor"/>
+              </svg>
+            `}
+          </button>
+          <span class="timer-display ${this._inStoppage ? 'stoppage' : ''}">${this._timeDisplay}</span>
+          <button class="reset-btn"
+                  @click="${this._requestReset}"
+                  aria-label="Reset timer">
+            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m1011.6 216c-206.4-206.4-537.6-211.2-750-18l-49.199-49.199c-19.199-19.199-48-26.398-74.398-19.199-26.398 8.3984-46.801 30-51.602 56.398l-55.203 256.8c-4.8008 25.199 2.3984 50.398 20.398 68.398s43.199 25.199 68.398 20.398l256.8-54c14.398-3.6016 27.602-10.801 37.199-20.398 8.3984-8.3984 15.602-19.199 19.199-31.199 7.1992-26.398 0-55.199-19.199-74.398l-46.801-46.801c154.8-136.8 390-130.8 537.61 16.801 153.6 153.6 153.6 403.2 0 556.8-153.6 153.6-403.2 153.6-556.8-0.003906-49.199-49.199-84-110.4-102-177.6-10.801-39.602-51.602-63.602-91.199-52.801-39.602 10.801-63.602 51.602-52.801 91.199 24 92.398 73.199 177.6 141.6 244.8 212.4 212.4 556.8 212.4 769.2 0 210-211.2 210-556.8-1.1992-768z" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <span class="spacer"></span>
+        <span class="select-wrap">
+          <select
+            .value="${this.formation}"
+            @change="${this._onFormationChange}">
+            ${FORMATION_LABELS.map(f => html`
+              <option value="${f.key}" ?selected="${f.key === this.formation}">${f.label}</option>
+            `)}
+          </select>
+          <span class="caret"></span>
+        </span>
+        <details class="settings-disclosure"
+                 @keydown="${this._onDisclosureKeydown}">
+          <summary aria-label="Settings">
+            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px"><path d="m1170 681.6v-163.2l-186-51.598c-4.8008-14.398-10.801-30-18-44.398l94.801-166.8-116.4-116.4-168 94.801c-13.199-7.1992-28.801-13.199-43.199-18l-50.402-186h-165.6l-50.398 186c-14.398 6-30 12-43.199 18l-168-94.801-116.4 116.4 94.801 166.8c-7.1992 14.398-13.199 28.801-18 44.398l-186 51.602v164.4l186 50.402c4.8008 14.398 10.801 28.801 18 43.199l-94.801 166.8 116.4 116.4 168-94.801c13.199 7.1992 28.801 13.199 43.199 18l51.602 186h164.4l50.402-184.8c14.398-6 30-12 43.199-18l168 94.801 116.4-116.4-94.801-166.8c7.1992-14.398 13.199-28.801 18-43.199zm-570 112.8c-108 0-194.4-86.398-194.4-194.4s86.398-194.4 194.4-194.4 194.4 87.598 194.4 194.4-86.398 194.4-194.4 194.4z" fill="currentColor"/></svg>
+            <span class="caret"></span>
+          </summary>
+          <div class="drawer settings-drawer">
+            <div class="settings-row">
+              <label for="half-length">Half length (min):</label>
+              <input
+                id="half-length"
+                class="player-input settings-number"
+                type="text"
+                inputmode="numeric"
+                maxlength="2"
+                .value="${String(this.halfLength)}"
+                @input="${this._onHalfLengthInput}" />
+            </div>
+          </div>
+        </details>
       </div>
-    `;
-  }
 
-  private _updatePlayer(id: string, field: 'number' | 'name', value: string) {
-    const updated = this.roster.map(p =>
-      p.id === id ? { ...p, [field]: value } : p,
-    );
-    this.dispatchEvent(new RosterUpdatedEvent(this.teamName, updated));
+      ${this._confirmAction ? html`
+        <div class="confirm-overlay" @click="${this._cancelConfirm}">
+          <div class="confirm-dialog" @click="${(e: Event) => e.stopPropagation()}">
+            ${this._confirmAction === 'reset' ? html`
+              <p>Reset ${this._half === 1 ? '1H' : '2H'} clock?<br>All player time for this half will be cleared.</p>
+            ` : this._confirmAction === 'switch-half' ? html`
+              <p>Start 2nd half?<br>The clock will reset to 00:00.</p>
+            ` : html`
+              <p>Reset entire game?<br>The clock and all player times for both halves will be cleared.</p>
+            `}
+            <div class="confirm-actions">
+              <button @click="${this._cancelConfirm}">Cancel</button>
+              <button class="confirm-yes" @click="${
+                this._confirmAction === 'reset' ? this._confirmReset
+                : this._confirmAction === 'switch-half' ? this._confirmSwitchHalf
+                : this._confirmResetGame}">
+                ${this._confirmAction === 'reset' ? 'Reset'
+                  : this._confirmAction === 'switch-half' ? 'Start 2H'
+                  : 'Reset Game'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ` : nothing}
+    `;
   }
 }
 

@@ -10,7 +10,7 @@ export function loadRoster(): StoredRoster {
       if (data.players && Array.isArray(data.players)) return data;
     }
   } catch { /* ignore corrupt data */ }
-  return { teamName: '', players: [] };
+  return { teamName: '', players: [], halfLength: 45 };
 }
 
 export function saveRoster(data: StoredRoster): void {

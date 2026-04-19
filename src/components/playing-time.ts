@@ -8,8 +8,7 @@ import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadRoster, saveRoster } from '../lib/storage.js';
 import type { RosterEntry, FieldPlayer, FormationKey } from '../lib/types.js';
 import { PLAYER_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE } from '../lib/types.js';
-import type { RosterUpdatedEvent } from './pt-toolbar.js';
-import type { FormationChangedEvent } from './pt-toolbar.js';
+import type { RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent, TimerTickEvent, ResetHalfEvent, ResetGameEvent } from './pt-toolbar.js';
 
 const GOAL_DEPTH = 2;
 const SEL_RING_OFFSET = 0.6;
@@ -140,6 +139,7 @@ export class PlayingTime extends LitElement {
   @state() accessor roster: RosterEntry[] = [];
   @state() accessor formation: FormationKey = '4-3-3';
   @state() accessor fieldPlayers: FieldPlayer[] = [];
+  @state() accessor halfLength = 45;
   @state() accessor selectedId: string | null = null;
   @state() accessor selectedSource: 'field' | 'sub' | null = null;
   @state() accessor swapMode = false;
@@ -152,10 +152,13 @@ export class PlayingTime extends LitElement {
     super.connectedCallback();
     const saved = loadRoster();
     this.teamName = saved.teamName;
+    this.halfLength = saved.halfLength ?? 45;
     this.roster = saved.players.map(p => ({
       id: uid('p'),
       number: p.number,
       name: p.name,
+      half1Time: p.half1Time ?? 0,
+      half2Time: p.half2Time ?? 0,
     }));
     this.#rebuildFieldPlayers();
   }
@@ -173,20 +176,59 @@ export class PlayingTime extends LitElement {
     }));
   }
 
+  #saveState() {
+    saveRoster({
+      teamName: this.teamName,
+      players: this.roster.map(p => ({
+        number: p.number,
+        name: p.name,
+        half1Time: p.half1Time,
+        half2Time: p.half2Time,
+      })),
+      halfLength: this.halfLength,
+    });
+  }
+
   get #subs(): RosterEntry[] {
     return this.roster.slice(11);
   }
 
   #onRosterUpdated(e: RosterUpdatedEvent) {
     this.teamName = e.teamName;
-    this.roster = e.roster;
-    saveRoster({
-      teamName: this.teamName,
-      players: this.roster.map(p => ({ number: p.number, name: p.name })),
-    });
+    this.roster = e.roster.map(p => ({
+      ...p,
+      half1Time: p.half1Time ?? 0,
+      half2Time: p.half2Time ?? 0,
+    }));
+    this.#saveState();
     this.#rebuildFieldPlayers();
     this.selectedId = null;
     this.swapMode = false;
+  }
+
+  #onSettingsChanged(e: SettingsChangedEvent) {
+    this.halfLength = e.halfLength;
+    this.#saveState();
+  }
+
+  #onTimerTick(e: TimerTickEvent) {
+    const field = e.half === 1 ? 'half1Time' : 'half2Time';
+    const fieldPlayerIds = new Set(this.fieldPlayers.map(fp => fp.id));
+    this.roster = this.roster.map(p =>
+      fieldPlayerIds.has(p.id) ? { ...p, [field]: p[field] + 1 } : p,
+    );
+    this.#saveState();
+  }
+
+  #onResetHalf(e: ResetHalfEvent) {
+    const field = e.half === 1 ? 'half1Time' : 'half2Time';
+    this.roster = this.roster.map(p => ({ ...p, [field]: 0 }));
+    this.#saveState();
+  }
+
+  #onResetGame(_e: ResetGameEvent) {
+    this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0 }));
+    this.#saveState();
   }
 
   #onFormationChanged(e: FormationChangedEvent) {
@@ -262,11 +304,7 @@ export class PlayingTime extends LitElement {
     updatedRoster[fieldIdx] = updatedRoster[subIdx];
     updatedRoster[subIdx] = tmp;
     this.roster = updatedRoster;
-
-    saveRoster({
-      teamName: this.teamName,
-      players: this.roster.map(p => ({ number: p.number, name: p.name })),
-    });
+    this.#saveState();
 
     const subEntry = this.roster[fieldIdx];
     this.fieldPlayers = this.fieldPlayers.map(fp =>
@@ -434,6 +472,7 @@ export class PlayingTime extends LitElement {
       </g>
       ${selected ? svg`
         <g data-kind="swap-btn" data-id="${p.id}"
+           role="button" aria-label="Swap player"
            style="cursor: pointer"
            @pointerdown="${(e: PointerEvent) => { e.stopPropagation(); this.#toggleSwapMode(); }}">
           <circle cx="${bx}" cy="${p.y}" r="${PLAYER_RADIUS}"
@@ -467,8 +506,13 @@ export class PlayingTime extends LitElement {
           .teamName="${this.teamName}"
           .roster="${this.roster}"
           .formation="${this.formation}"
+          .halfLength="${this.halfLength}"
           @roster-updated="${this.#onRosterUpdated}"
-          @formation-changed="${this.#onFormationChanged}">
+          @formation-changed="${this.#onFormationChanged}"
+          @settings-changed="${this.#onSettingsChanged}"
+          @timer-tick="${this.#onTimerTick}"
+          @reset-half="${this.#onResetHalf}"
+          @reset-game="${this.#onResetGame}">
         </pt-toolbar>
 
         <div class="svg-wrap">
@@ -556,6 +600,7 @@ export class PlayingTime extends LitElement {
         </svg>
         ${selected ? html`
           <div class="sub-swap-btn ${this.swapMode ? 'active' : ''}"
+               role="button" aria-label="Swap player"
                @click="${(e: Event) => { e.stopPropagation(); this.#toggleSwapMode(); }}">
             <svg viewBox="-1.2 -1.2 2.4 2.4" xmlns="http://www.w3.org/2000/svg">
               <polyline points="-0.375,0.825 -0.375,-0.525 -0.9,0.075"

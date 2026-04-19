@@ -44,6 +44,7 @@ export class PlayingTime extends LitElement {
       display: block;
       width: 100%;
       height: auto;
+      min-height: 400px;
       cursor: default;
       user-select: none;
     }
@@ -81,6 +82,8 @@ export class PlayingTime extends LitElement {
     .sub-player .circle-svg {
       width: 36px;
       height: 36px;
+      min-width: 36px;
+      min-height: 36px;
       flex-shrink: 0;
     }
 

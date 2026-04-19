@@ -82,8 +82,6 @@ export class PtToolbar extends LitElement {
   static styles = css`
     :host {
       display: block;
-      position: sticky;
-      top: 0;
       z-index: 100;
       font-family: system-ui, -apple-system, sans-serif;
     }

@@ -97,15 +97,112 @@ export class PtToolbar extends LitElement {
       user-select: none;
     }
 
-    .roster-disclosure {
-      position: relative;
+    .roster-btn {
+      border: 1px solid rgba(255, 255, 255, 0.25);
     }
 
-    summary {
+    .roster-btn.open {
+      background: #e94560;
+      border-color: #e94560;
+      color: #fff;
+    }
+
+    .roster-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .roster-dialog {
+      background: #0f3460;
+      border: 1px solid #1a4a7a;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 520px;
+      max-height: calc(100vh - 32px);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .roster-dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+
+    .roster-dialog-header h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: #e0e0e0;
+    }
+
+    .roster-dialog-close {
+      background: transparent;
+      border: none;
+      color: #aaa;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+
+    .roster-dialog-close:hover { color: #fff; }
+
+    .roster-dialog-close svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .roster-dialog-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .roster-dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+
+    .roster-dialog-footer button {
+      padding: 8px 24px;
+      background: #4ea8de;
+      border: none;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .roster-dialog-footer button:hover {
+      background: #3a8fc4;
+    }
+
+    .settings-disclosure { position: relative; }
+
+    .settings-disclosure summary {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 14px;
+      padding: 6px 10px;
       border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 6px;
       background: #0f3460;
@@ -117,24 +214,21 @@ export class PtToolbar extends LitElement {
       list-style: none;
     }
 
-    summary::-webkit-details-marker { display: none; }
-    summary::marker { display: none; content: ''; }
+    .settings-disclosure summary::-webkit-details-marker { display: none; }
+    .settings-disclosure summary::marker { display: none; content: ''; }
 
-    summary:hover { background: #1a4a7a; }
+    .settings-disclosure summary:hover { background: #1a4a7a; }
 
-    summary:focus-visible {
+    .settings-disclosure summary:focus-visible {
       outline: 2px solid #4ea8de;
       outline-offset: 2px;
     }
 
-    details[open] > summary {
+    .settings-disclosure[open] > summary {
       background: #e94560;
       border-color: #e94560;
       color: #fff;
     }
-
-    .settings-disclosure { position: relative; }
-    .settings-disclosure summary { padding: 6px 10px; }
 
     .drawer.settings-drawer {
       right: 0;
@@ -463,7 +557,8 @@ export class PtToolbar extends LitElement {
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .drawer label {
+    .drawer label,
+    .roster-dialog-body label {
       font-size: 0.8rem;
       color: #aaa;
     }
@@ -562,6 +657,8 @@ export class PtToolbar extends LitElement {
       border-top: 1px solid rgba(255, 255, 255, 0.15);
       padding-top: 16px;
       margin-top: 2px;
+      font-size: 0.8rem;
+      color: #aaa;
     }
 
     .section-separator {
@@ -775,6 +872,7 @@ export class PtToolbar extends LitElement {
   @property({ type: Array }) teams: StoredTeam[] = [];
   @property({ type: String }) activeTeamId: string | null = null;
 
+  @state() private _rosterOpen = false;
   @state() private _editMode = false;
   @state() private _addNumber = '';
   @state() private _addName = '';
@@ -790,6 +888,16 @@ export class PtToolbar extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this._stopTimer();
+  }
+
+  // --- Roster dialog ---
+
+  private _openRoster() {
+    this._rosterOpen = true;
+  }
+
+  private _closeRoster() {
+    this._rosterOpen = false;
   }
 
   // --- Timer ---
@@ -892,6 +1000,7 @@ export class PtToolbar extends LitElement {
 
   private _addTeam() {
     this._editMode = true;
+    this._rosterOpen = true;
     this.dispatchEvent(new TeamAddedEvent());
   }
 
@@ -992,149 +1101,11 @@ export class PtToolbar extends LitElement {
   render() {
     return html`
       <div class="bar">
-        <details class="roster-disclosure"
-                 @keydown="${this._onDisclosureKeydown}">
-          <summary aria-label="Roster${this.roster.length ? ` (${this.roster.length})` : ''}">
-            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px"><path d="m600 185.26c80.25 0 145.69 65.25 145.69 145.69 0 80.441-65.25 145.69-145.69 145.69s-145.69-65.25-145.69-145.69c0-80.441 65.25-145.69 145.69-145.69z" fill="currentColor"/><path d="m267.56 351.37c62.812 0 114 51.188 114 114s-51.188 114-114 114-114-51.188-114-114 51.188-114 114-114z" fill="currentColor"/><path d="m932.44 351.37c62.812 0 114 51.188 114 114s-51.188 114-114 114-114-51.188-114-114 51.188-114 114-114z" fill="currentColor"/><path d="m681.37 566.26h-162.94c-78.75 0-142.87 64.125-142.87 142.87v285.19c0 11.438 9.1875 20.625 20.625 20.625h407.26c11.438 0 20.625-9.1875 20.625-20.625v-285.19c0-78.75-64.125-142.87-142.87-142.87z" fill="currentColor"/><path d="m991.87 651.56h-132c-1.5 0-3 0.1875-4.6875 0.375 6 18 9.1875 37.125 9.1875 57.188v264.94h218.44c11.438 0 20.625-9.1875 20.625-20.625v-189.94c0-61.688-50.062-111.75-111.56-111.75z" fill="currentColor"/><path d="m208.13 651.56c-61.5 0-111.56 50.25-111.56 111.75v189.94c0 11.438 9.1875 20.625 20.625 20.625h218.44v-264.94c0-20.062 3.375-39.188 9.1875-57.188-1.5 0-3-0.375-4.6875-0.375h-132z" fill="currentColor"/></svg>
-            <span class="caret"></span>
-          </summary>
-          <div class="drawer">
-            ${this.teams.length === 0 ? html`
-              <div class="drawer-empty">
-                <p>No teams yet</p>
-                <button class="add-team-btn-lg" @click="${this._addTeam}">+ Add team</button>
-              </div>
-            ` : html`
-            <div class="drawer-header">
-              <div class="team-row">
-                <span class="select-wrap">
-                  <select @change="${this._onTeamSwitch}">
-                    ${this.teams.map(t => html`
-                      <option value="${t.id}" .selected="${t.id === this.activeTeamId}">${t.teamName || 'Untitled'}</option>
-                    `)}
-                  </select>
-                  <span class="caret"></span>
-                </span>
-                <button class="add-team-btn" @click="${this._addTeam}" aria-label="Add team">+</button>
-              </div>
-              <span class="spacer"></span>
-              <div class="mode-toggle">
-                <button class="${!this._editMode ? 'active' : ''}"
-                        @click="${() => this._editMode = false}">${!this._editMode ? html`<span class="half-dot"></span>` : nothing}View</button>
-                <button class="${this._editMode ? 'active' : ''}"
-                        @click="${() => this._editMode = true}">Edit${this._editMode ? html`<span class="half-dot"></span>` : nothing}</button>
-              </div>
-            </div>
-
-            <div class="drawer-header section-separator">
-              <div class="team-name-row">
-                ${this._editMode ? html`
-                  <label>Team name</label>
-                  <input
-                    class="team-name-input"
-                    type="text"
-                    placeholder="Enter team name"
-                    .value="${this.teamName}"
-                    @input="${this._onTeamNameInput}" />
-                ` : html`
-                  <span class="team-label">${this.teamName || 'Roster'}</span>
-                `}
-              </div>
-              ${this._editMode ? html`
-                <span class="select-wrap">
-                  <select
-                    .value="${this.gameFormat}"
-                    @change="${this._onGameFormatChange}">
-                    ${GAME_FORMATS.map(f => html`
-                      <option value="${f.key}" ?selected="${f.key === this.gameFormat}">${f.label}</option>
-                    `)}
-                  </select>
-                  <span class="caret"></span>
-                </span>
-              ` : nothing}
-            </div>
-
-            ${this._editMode ? html`
-              <div class="roster-list">
-                ${this.roster.map((p, i) => html`
-                  <div class="roster-row ${this._dragIdx === i ? 'dragging' : ''} ${this._dragOverIdx === i ? 'drag-over' : ''}"
-                       draggable="true"
-                       @dragstart="${() => this._onDragStart(i)}"
-                       @dragover="${(e: DragEvent) => this._onDragOver(e, i)}"
-                       @dragend="${this._onDragEnd}">
-                    <span class="drag-handle"><svg viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="2" r="1" fill="currentColor"/><circle cx="7" cy="2" r="1" fill="currentColor"/><circle cx="3" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/></svg></span>
-                    <input
-                      class="player-input number-input"
-                      type="text"
-                      maxlength="2"
-                      placeholder="#"
-                      .value="${p.number}"
-                      @input="${(e: InputEvent) => this._updatePlayer(p.id, 'number', (e.target as HTMLInputElement).value)}" />
-                    <input
-                      class="player-input name-input"
-                      type="text"
-                      placeholder="Player name"
-                      .value="${p.name}"
-                      @input="${(e: InputEvent) => this._updatePlayer(p.id, 'name', (e.target as HTMLInputElement).value)}" />
-                    <button class="danger" @click="${() => this._removePlayer(p.id)}"><svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-                  </div>
-                `)}
-              </div>
-
-              <label class="add-player-label">Add player</label>
-              <div class="add-row">
-                <input
-                  class="player-input number-input"
-                  type="text"
-                  maxlength="2"
-                  placeholder="#"
-                  .value="${this._addNumber}"
-                  @input="${this._onAddNumberInput}"
-                  @keydown="${this._addPlayerKeydown}" />
-                <input
-                  class="player-input name-input"
-                  type="text"
-                  placeholder="Player name"
-                  .value="${this._addName}"
-                  @input="${this._onAddNameInput}"
-                  @keydown="${this._addPlayerKeydown}" />
-                <button class="sm" @click="${this._addPlayer}">Add</button>
-              </div>
-
-              <div class="delete-team-section">
-                <button class="delete-team-btn" @click="${this._requestDeleteTeam}">Delete team</button>
-              </div>
-            ` : html`
-              ${this.roster.length === 0 ? html`
-                <div style="color: #666; font-size: 0.8rem;">No players added yet</div>
-              ` : html`
-                <table class="roster-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Player name</th>
-                      <th class="time-col">1H</th>
-                      <th class="time-col">2H</th>
-                      <th class="time-col" style="font-weight:bold;color:#e0e0e0">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${this.roster.map(p => html`
-                      <tr>
-                        <td class="jersey-col">${p.number}</td>
-                        <td>${p.name}</td>
-                        <td class="time-col">${formatTime(p.half1Time)}</td>
-                        <td class="time-col">${formatTime(p.half2Time)}</td>
-                        <td class="time-col total">${formatTime(p.half1Time + p.half2Time)}</td>
-                      </tr>
-                    `)}
-                  </tbody>
-                </table>
-              `}
-            `}
-            `}
-          </div>
-        </details>
+        <button class="roster-btn ${this._rosterOpen ? 'open' : ''}"
+                @click="${this._openRoster}"
+                aria-label="Roster${this.roster.length ? ` (${this.roster.length})` : ''}">
+          <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px"><path d="m600 185.26c80.25 0 145.69 65.25 145.69 145.69 0 80.441-65.25 145.69-145.69 145.69s-145.69-65.25-145.69-145.69c0-80.441 65.25-145.69 145.69-145.69z" fill="currentColor"/><path d="m267.56 351.37c62.812 0 114 51.188 114 114s-51.188 114-114 114-114-51.188-114-114 51.188-114 114-114z" fill="currentColor"/><path d="m932.44 351.37c62.812 0 114 51.188 114 114s-51.188 114-114 114-114-51.188-114-114 51.188-114 114-114z" fill="currentColor"/><path d="m681.37 566.26h-162.94c-78.75 0-142.87 64.125-142.87 142.87v285.19c0 11.438 9.1875 20.625 20.625 20.625h407.26c11.438 0 20.625-9.1875 20.625-20.625v-285.19c0-78.75-64.125-142.87-142.87-142.87z" fill="currentColor"/><path d="m991.87 651.56h-132c-1.5 0-3 0.1875-4.6875 0.375 6 18 9.1875 37.125 9.1875 57.188v264.94h218.44c11.438 0 20.625-9.1875 20.625-20.625v-189.94c0-61.688-50.062-111.75-111.56-111.75z" fill="currentColor"/><path d="m208.13 651.56c-61.5 0-111.56 50.25-111.56 111.75v189.94c0 11.438 9.1875 20.625 20.625 20.625h218.44v-264.94c0-20.062 3.375-39.188 9.1875-57.188-1.5 0-3-0.375-4.6875-0.375h-132z" fill="currentColor"/></svg>
+        </button>
         <span class="spacer"></span>
         <span class="select-wrap">
           <select @change="${this._onFormationChange}">
@@ -1204,6 +1175,160 @@ export class PtToolbar extends LitElement {
                   @click="${this._requestSwitchTo1H}">Reset Game</button>
         </div>
       </div>
+
+      ${this._rosterOpen ? html`
+        <div class="roster-overlay" @click="${this._closeRoster}">
+          <div class="roster-dialog" @click="${(e: Event) => e.stopPropagation()}">
+            <div class="roster-dialog-header">
+              <h2>Roster</h2>
+              <button class="roster-dialog-close" @click="${this._closeRoster}" aria-label="Close">
+                <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <div class="roster-dialog-body">
+              ${this.teams.length === 0 ? html`
+                <div class="drawer-empty">
+                  <p>No teams yet</p>
+                  <button class="add-team-btn-lg" @click="${this._addTeam}">+ Add team</button>
+                </div>
+              ` : html`
+                <div class="drawer-header">
+                  <div class="team-row">
+                    <span class="select-wrap">
+                      <select @change="${this._onTeamSwitch}">
+                        ${this.teams.map(t => html`
+                          <option value="${t.id}" .selected="${t.id === this.activeTeamId}">${t.teamName || 'Untitled'}</option>
+                        `)}
+                      </select>
+                      <span class="caret"></span>
+                    </span>
+                    <button class="add-team-btn" @click="${this._addTeam}" aria-label="Add team">+</button>
+                  </div>
+                  <span class="spacer"></span>
+                  <div class="mode-toggle">
+                    <button class="${!this._editMode ? 'active' : ''}"
+                            @click="${() => this._editMode = false}">${!this._editMode ? html`<span class="half-dot"></span>` : nothing}View</button>
+                    <button class="${this._editMode ? 'active' : ''}"
+                            @click="${() => this._editMode = true}">Edit${this._editMode ? html`<span class="half-dot"></span>` : nothing}</button>
+                  </div>
+                </div>
+
+                <div class="drawer-header section-separator">
+                  <div class="team-name-row">
+                    ${this._editMode ? html`
+                      <label>Team name</label>
+                      <input
+                        class="team-name-input"
+                        type="text"
+                        placeholder="Enter team name"
+                        .value="${this.teamName}"
+                        @input="${this._onTeamNameInput}" />
+                    ` : html`
+                      <span class="team-label">${this.teamName || 'Roster'}</span>
+                    `}
+                  </div>
+                  ${this._editMode ? html`
+                    <span class="select-wrap">
+                      <select
+                        .value="${this.gameFormat}"
+                        @change="${this._onGameFormatChange}">
+                        ${GAME_FORMATS.map(f => html`
+                          <option value="${f.key}" ?selected="${f.key === this.gameFormat}">${f.label}</option>
+                        `)}
+                      </select>
+                      <span class="caret"></span>
+                    </span>
+                  ` : nothing}
+                </div>
+
+                ${this._editMode ? html`
+                  <div class="roster-list">
+                    ${this.roster.map((p, i) => html`
+                      <div class="roster-row ${this._dragIdx === i ? 'dragging' : ''} ${this._dragOverIdx === i ? 'drag-over' : ''}"
+                           draggable="true"
+                           @dragstart="${() => this._onDragStart(i)}"
+                           @dragover="${(e: DragEvent) => this._onDragOver(e, i)}"
+                           @dragend="${this._onDragEnd}">
+                        <span class="drag-handle"><svg viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="2" r="1" fill="currentColor"/><circle cx="7" cy="2" r="1" fill="currentColor"/><circle cx="3" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/></svg></span>
+                        <input
+                          class="player-input number-input"
+                          type="text"
+                          maxlength="2"
+                          placeholder="#"
+                          .value="${p.number}"
+                          @input="${(e: InputEvent) => this._updatePlayer(p.id, 'number', (e.target as HTMLInputElement).value)}" />
+                        <input
+                          class="player-input name-input"
+                          type="text"
+                          placeholder="Player name"
+                          .value="${p.name}"
+                          @input="${(e: InputEvent) => this._updatePlayer(p.id, 'name', (e.target as HTMLInputElement).value)}" />
+                        <button class="danger" @click="${() => this._removePlayer(p.id)}"><svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+                      </div>
+                    `)}
+                  </div>
+
+                  <label class="add-player-label">Add player</label>
+                  <div class="add-row">
+                    <input
+                      class="player-input number-input"
+                      type="text"
+                      maxlength="2"
+                      placeholder="#"
+                      .value="${this._addNumber}"
+                      @input="${this._onAddNumberInput}"
+                      @keydown="${this._addPlayerKeydown}" />
+                    <input
+                      class="player-input name-input"
+                      type="text"
+                      placeholder="Player name"
+                      .value="${this._addName}"
+                      @input="${this._onAddNameInput}"
+                      @keydown="${this._addPlayerKeydown}" />
+                    <button class="sm" @click="${this._addPlayer}">Add</button>
+                  </div>
+
+                  <div class="delete-team-section">
+                    <button class="delete-team-btn" @click="${this._requestDeleteTeam}">Delete team</button>
+                  </div>
+                ` : html`
+                  ${this.roster.length === 0 ? html`
+                    <div style="color: #666; font-size: 0.8rem;">No players added yet</div>
+                  ` : html`
+                    <table class="roster-table">
+                      <thead>
+                        <tr>
+                          <th>#</th>
+                          <th>Player name</th>
+                          <th class="time-col">1H</th>
+                          <th class="time-col">2H</th>
+                          <th class="time-col" style="font-weight:bold;color:#e0e0e0">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${this.roster.map(p => html`
+                          <tr>
+                            <td class="jersey-col">${p.number}</td>
+                            <td>${p.name}</td>
+                            <td class="time-col">${formatTime(p.half1Time)}</td>
+                            <td class="time-col">${formatTime(p.half2Time)}</td>
+                            <td class="time-col total">${formatTime(p.half1Time + p.half2Time)}</td>
+                          </tr>
+                        `)}
+                      </tbody>
+                    </table>
+                  `}
+                `}
+              `}
+            </div>
+            ${this.teams.length > 0 ? html`
+              <div class="roster-dialog-footer">
+                <button @click="${this._closeRoster}">Done</button>
+              </div>
+            ` : nothing}
+          </div>
+        </div>
+      ` : nothing}
 
       ${this._confirmAction ? html`
         <div class="confirm-overlay" @click="${this._cancelConfirm}">

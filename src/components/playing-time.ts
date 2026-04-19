@@ -5,10 +5,14 @@ import './pt-toolbar.js';
 import { renderHalfField, FIELD, PADDING } from '../lib/field.js';
 import { getFormationPositions } from '../lib/formations.js';
 import { screenToSVG, uid } from '../lib/svg-utils.js';
-import { loadRoster, saveRoster } from '../lib/storage.js';
-import type { RosterEntry, FieldPlayer, FormationKey, GameFormat } from '../lib/types.js';
+import { loadAppState, saveAppState, createNewTeam } from '../lib/storage.js';
+import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState } from '../lib/types.js';
 import { PLAYER_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, getPlayerCount, getDefaultFormation } from '../lib/types.js';
-import type { RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent, TimerTickEvent, ResetHalfEvent, ResetGameEvent, GameFormatChangedEvent } from './pt-toolbar.js';
+import type {
+  RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent,
+  TimerTickEvent, ResetHalfEvent, ResetGameEvent, GameFormatChangedEvent,
+  TeamSwitchedEvent, TeamAddedEvent, TeamDeletedEvent,
+} from './pt-toolbar.js';
 
 const GOAL_DEPTH = 2;
 const SEL_RING_OFFSET = 0.6;
@@ -134,6 +138,8 @@ export class PlayingTime extends LitElement {
     }
   `;
 
+  @state() accessor teams: StoredTeam[] = [];
+  @state() accessor activeTeamId: string | null = null;
   @state() accessor teamName = '';
   @state() accessor roster: RosterEntry[] = [];
   @state() accessor gameFormat: GameFormat = '11v11';
@@ -150,19 +156,46 @@ export class PlayingTime extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    const saved = loadRoster();
-    this.teamName = saved.teamName;
-    this.halfLength = saved.halfLength ?? 45;
-    this.gameFormat = saved.gameFormat ?? '11v11';
-    this.formation = saved.formation ?? getDefaultFormation(this.gameFormat);
-    this.roster = saved.players.map(p => ({
+    const appState = loadAppState();
+    this.teams = appState.teams;
+
+    if (appState.activeTeamId && appState.teams.find(t => t.id === appState.activeTeamId)) {
+      this.#loadTeam(appState.activeTeamId);
+    } else if (appState.teams.length > 0) {
+      this.#loadTeam(appState.teams[0].id);
+    }
+  }
+
+  #loadTeam(teamId: string) {
+    const team = this.teams.find(t => t.id === teamId);
+    if (!team) return;
+
+    this.activeTeamId = teamId;
+    this.teamName = team.teamName;
+    this.halfLength = team.halfLength;
+    this.gameFormat = team.gameFormat;
+    this.formation = team.formation;
+    this.roster = team.players.map(p => ({
       id: uid('p'),
       number: p.number,
       name: p.name,
       half1Time: p.half1Time ?? 0,
       half2Time: p.half2Time ?? 0,
     }));
+
     this.#rebuildFieldPlayers();
+
+    if (team.fieldPositions?.length) {
+      this.fieldPlayers = this.fieldPlayers.map(fp => {
+        const rosterIdx = this.roster.findIndex(r => r.id === fp.id);
+        const saved = team.fieldPositions!.find(sp => sp.rosterIndex === rosterIdx);
+        return saved ? { ...fp, x: saved.x, y: saved.y } : fp;
+      });
+    }
+
+    this.selectedId = null;
+    this.selectedSource = null;
+    this.swapMode = false;
   }
 
   #rebuildFieldPlayers() {
@@ -180,7 +213,10 @@ export class PlayingTime extends LitElement {
   }
 
   #saveState() {
-    saveRoster({
+    if (!this.activeTeamId) return;
+
+    const updatedTeam: StoredTeam = {
+      id: this.activeTeamId,
       teamName: this.teamName,
       players: this.roster.map(p => ({
         number: p.number,
@@ -191,12 +227,51 @@ export class PlayingTime extends LitElement {
       halfLength: this.halfLength,
       gameFormat: this.gameFormat,
       formation: this.formation,
-    });
+      fieldPositions: this.fieldPlayers.map(fp => ({
+        rosterIndex: this.roster.findIndex(r => r.id === fp.id),
+        x: fp.x,
+        y: fp.y,
+      })),
+    };
+
+    this.teams = this.teams.map(t => t.id === this.activeTeamId ? updatedTeam : t);
+    saveAppState({ activeTeamId: this.activeTeamId, teams: this.teams });
   }
 
   get #subs(): RosterEntry[] {
     return this.roster.slice(getPlayerCount(this.gameFormat));
   }
+
+  // --- Team management ---
+
+  #onTeamSwitched(e: TeamSwitchedEvent) {
+    this.#saveState();
+    this.#loadTeam(e.teamId);
+    this.#saveState();
+  }
+
+  #onTeamAdded(_e: TeamAddedEvent) {
+    this.#saveState();
+    const newTeam = createNewTeam();
+    this.teams = [...this.teams, newTeam];
+    this.#loadTeam(newTeam.id);
+    this.#saveState();
+  }
+
+  #onTeamDeleted(e: TeamDeletedEvent) {
+    this.teams = this.teams.filter(t => t.id !== e.teamId);
+    if (this.teams.length > 0) {
+      this.#loadTeam(this.teams[0].id);
+    } else {
+      this.activeTeamId = null;
+      this.teamName = '';
+      this.roster = [];
+      this.fieldPlayers = [];
+    }
+    saveAppState({ activeTeamId: this.activeTeamId, teams: this.teams });
+  }
+
+  // --- Roster ---
 
   #onRosterUpdated(e: RosterUpdatedEvent) {
     this.teamName = e.teamName;
@@ -248,6 +323,7 @@ export class PlayingTime extends LitElement {
   #onFormationChanged(e: FormationChangedEvent) {
     this.formation = e.formation;
     this.#rebuildFieldPlayers();
+    this.#saveState();
     this.selectedId = null;
     this.swapMode = false;
   }
@@ -306,6 +382,7 @@ export class PlayingTime extends LitElement {
     this.selectedId = null;
     this.selectedSource = null;
     this.swapMode = false;
+    this.#saveState();
   }
 
   #doSubstitution(fieldId: string, subId: string) {
@@ -318,7 +395,6 @@ export class PlayingTime extends LitElement {
     updatedRoster[fieldIdx] = updatedRoster[subIdx];
     updatedRoster[subIdx] = tmp;
     this.roster = updatedRoster;
-    this.#saveState();
 
     const subEntry = this.roster[fieldIdx];
     this.fieldPlayers = this.fieldPlayers.map(fp =>
@@ -330,6 +406,7 @@ export class PlayingTime extends LitElement {
     this.selectedId = null;
     this.selectedSource = null;
     this.swapMode = false;
+    this.#saveState();
   }
 
   // --- Pointer / drag handling ---
@@ -395,6 +472,8 @@ export class PlayingTime extends LitElement {
     if (this.#dragState) {
       if (!this.#dragState.moved) {
         this.#selectFieldPlayer(this.#dragState.id);
+      } else {
+        this.#saveState();
       }
       this.#dragState = null;
     }
@@ -524,13 +603,18 @@ export class PlayingTime extends LitElement {
           .gameFormat="${this.gameFormat}"
           .formation="${this.formation}"
           .halfLength="${this.halfLength}"
+          .teams="${this.teams}"
+          .activeTeamId="${this.activeTeamId}"
           @roster-updated="${this.#onRosterUpdated}"
           @game-format-changed="${this.#onGameFormatChanged}"
           @formation-changed="${this.#onFormationChanged}"
           @settings-changed="${this.#onSettingsChanged}"
           @timer-tick="${this.#onTimerTick}"
           @reset-half="${this.#onResetHalf}"
-          @reset-game="${this.#onResetGame}">
+          @reset-game="${this.#onResetGame}"
+          @team-switched="${this.#onTeamSwitched}"
+          @team-added="${this.#onTeamAdded}"
+          @team-deleted="${this.#onTeamDeleted}">
         </pt-toolbar>
 
         <div class="svg-wrap">
@@ -643,7 +727,6 @@ export class PlayingTime extends LitElement {
       return;
     }
     if (this.swapMode && this.selectedId && this.selectedSource === 'sub' && subId !== this.selectedId) {
-      // Sub-to-sub swap doesn't make sense for playing time, just select the new one
       this.#selectSub(subId);
       return;
     }

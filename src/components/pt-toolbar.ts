@@ -1,6 +1,6 @@
 import { LitElement, html, svg, css, nothing } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
-import type { RosterEntry, FormationKey, GameFormat } from '../lib/types.js';
+import type { RosterEntry, FormationKey, GameFormat, StoredTeam } from '../lib/types.js';
 import { FORMATIONS_BY_FORMAT, GAME_FORMATS, formatTime } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
 
@@ -53,6 +53,27 @@ export class ResetGameEvent extends Event {
   static readonly eventName = 'reset-game' as const;
   constructor() {
     super(ResetGameEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class TeamSwitchedEvent extends Event {
+  static readonly eventName = 'team-switched' as const;
+  constructor(public teamId: string) {
+    super(TeamSwitchedEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class TeamAddedEvent extends Event {
+  static readonly eventName = 'team-added' as const;
+  constructor() {
+    super(TeamAddedEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class TeamDeletedEvent extends Event {
+  static readonly eventName = 'team-deleted' as const;
+  constructor(public teamId: string) {
+    super(TeamDeletedEvent.eventName, { bubbles: true, composed: true });
   }
 }
 
@@ -495,6 +516,51 @@ export class PtToolbar extends LitElement {
       margin-top: 2px;
     }
 
+    .section-separator {
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 10px;
+      margin-top: 2px;
+    }
+
+    .delete-team-section {
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 16px;
+      margin-top: 2px;
+    }
+
+    button.delete-team-btn {
+      background: transparent;
+      color: #e94560;
+      border: 1px solid #e94560;
+      padding: 8px 14px;
+    }
+
+    button.delete-team-btn:hover {
+      background: #e9456020;
+    }
+
+    .team-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .team-row select {
+      flex: 1;
+      min-width: 0;
+    }
+
+    button.add-team-btn {
+      padding: 4px 8px 6px;
+      font-size: 1rem;
+      font-weight: bold;
+      line-height: 1;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      white-space: nowrap;
+    }
+
     .team-name-row {
       display: flex;
       align-items: center;
@@ -630,6 +696,8 @@ export class PtToolbar extends LitElement {
   @property({ type: String }) teamName = '';
   @property({ type: Array }) roster: RosterEntry[] = [];
   @property({ type: Number }) halfLength = 45;
+  @property({ type: Array }) teams: StoredTeam[] = [];
+  @property({ type: String }) activeTeamId: string | null = null;
 
   @state() private _editMode = false;
   @state() private _addNumber = '';
@@ -639,7 +707,7 @@ export class PtToolbar extends LitElement {
   @state() private _elapsed = 0;
   @state() private _running = false;
   @state() private _half: 1 | 2 = 1;
-  @state() private _confirmAction: 'reset' | 'switch-half' | 'reset-game' | null = null;
+  @state() private _confirmAction: 'reset' | 'switch-half' | 'reset-game' | 'delete-team' | null = null;
 
   private _timerInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -738,6 +806,30 @@ export class PtToolbar extends LitElement {
     }
   }
 
+  // --- Team management ---
+
+  private _onTeamSwitch(e: Event) {
+    const val = (e.target as HTMLSelectElement).value;
+    this._stopTimer();
+    this.dispatchEvent(new TeamSwitchedEvent(val));
+  }
+
+  private _addTeam() {
+    this._editMode = true;
+    this.dispatchEvent(new TeamAddedEvent());
+  }
+
+  private _requestDeleteTeam() {
+    this._confirmAction = 'delete-team';
+  }
+
+  private _confirmDeleteTeam() {
+    if (this.activeTeamId) {
+      this.dispatchEvent(new TeamDeletedEvent(this.activeTeamId));
+    }
+    this._confirmAction = null;
+  }
+
   // --- Roster management ---
 
   private _onTeamNameInput(e: InputEvent) {
@@ -832,6 +924,18 @@ export class PtToolbar extends LitElement {
           </summary>
           <div class="drawer">
             <div class="drawer-header">
+              <div class="team-row">
+                <span class="select-wrap">
+                  <select @change="${this._onTeamSwitch}">
+                    ${this.teams.map(t => html`
+                      <option value="${t.id}" .selected="${t.id === this.activeTeamId}">${t.teamName || 'Untitled'}</option>
+                    `)}
+                  </select>
+                  <span class="caret"></span>
+                </span>
+                <button class="add-team-btn" @click="${this._addTeam}" aria-label="Add team">+</button>
+              </div>
+              <span class="spacer"></span>
               <div class="mode-toggle">
                 <button class="${!this._editMode ? 'active' : ''}"
                         @click="${() => this._editMode = false}">${!this._editMode ? html`<span class="half-dot"></span>` : nothing}View</button>
@@ -840,7 +944,7 @@ export class PtToolbar extends LitElement {
               </div>
             </div>
 
-            <div class="drawer-header">
+            <div class="drawer-header section-separator">
               <div class="team-name-row">
                 ${this._editMode ? html`
                   <label>Team name</label>
@@ -913,6 +1017,10 @@ export class PtToolbar extends LitElement {
                   @input="${this._onAddNameInput}"
                   @keydown="${this._addPlayerKeydown}" />
                 <button class="sm" @click="${this._addPlayer}">Add</button>
+              </div>
+
+              <div class="delete-team-section">
+                <button class="delete-team-btn" @click="${this._requestDeleteTeam}">Delete team</button>
               </div>
             ` : html`
               ${this.roster.length === 0 ? html`
@@ -1013,6 +1121,8 @@ export class PtToolbar extends LitElement {
               <p>Reset ${this._half === 1 ? '1H' : '2H'} clock?<br>All player time for this half will be cleared.</p>
             ` : this._confirmAction === 'switch-half' ? html`
               <p>Start 2nd half?<br>The clock will reset to 00:00.</p>
+            ` : this._confirmAction === 'delete-team' ? html`
+              <p>Delete "${this.teamName || 'Untitled'}"?<br>This cannot be undone.</p>
             ` : html`
               <p>Reset entire game?<br>The clock and all player times for both halves will be cleared.</p>
             `}
@@ -1021,9 +1131,11 @@ export class PtToolbar extends LitElement {
               <button class="confirm-yes" @click="${
                 this._confirmAction === 'reset' ? this._confirmReset
                 : this._confirmAction === 'switch-half' ? this._confirmSwitchHalf
+                : this._confirmAction === 'delete-team' ? this._confirmDeleteTeam
                 : this._confirmResetGame}">
                 ${this._confirmAction === 'reset' ? 'Reset'
                   : this._confirmAction === 'switch-half' ? 'Start 2H'
+                  : this._confirmAction === 'delete-team' ? 'Delete'
                   : 'Reset Game'}
               </button>
             </div>

@@ -77,6 +77,28 @@ export interface StoredPlayer {
   half2Time?: number;
 }
 
+export interface StoredPosition {
+  rosterIndex: number;
+  x: number;
+  y: number;
+}
+
+export interface StoredTeam {
+  id: string;
+  teamName: string;
+  players: StoredPlayer[];
+  halfLength: number;
+  gameFormat: GameFormat;
+  formation: FormationKey;
+  fieldPositions?: StoredPosition[];
+}
+
+export interface StoredAppState {
+  activeTeamId: string | null;
+  teams: StoredTeam[];
+}
+
+/** @deprecated kept for migration only */
 export interface StoredRoster {
   teamName: string;
   players: StoredPlayer[];

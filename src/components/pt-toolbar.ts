@@ -1,7 +1,7 @@
 import { LitElement, html, svg, css, nothing } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
-import type { RosterEntry, FormationKey } from '../lib/types.js';
-import { FORMATION_LABELS, formatTime } from '../lib/types.js';
+import type { RosterEntry, FormationKey, GameFormat } from '../lib/types.js';
+import { FORMATIONS_BY_FORMAT, GAME_FORMATS, formatTime } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
 
 export class RosterUpdatedEvent extends Event {
@@ -18,6 +18,13 @@ export class FormationChangedEvent extends Event {
   static readonly eventName = 'formation-changed' as const;
   constructor(public formation: FormationKey) {
     super(FormationChangedEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class GameFormatChangedEvent extends Event {
+  static readonly eventName = 'game-format-changed' as const;
+  constructor(public gameFormat: GameFormat) {
+    super(GameFormatChangedEvent.eventName, { bubbles: true, composed: true });
   }
 }
 
@@ -78,7 +85,7 @@ export class PtToolbar extends LitElement {
       align-items: center;
       gap: 6px;
       padding: 6px 14px;
-      border: 1px solid transparent;
+      border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 6px;
       background: #0f3460;
       color: #e0e0e0;
@@ -177,7 +184,7 @@ export class PtToolbar extends LitElement {
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      border: 1px solid transparent;
+      border: 1px solid rgba(255, 255, 255, 0.25);
       background: #0f3460;
       color: #e0e0e0;
       cursor: pointer;
@@ -337,7 +344,7 @@ export class PtToolbar extends LitElement {
       appearance: none;
       -webkit-appearance: none;
       padding: 6px 26px 6px 10px;
-      border: 1px solid transparent;
+      border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 6px;
       background: #0f3460;
       color: #e0e0e0;
@@ -414,22 +421,34 @@ export class PtToolbar extends LitElement {
       display: flex;
       border: 1px solid #1a4a7a;
       border-radius: 6px;
-      overflow: hidden;
     }
 
     .mode-toggle button {
-      padding: 4px 10px;
+      padding: 6px 8px;
       font-size: 0.75rem;
+      font-weight: bold;
       border: none;
       border-radius: 0;
       background: transparent;
       color: #aaa;
       transition: background 0.15s, color 0.15s;
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .mode-toggle button:first-child {
+      border-radius: 5px 0 0 5px;
+    }
+
+    .mode-toggle button:last-child {
+      border-radius: 0 5px 5px 0;
     }
 
     .mode-toggle button.active {
-      background: #1a4a7a;
-      color: #e0e0e0;
+      background: #fff;
+      color: #16213e;
     }
 
     .roster-table {
@@ -607,6 +626,7 @@ export class PtToolbar extends LitElement {
   `;
 
   @property({ type: String }) formation: FormationKey = '4-3-3';
+  @property({ type: String }) gameFormat: GameFormat = '11v11';
   @property({ type: String }) teamName = '';
   @property({ type: Array }) roster: RosterEntry[] = [];
   @property({ type: Number }) halfLength = 45;
@@ -730,6 +750,11 @@ export class PtToolbar extends LitElement {
     this.dispatchEvent(new FormationChangedEvent(val));
   }
 
+  private _onGameFormatChange(e: Event) {
+    const val = (e.target as HTMLSelectElement).value as GameFormat;
+    this.dispatchEvent(new GameFormatChangedEvent(val));
+  }
+
   private _onHalfLengthInput(e: InputEvent) {
     const val = parseInt((e.target as HTMLInputElement).value, 10);
     if (!isNaN(val) && val > 0) {
@@ -807,6 +832,15 @@ export class PtToolbar extends LitElement {
           </summary>
           <div class="drawer">
             <div class="drawer-header">
+              <div class="mode-toggle">
+                <button class="${!this._editMode ? 'active' : ''}"
+                        @click="${() => this._editMode = false}">${!this._editMode ? html`<span class="half-dot"></span>` : nothing}View</button>
+                <button class="${this._editMode ? 'active' : ''}"
+                        @click="${() => this._editMode = true}">Edit${this._editMode ? html`<span class="half-dot"></span>` : nothing}</button>
+              </div>
+            </div>
+
+            <div class="drawer-header">
               <div class="team-name-row">
                 ${this._editMode ? html`
                   <label>Team name</label>
@@ -820,12 +854,18 @@ export class PtToolbar extends LitElement {
                   <span class="team-label">${this.teamName || 'Roster'}</span>
                 `}
               </div>
-              <div class="mode-toggle">
-                <button class="${!this._editMode ? 'active' : ''}"
-                        @click="${() => this._editMode = false}">View</button>
-                <button class="${this._editMode ? 'active' : ''}"
-                        @click="${() => this._editMode = true}">Edit</button>
-              </div>
+              ${this._editMode ? html`
+                <span class="select-wrap">
+                  <select
+                    .value="${this.gameFormat}"
+                    @change="${this._onGameFormatChange}">
+                    ${GAME_FORMATS.map(f => html`
+                      <option value="${f.key}" ?selected="${f.key === this.gameFormat}">${f.label}</option>
+                    `)}
+                  </select>
+                  <span class="caret"></span>
+                </span>
+              ` : nothing}
             </div>
 
             ${this._editMode ? html`
@@ -936,11 +976,9 @@ export class PtToolbar extends LitElement {
         </div>
         <span class="spacer"></span>
         <span class="select-wrap">
-          <select
-            .value="${this.formation}"
-            @change="${this._onFormationChange}">
-            ${FORMATION_LABELS.map(f => html`
-              <option value="${f.key}" ?selected="${f.key === this.formation}">${f.label}</option>
+          <select @change="${this._onFormationChange}">
+            ${FORMATIONS_BY_FORMAT[this.gameFormat].map(f => html`
+              <option value="${f.key}" .selected="${f.key === this.formation}">${f.label}</option>
             `)}
           </select>
           <span class="caret"></span>
@@ -961,6 +999,7 @@ export class PtToolbar extends LitElement {
                 inputmode="numeric"
                 maxlength="2"
                 .value="${String(this.halfLength)}"
+                ?disabled="${this._running}"
                 @input="${this._onHalfLengthInput}" />
             </div>
           </div>

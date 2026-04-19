@@ -6,9 +6,9 @@ import { renderHalfField, FIELD, PADDING } from '../lib/field.js';
 import { getFormationPositions } from '../lib/formations.js';
 import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadRoster, saveRoster } from '../lib/storage.js';
-import type { RosterEntry, FieldPlayer, FormationKey } from '../lib/types.js';
-import { PLAYER_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE } from '../lib/types.js';
-import type { RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent, TimerTickEvent, ResetHalfEvent, ResetGameEvent } from './pt-toolbar.js';
+import type { RosterEntry, FieldPlayer, FormationKey, GameFormat } from '../lib/types.js';
+import { PLAYER_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, getPlayerCount, getDefaultFormation } from '../lib/types.js';
+import type { RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent, TimerTickEvent, ResetHalfEvent, ResetGameEvent, GameFormatChangedEvent } from './pt-toolbar.js';
 
 const GOAL_DEPTH = 2;
 const SEL_RING_OFFSET = 0.6;
@@ -57,10 +57,9 @@ export class PlayingTime extends LitElement {
 
     .subs-list {
       display: flex;
-      gap: 32px;
-      overflow-x: auto;
+      flex-wrap: wrap;
+      gap: 16px 32px;
       padding-bottom: 4px;
-      -webkit-overflow-scrolling: touch;
     }
 
     .sub-player {
@@ -137,6 +136,7 @@ export class PlayingTime extends LitElement {
 
   @state() accessor teamName = '';
   @state() accessor roster: RosterEntry[] = [];
+  @state() accessor gameFormat: GameFormat = '11v11';
   @state() accessor formation: FormationKey = '4-3-3';
   @state() accessor fieldPlayers: FieldPlayer[] = [];
   @state() accessor halfLength = 45;
@@ -153,6 +153,8 @@ export class PlayingTime extends LitElement {
     const saved = loadRoster();
     this.teamName = saved.teamName;
     this.halfLength = saved.halfLength ?? 45;
+    this.gameFormat = saved.gameFormat ?? '11v11';
+    this.formation = saved.formation ?? getDefaultFormation(this.gameFormat);
     this.roster = saved.players.map(p => ({
       id: uid('p'),
       number: p.number,
@@ -165,7 +167,8 @@ export class PlayingTime extends LitElement {
 
   #rebuildFieldPlayers() {
     const positions = getFormationPositions(this.formation);
-    const starters = this.roster.slice(0, 11);
+    const count = getPlayerCount(this.gameFormat);
+    const starters = this.roster.slice(0, count);
     this.fieldPlayers = starters.map((entry, i) => ({
       id: entry.id,
       rosterId: entry.id,
@@ -186,11 +189,13 @@ export class PlayingTime extends LitElement {
         half2Time: p.half2Time,
       })),
       halfLength: this.halfLength,
+      gameFormat: this.gameFormat,
+      formation: this.formation,
     });
   }
 
   get #subs(): RosterEntry[] {
-    return this.roster.slice(11);
+    return this.roster.slice(getPlayerCount(this.gameFormat));
   }
 
   #onRosterUpdated(e: RosterUpdatedEvent) {
@@ -229,6 +234,15 @@ export class PlayingTime extends LitElement {
   #onResetGame(_e: ResetGameEvent) {
     this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0 }));
     this.#saveState();
+  }
+
+  #onGameFormatChanged(e: GameFormatChangedEvent) {
+    this.gameFormat = e.gameFormat;
+    this.formation = getDefaultFormation(this.gameFormat);
+    this.#rebuildFieldPlayers();
+    this.#saveState();
+    this.selectedId = null;
+    this.swapMode = false;
   }
 
   #onFormationChanged(e: FormationChangedEvent) {
@@ -449,9 +463,11 @@ export class PlayingTime extends LitElement {
                   fill="none" stroke="white" stroke-width="0.15"
                   stroke-dasharray="0.4,0.3" opacity="0.5" />
         ` : nothing}
-        <circle cx="${p.x}" cy="${p.y}" r="${PLAYER_RADIUS}"
-                fill="#ffffff" stroke="white" stroke-width="0.15"
+        <circle cx="${p.x}" cy="${p.y}" r="${PLAYER_RADIUS + 0.2}"
+                fill="none" stroke="white" stroke-width="0.25" stroke-opacity="0.8"
                 filter="url(#player-shadow)" />
+        <circle cx="${p.x}" cy="${p.y}" r="${PLAYER_RADIUS}"
+                fill="#ffffff" />
         ${p.number ? svg`
           <text x="${p.x}" y="${p.y}"
                 text-anchor="middle" dominant-baseline="central"
@@ -505,9 +521,11 @@ export class PlayingTime extends LitElement {
         <pt-toolbar
           .teamName="${this.teamName}"
           .roster="${this.roster}"
+          .gameFormat="${this.gameFormat}"
           .formation="${this.formation}"
           .halfLength="${this.halfLength}"
           @roster-updated="${this.#onRosterUpdated}"
+          @game-format-changed="${this.#onGameFormatChanged}"
           @formation-changed="${this.#onFormationChanged}"
           @settings-changed="${this.#onSettingsChanged}"
           @timer-tick="${this.#onTimerTick}"
@@ -587,8 +605,10 @@ export class PlayingTime extends LitElement {
                     fill="none" stroke="white" stroke-width="0.25"
                     stroke-dasharray="0.7,0.4" opacity="0.5" />
           ` : nothing}
+          <circle cx="5" cy="5" r="4.4"
+                  fill="none" stroke="white" stroke-width="0.5" stroke-opacity="0.8" />
           <circle cx="5" cy="5" r="4"
-                  fill="#ffffff" stroke="white" stroke-width="0.3" />
+                  fill="#ffffff" />
           ${entry.number ? svg`
             <text x="5" y="5"
                   text-anchor="middle" dominant-baseline="central"

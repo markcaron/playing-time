@@ -153,7 +153,7 @@ export class PtToolbar extends LitElement {
       border: none;
       color: #aaa;
       cursor: pointer;
-      padding: 4px;
+      padding: 10px 14px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -589,7 +589,7 @@ export class PtToolbar extends LitElement {
     }
 
     .mode-toggle button {
-      padding: 6px 8px;
+      padding: 6px 14px;
       font-size: 0.75rem;
       font-weight: bold;
       border: none;
@@ -732,7 +732,7 @@ export class PtToolbar extends LitElement {
     }
 
     button.add-team-btn {
-      padding: 4px 8px 6px;
+      padding: 4px 14px 6px;
       font-size: 1rem;
       font-weight: bold;
       line-height: 1;
@@ -749,6 +749,7 @@ export class PtToolbar extends LitElement {
     .team-name-input {
       width: 60%;
       padding: 6px 10px;
+      min-height: 44px;
       border: 1px solid #1a4a7a;
       border-radius: 6px;
       background: #16213e;
@@ -760,6 +761,7 @@ export class PtToolbar extends LitElement {
     .player-input {
       width: 100%;
       padding: 6px 10px;
+      min-height: 44px;
       border: 1px solid #1a4a7a;
       border-radius: 6px;
       background: #16213e;
@@ -775,7 +777,7 @@ export class PtToolbar extends LitElement {
     }
 
     .number-input {
-      width: 30px;
+      width: 48px;
       flex-shrink: 0;
     }
 

@@ -113,7 +113,7 @@ export class PtToolbar extends LitElement {
       z-index: 300;
       background: rgba(0, 0, 0, 0.6);
       display: flex;
-      align-items: center;
+      align-items: stretch;
       justify-content: center;
       padding: 16px;
     }
@@ -124,7 +124,7 @@ export class PtToolbar extends LitElement {
       border-radius: 10px;
       width: 100%;
       max-width: 520px;
-      max-height: calc(100vh - 32px);
+      height: 100%;
       display: flex;
       flex-direction: column;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);

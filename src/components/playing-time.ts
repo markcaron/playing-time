@@ -30,6 +30,7 @@ export class PlayingTime extends LitElement {
     .app-container {
       display: flex;
       flex-direction: column;
+      min-height: 100vh;
     }
 
     .svg-wrap {
@@ -135,6 +136,24 @@ export class PlayingTime extends LitElement {
       text-align: center;
       padding: 16px;
       font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .app-footer {
+      text-align: center;
+      padding: 32px 12px;
+      margin-top: auto;
+      font-size: 0.75rem;
+      color: rgba(78, 168, 222, 0.6);
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .footer-icon {
+      width: 12px;
+      height: 12px;
     }
   `;
 
@@ -664,6 +683,8 @@ export class PlayingTime extends LitElement {
             `}
           </div>
         ` : nothing}
+
+        <footer class="app-footer"><svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" class="footer-icon"><path d="m660 243.6v-63.602h60v-120h-240v120h60v63.602c-219.6 30-390 218.4-390 446.4 0 248.4 201.6 450 450 450s450-201.6 450-450c0-228-170.4-416.4-390-446.4zm-60 776.4c-182.4 0-330-147.6-330-330s147.6-330 330-330 330 147.6 330 330-147.6 330-330 330z" fill="currentColor"/><path d="m151.2 247.2 85.199 84c48-49.199 104.4-86.398 168-112.8l-45.598-110.4c-78 32.398-148.8 79.199-207.6 139.2z" fill="currentColor"/><path d="m1042.8 241.2c-58.801-57.598-126-102-201.6-133.2l-45.602 110.4c61.199 25.199 116.4 61.199 163.2 108z" fill="currentColor"/><path d="m642.48 732.32-84.863-84.852 179.89-179.91 84.863 84.852z" fill="currentColor"/></svg> Playing Time by Mark Caron</footer>
       </div>
     `;
   }

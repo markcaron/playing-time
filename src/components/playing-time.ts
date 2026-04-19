@@ -34,7 +34,9 @@ export class PlayingTime extends LitElement {
 
     .svg-wrap {
       position: relative;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      width: 100%;
+      max-width: 768px;
+      margin: 0 auto;
     }
 
     svg {
@@ -48,8 +50,6 @@ export class PlayingTime extends LitElement {
     .subs-section {
       background: #16213e;
       padding: 12px;
-      border-radius: 0 0 10px 10px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     }
 
     .subs-heading {

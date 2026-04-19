@@ -183,31 +183,50 @@ export class PtToolbar extends LitElement {
 
     .spacer { flex: 1; }
 
-    .timer {
-      display: flex;
+    .timer-bar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 12px;
       align-items: center;
-      gap: 6px;
+      padding: 10px 12px;
+      background: #ffffff;
+      user-select: none;
     }
 
-    .timer-display {
+    .timer-left {
+      justify-self: start;
+    }
+
+    .timer-center {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-self: center;
+    }
+
+    .timer-right {
+      justify-self: end;
+    }
+
+    .timer-bar .timer-display {
       font-size: 1.1rem;
       font-weight: bold;
       font-variant-numeric: tabular-nums;
-      color: #e0e0e0;
+      color: #16213e;
       min-width: 48px;
       text-align: center;
       letter-spacing: 0.5px;
     }
 
-    .timer-display.stoppage { color: #e94560; }
+    .timer-bar .timer-display.stoppage { color: #e94560; }
 
-    .play-btn {
+    .timer-bar .play-btn {
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      background: #0f3460;
-      color: #e0e0e0;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      background: #16213e;
+      color: #fff;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -216,38 +235,38 @@ export class PtToolbar extends LitElement {
       transition: background 0.15s;
     }
 
-    .play-btn:hover { background: #1a4a7a; }
+    .timer-bar .play-btn:hover { background: #1a4a7a; }
 
-    .play-btn:focus-visible {
+    .timer-bar .play-btn:focus-visible {
       outline: 2px solid #4ea8de;
       outline-offset: 2px;
     }
 
-    .play-btn.running {
+    .timer-bar .play-btn.running {
       background: #e94560;
       border-color: #e94560;
       color: #fff;
     }
 
-    .play-btn svg {
+    .timer-bar .play-btn svg {
       width: 14px;
       height: 14px;
     }
 
-    .half-toggle {
+    .timer-bar .half-toggle {
       display: flex;
-      border: 1px solid #1a4a7a;
+      border: 1px solid rgba(0, 0, 0, 0.2);
       border-radius: 6px;
     }
 
-    .half-toggle button {
+    .timer-bar .half-toggle button {
       padding: 6px 8px;
       font-size: 0.75rem;
       font-weight: bold;
       border: none;
       border-radius: 0;
       background: transparent;
-      color: #aaa;
+      color: #666;
       transition: background 0.15s, color 0.15s;
       min-width: 0;
       display: inline-flex;
@@ -255,21 +274,25 @@ export class PtToolbar extends LitElement {
       gap: 3px;
     }
 
-    .half-toggle button:first-child {
+    .timer-bar .half-toggle button:first-child {
       border-radius: 5px 0 0 5px;
     }
 
-    .half-toggle button:last-child {
+    .timer-bar .half-toggle button:last-child {
       border-radius: 0 5px 5px 0;
     }
 
-    .half-toggle button.active {
-      background: #fff;
-      color: #16213e;
+    .timer-bar .half-toggle button.active {
+      background: #16213e;
+      color: #fff;
     }
 
-    .half-toggle button.active:disabled {
+    .timer-bar .half-toggle button.active:disabled {
       opacity: 1;
+    }
+
+    .timer-bar .half-toggle button:disabled:not(.active) {
+      opacity: 0.35;
     }
 
     .half-dot {
@@ -280,13 +303,13 @@ export class PtToolbar extends LitElement {
       flex-shrink: 0;
     }
 
-    .reset-btn {
+    .timer-bar .reset-btn {
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      border: 1px solid #1a4a7a;
+      border: 1px solid rgba(0, 0, 0, 0.15);
       background: transparent;
-      color: #aaa;
+      color: #666;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -295,19 +318,39 @@ export class PtToolbar extends LitElement {
       transition: background 0.15s, color 0.15s;
     }
 
-    .reset-btn:hover {
-      background: #1a4a7a;
-      color: #e0e0e0;
+    .timer-bar .reset-btn:hover {
+      background: rgba(0, 0, 0, 0.08);
+      color: #16213e;
     }
 
-    .reset-btn:focus-visible {
+    .timer-bar .reset-btn:focus-visible {
       outline: 2px solid #4ea8de;
       outline-offset: 2px;
     }
 
-    .reset-btn svg {
+    .timer-bar .reset-btn svg {
       width: 12px;
       height: 12px;
+    }
+
+    .timer-bar .reset-game-btn {
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      border: 1px solid #e94560;
+      border-radius: 6px;
+      background: transparent;
+      color: #e94560;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .timer-bar .reset-game-btn:hover {
+      background: rgba(233, 69, 96, 0.1);
+    }
+
+    .timer-bar .reset-game-btn:focus-visible {
+      outline: 2px solid #4ea8de;
+      outline-offset: 2px;
     }
 
     .confirm-overlay {
@@ -1093,36 +1136,6 @@ export class PtToolbar extends LitElement {
           </div>
         </details>
         <span class="spacer"></span>
-        <div class="timer">
-          <div class="half-toggle">
-            <button class="${this._half === 1 ? 'active' : ''}"
-                    ?disabled="${this._half === 1 || this._running}"
-                    @click="${this._requestSwitchTo1H}">${this._half === 1 ? html`<span class="half-dot"></span>` : nothing}1H</button>
-            <button class="${this._half === 2 ? 'active' : ''}"
-                    ?disabled="${this._half === 2 || this._running}"
-                    @click="${this._requestSwitchTo2H}">2H${this._half === 2 ? html`<span class="half-dot"></span>` : nothing}</button>
-          </div>
-          <button class="play-btn ${this._running ? 'running' : ''}"
-                  @click="${this._toggleTimer}"
-                  aria-label="${this._running ? 'Stop' : 'Play'}">
-            ${this._running ? svg`
-              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="1" width="10" height="12" rx="1" fill="currentColor"/>
-              </svg>
-            ` : svg`
-              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 1.5v11l9-5.5z" fill="currentColor"/>
-              </svg>
-            `}
-          </button>
-          <span class="timer-display ${this._inStoppage ? 'stoppage' : ''}">${this._timeDisplay}</span>
-          <button class="reset-btn"
-                  @click="${this._requestReset}"
-                  aria-label="Reset timer">
-            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m1011.6 216c-206.4-206.4-537.6-211.2-750-18l-49.199-49.199c-19.199-19.199-48-26.398-74.398-19.199-26.398 8.3984-46.801 30-51.602 56.398l-55.203 256.8c-4.8008 25.199 2.3984 50.398 20.398 68.398s43.199 25.199 68.398 20.398l256.8-54c14.398-3.6016 27.602-10.801 37.199-20.398 8.3984-8.3984 15.602-19.199 19.199-31.199 7.1992-26.398 0-55.199-19.199-74.398l-46.801-46.801c154.8-136.8 390-130.8 537.61 16.801 153.6 153.6 153.6 403.2 0 556.8-153.6 153.6-403.2 153.6-556.8-0.003906-49.199-49.199-84-110.4-102-177.6-10.801-39.602-51.602-63.602-91.199-52.801-39.602 10.801-63.602 51.602-52.801 91.199 24 92.398 73.199 177.6 141.6 244.8 212.4 212.4 556.8 212.4 769.2 0 210-211.2 210-556.8-1.1992-768z" fill="currentColor"/></svg>
-          </button>
-        </div>
-        <span class="spacer"></span>
         <span class="select-wrap">
           <select @change="${this._onFormationChange}">
             ${FORMATIONS_BY_FORMAT[this.gameFormat].map(f => html`
@@ -1152,6 +1165,44 @@ export class PtToolbar extends LitElement {
             </div>
           </div>
         </details>
+      </div>
+
+      <div class="timer-bar">
+        <div class="timer-left">
+          <div class="half-toggle">
+            <button class="${this._half === 1 ? 'active' : ''}"
+                    ?disabled="${this._half === 1 || this._running}"
+                    @click="${this._requestSwitchTo1H}">${this._half === 1 ? html`<span class="half-dot"></span>` : nothing}1H</button>
+            <button class="${this._half === 2 ? 'active' : ''}"
+                    ?disabled="${this._half === 2 || this._running}"
+                    @click="${this._requestSwitchTo2H}">2H${this._half === 2 ? html`<span class="half-dot"></span>` : nothing}</button>
+          </div>
+        </div>
+        <div class="timer-center">
+          <button class="play-btn ${this._running ? 'running' : ''}"
+                  @click="${this._toggleTimer}"
+                  aria-label="${this._running ? 'Stop' : 'Play'}">
+            ${this._running ? svg`
+              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="1" width="10" height="12" rx="1" fill="currentColor"/>
+              </svg>
+            ` : svg`
+              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 1.5v11l9-5.5z" fill="currentColor"/>
+              </svg>
+            `}
+          </button>
+          <span class="timer-display ${this._inStoppage ? 'stoppage' : ''}">${this._timeDisplay}</span>
+          <button class="reset-btn"
+                  @click="${this._requestReset}"
+                  aria-label="Reset timer">
+            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m1011.6 216c-206.4-206.4-537.6-211.2-750-18l-49.199-49.199c-19.199-19.199-48-26.398-74.398-19.199-26.398 8.3984-46.801 30-51.602 56.398l-55.203 256.8c-4.8008 25.199 2.3984 50.398 20.398 68.398s43.199 25.199 68.398 20.398l256.8-54c14.398-3.6016 27.602-10.801 37.199-20.398 8.3984-8.3984 15.602-19.199 19.199-31.199 7.1992-26.398 0-55.199-19.199-74.398l-46.801-46.801c154.8-136.8 390-130.8 537.61 16.801 153.6 153.6 153.6 403.2 0 556.8-153.6 153.6-403.2 153.6-556.8-0.003906-49.199-49.199-84-110.4-102-177.6-10.801-39.602-51.602-63.602-91.199-52.801-39.602 10.801-63.602 51.602-52.801 91.199 24 92.398 73.199 177.6 141.6 244.8 212.4 212.4 556.8 212.4 769.2 0 210-211.2 210-556.8-1.1992-768z" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div class="timer-right">
+          <button class="reset-game-btn"
+                  @click="${this._requestSwitchTo1H}">Reset Game</button>
+        </div>
       </div>
 
       ${this._confirmAction ? html`

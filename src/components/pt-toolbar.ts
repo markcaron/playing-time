@@ -557,6 +557,34 @@ export class PtToolbar extends LitElement {
       min-width: 0;
     }
 
+    .drawer-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 0;
+    }
+
+    .drawer-empty p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    button.add-team-btn-lg {
+      padding: 8px 20px;
+      font-size: 0.85rem;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      background: #0f3460;
+      color: #e0e0e0;
+      cursor: pointer;
+    }
+
+    button.add-team-btn-lg:hover {
+      background: #1a4a7a;
+    }
+
     button.add-team-btn {
       padding: 4px 8px 6px;
       font-size: 1rem;
@@ -928,6 +956,12 @@ export class PtToolbar extends LitElement {
             <span class="caret"></span>
           </summary>
           <div class="drawer">
+            ${this.teams.length === 0 ? html`
+              <div class="drawer-empty">
+                <p>No teams yet</p>
+                <button class="add-team-btn-lg" @click="${this._addTeam}">+ Add team</button>
+              </div>
+            ` : html`
             <div class="drawer-header">
               <div class="team-row">
                 <span class="select-wrap">
@@ -1054,6 +1088,7 @@ export class PtToolbar extends LitElement {
                   </tbody>
                 </table>
               `}
+            `}
             `}
           </div>
         </details>

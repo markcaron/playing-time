@@ -92,10 +92,10 @@ export class PlayingTime extends LitElement {
 
     .sub-swap-btn {
       position: absolute;
-      top: 7px;
+      top: 3px;
       left: calc(100% + 4px);
-      width: 22px;
-      height: 22px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       background: #151515;
       border: 1px solid white;
@@ -557,12 +557,12 @@ export class PlayingTime extends LitElement {
         ${selected ? html`
           <div class="sub-swap-btn ${this.swapMode ? 'active' : ''}"
                @click="${(e: Event) => { e.stopPropagation(); this.#toggleSwapMode(); }}">
-            <svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <polyline points="8,14.5 8,5.5 5,8.5"
-                        fill="none" stroke="${arrowUpColor}" stroke-width="2.8"
+            <svg viewBox="-1.2 -1.2 2.4 2.4" xmlns="http://www.w3.org/2000/svg">
+              <polyline points="-0.375,0.825 -0.375,-0.525 -0.9,0.075"
+                        fill="none" stroke="${arrowUpColor}" stroke-width="0.3"
                         stroke-linecap="round" stroke-linejoin="round" />
-              <polyline points="12,5.5 12,14.5 15,11.5"
-                        fill="none" stroke="${arrowDownColor}" stroke-width="2.8"
+              <polyline points="0.375,-0.825 0.375,0.525 0.9,-0.075"
+                        fill="none" stroke="${arrowDownColor}" stroke-width="0.3"
                         stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </div>

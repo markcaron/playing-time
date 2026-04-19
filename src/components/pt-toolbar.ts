@@ -80,6 +80,10 @@ export class TeamDeletedEvent extends Event {
 @customElement('pt-toolbar')
 export class PtToolbar extends LitElement {
   static styles = css`
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     :host {
       display: block;
       z-index: 100;
@@ -201,6 +205,7 @@ export class PtToolbar extends LitElement {
       align-items: center;
       gap: 6px;
       padding: 6px 10px;
+      min-height: 44px;
       border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 6px;
       background: #0f3460;
@@ -248,8 +253,10 @@ export class PtToolbar extends LitElement {
     button {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
       padding: 6px 14px;
+      min-height: 44px;
       border: 1px solid transparent;
       border-radius: 6px;
       background: #0f3460;
@@ -313,8 +320,8 @@ export class PtToolbar extends LitElement {
     .timer-bar .timer-display.stoppage { color: #e94560; }
 
     .timer-bar .play-btn {
-      width: 32px;
-      height: 32px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       border: 1px solid rgba(0, 0, 0, 0.15);
       background: #16213e;
@@ -352,7 +359,7 @@ export class PtToolbar extends LitElement {
     }
 
     .timer-bar .half-toggle button {
-      padding: 6px 8px;
+      padding: 6px 12px;
       font-size: 0.75rem;
       font-weight: bold;
       border: none;
@@ -396,8 +403,8 @@ export class PtToolbar extends LitElement {
     }
 
     .timer-bar .reset-btn {
-      width: 28px;
-      height: 28px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       border: 1px solid rgba(0, 0, 0, 0.15);
       background: transparent;
@@ -500,6 +507,7 @@ export class PtToolbar extends LitElement {
       appearance: none;
       -webkit-appearance: none;
       padding: 6px 26px 6px 10px;
+      min-height: 44px;
       border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 6px;
       background: #0f3460;
@@ -1102,7 +1110,7 @@ export class PtToolbar extends LitElement {
         <button class="roster-btn ${this._rosterOpen ? 'open' : ''}"
                 @click="${this._openRoster}"
                 aria-label="Roster${this.roster.length ? ` (${this.roster.length})` : ''}">
-          <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px"><path d="m600 185.26c80.25 0 145.69 65.25 145.69 145.69 0 80.441-65.25 145.69-145.69 145.69s-145.69-65.25-145.69-145.69c0-80.441 65.25-145.69 145.69-145.69z" fill="currentColor"/><path d="m267.56 351.37c62.812 0 114 51.188 114 114s-51.188 114-114 114-114-51.188-114-114 51.188-114 114-114z" fill="currentColor"/><path d="m932.44 351.37c62.812 0 114 51.188 114 114s-51.188 114-114 114-114-51.188-114-114 51.188-114 114-114z" fill="currentColor"/><path d="m681.37 566.26h-162.94c-78.75 0-142.87 64.125-142.87 142.87v285.19c0 11.438 9.1875 20.625 20.625 20.625h407.26c11.438 0 20.625-9.1875 20.625-20.625v-285.19c0-78.75-64.125-142.87-142.87-142.87z" fill="currentColor"/><path d="m991.87 651.56h-132c-1.5 0-3 0.1875-4.6875 0.375 6 18 9.1875 37.125 9.1875 57.188v264.94h218.44c11.438 0 20.625-9.1875 20.625-20.625v-189.94c0-61.688-50.062-111.75-111.56-111.75z" fill="currentColor"/><path d="m208.13 651.56c-61.5 0-111.56 50.25-111.56 111.75v189.94c0 11.438 9.1875 20.625 20.625 20.625h218.44v-264.94c0-20.062 3.375-39.188 9.1875-57.188-1.5 0-3-0.375-4.6875-0.375h-132z" fill="currentColor"/></svg>
+          <svg viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px"><path d="M1250.75 484.752L1150 585.501V790.128L1350 650.128L1250.75 484.752Z" fill="currentColor"/><path d="M450 585.499L349.251 484.75L250 650.123L450 790.123V585.499Z" fill="currentColor"/><path d="M500 575.125V1275.13H1100V575.125C1100 568.5 1102.63 562.125 1107.31 557.437L1224.25 440.5L1210 416.688C1203.62 406.001 1193.44 398.063 1181.5 394.5L950.059 325.063L947.497 330.125C925.059 375 884.871 410.188 835.871 421.063C761.371 437.625 687.991 400.937 655.311 335.563L650.061 325L418.621 394.437C406.684 398 396.496 405.937 390.121 416.625L375.871 440.437L492.808 557.375C497.495 562.062 500.121 568.437 500.121 575.063L500 575.125ZM950 575.125C977.625 575.125 1000 597.5 1000 625.125C1000 652.751 977.625 675.125 950 675.125C922.375 675.125 900 652.751 900 625.125C900 597.5 922.375 575.125 950 575.125ZM600 1125.13H700V1175.13H600V1125.13Z" fill="currentColor"/></svg>
         </button>
         <span class="spacer"></span>
         <span class="select-wrap">

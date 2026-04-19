@@ -22,7 +22,9 @@ const SWAP_BTN_GAP = 1.5;
 export class PlayingTime extends LitElement {
   static styles = css`
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
       --field-stripe-light: #2d6a4f;
       --field-stripe-dark: #276749;
     }
@@ -30,7 +32,7 @@ export class PlayingTime extends LitElement {
     .app-container {
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
+      flex: 1;
     }
 
     .svg-wrap {
@@ -44,7 +46,6 @@ export class PlayingTime extends LitElement {
       display: block;
       width: 100%;
       height: auto;
-      min-height: 400px;
       cursor: default;
       user-select: none;
     }
@@ -80,10 +81,10 @@ export class PlayingTime extends LitElement {
     }
 
     .sub-player .circle-svg {
-      width: 36px;
-      height: 36px;
-      min-width: 36px;
-      min-height: 36px;
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 44px;
       flex-shrink: 0;
     }
 
@@ -98,10 +99,10 @@ export class PlayingTime extends LitElement {
 
     .sub-swap-btn {
       position: absolute;
-      top: 3px;
+      top: 0;
       left: calc(100% + 4px);
-      width: 28px;
-      height: 28px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       background: #151515;
       border: 1px solid white;

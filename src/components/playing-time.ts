@@ -7,7 +7,7 @@ import { getFormationPositions } from '../lib/formations.js';
 import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadAppState, saveAppState, createNewTeam } from '../lib/storage.js';
 import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState } from '../lib/types.js';
-import { PLAYER_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, getPlayerCount, getDefaultFormation } from '../lib/types.js';
+import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, getPlayerCount, getDefaultFormation } from '../lib/types.js';
 import type {
   RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent,
   TimerTickEvent, ResetHalfEvent, ResetGameEvent, GameFormatChangedEvent,
@@ -565,11 +565,15 @@ export class PlayingTime extends LitElement {
                   fill="none" stroke="white" stroke-width="0.15"
                   stroke-dasharray="0.4,0.3" opacity="0.5" />
         ` : nothing}
+        <circle cx="${p.x}" cy="${p.y}" r="${PLAYER_HIT_RADIUS}"
+                fill="transparent" />
         <circle cx="${p.x}" cy="${p.y}" r="${PLAYER_RADIUS + 0.2}"
                 fill="none" stroke="white" stroke-width="0.25" stroke-opacity="0.8"
-                filter="url(#player-shadow)" />
+                filter="url(#player-shadow)"
+                style="pointer-events: none" />
         <circle cx="${p.x}" cy="${p.y}" r="${PLAYER_RADIUS}"
-                fill="#ffffff" />
+                fill="#ffffff"
+                style="pointer-events: none" />
         ${p.number ? svg`
           <text x="${p.x}" y="${p.y}"
                 text-anchor="middle" dominant-baseline="central"
@@ -597,12 +601,12 @@ export class PlayingTime extends LitElement {
                   fill="${this.swapMode ? '#e94560' : '#151515'}"
                   stroke="white" stroke-width="0.15"
                   filter="url(#player-shadow)" />
-          <polyline points="${bx - 0.375},${p.y + 0.825} ${bx - 0.375},${p.y - 0.525} ${bx - 0.9},${p.y + 0.075}"
-                    fill="none" stroke="${this.swapMode ? 'white' : '#4ade80'}" stroke-width="0.3"
+          <polyline points="${bx - 0.5},${p.y + 1.1} ${bx - 0.5},${p.y - 0.7} ${bx - 1.2},${p.y + 0.1}"
+                    fill="none" stroke="${this.swapMode ? 'white' : '#4ade80'}" stroke-width="0.4"
                     stroke-linecap="round" stroke-linejoin="round"
                     style="pointer-events: none" />
-          <polyline points="${bx + 0.375},${p.y - 0.825} ${bx + 0.375},${p.y + 0.525} ${bx + 0.9},${p.y - 0.075}"
-                    fill="none" stroke="${this.swapMode ? 'white' : '#f87171'}" stroke-width="0.3"
+          <polyline points="${bx + 0.5},${p.y - 1.1} ${bx + 0.5},${p.y + 0.7} ${bx + 1.2},${p.y - 0.1}"
+                    fill="none" stroke="${this.swapMode ? 'white' : '#f87171'}" stroke-width="0.4"
                     stroke-linecap="round" stroke-linejoin="round"
                     style="pointer-events: none" />
         </g>

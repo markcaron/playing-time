@@ -66,9 +66,10 @@ export function getDefaultFormation(format: GameFormat): FormationKey {
   return FORMATIONS_BY_FORMAT[format][0].key;
 }
 
-export const PLAYER_RADIUS = 2.25;
-export const PLAYER_FONT_SIZE = 1.8;
-export const NAME_FONT_SIZE = 1.6;
+export const PLAYER_RADIUS = 3.2;
+export const PLAYER_HIT_RADIUS = 3.6;
+export const PLAYER_FONT_SIZE = 2.4;
+export const NAME_FONT_SIZE = 1.8;
 
 export interface StoredPlayer {
   number: string;

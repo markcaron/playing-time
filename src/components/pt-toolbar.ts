@@ -103,6 +103,17 @@ export class PtToolbar extends LitElement {
       border: 1px solid rgba(255, 255, 255, 0.25);
     }
 
+    .roster-btn.hint {
+      outline: 2px solid #7fff00;
+      outline-offset: 2px;
+      animation: hintPulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes hintPulse {
+      0%, 100% { outline-color: #7fff00; }
+      50% { outline-color: rgba(127, 255, 0, 0.4); }
+    }
+
     .roster-btn.open {
       background: #e94560;
       border-color: #e94560;
@@ -819,6 +830,7 @@ export class PtToolbar extends LitElement {
   @property({ type: String }) teamName = '';
   @property({ type: Array }) roster: RosterEntry[] = [];
   @property({ type: Number }) halfLength = 45;
+  @property({ type: Boolean }) showRosterHint = false;
   @property({ type: Array }) teams: StoredTeam[] = [];
   @property({ type: String }) activeTeamId: string | null = null;
 
@@ -1051,7 +1063,7 @@ export class PtToolbar extends LitElement {
   render() {
     return html`
       <div class="bar">
-        <button class="roster-btn ${this._rosterOpen ? 'open' : ''}"
+        <button class="roster-btn ${this._rosterOpen ? 'open' : ''} ${this.showRosterHint && !this._rosterOpen ? 'hint' : ''}"
                 @click="${this._openRoster}"
                 aria-label="Roster${this.roster.length ? ` (${this.roster.length})` : ''}">
           <svg viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px"><path d="M1250.75 484.752L1150 585.501V790.128L1350 650.128L1250.75 484.752Z" fill="currentColor"/><path d="M450 585.499L349.251 484.75L250 650.123L450 790.123V585.499Z" fill="currentColor"/><path d="M500 575.125V1275.13H1100V575.125C1100 568.5 1102.63 562.125 1107.31 557.437L1224.25 440.5L1210 416.688C1203.62 406.001 1193.44 398.063 1181.5 394.5L950.059 325.063L947.497 330.125C925.059 375 884.871 410.188 835.871 421.063C761.371 437.625 687.991 400.937 655.311 335.563L650.061 325L418.621 394.437C406.684 398 396.496 405.937 390.121 416.625L375.871 440.437L492.808 557.375C497.495 562.062 500.121 568.437 500.121 575.063L500 575.125ZM950 575.125C977.625 575.125 1000 597.5 1000 625.125C1000 652.751 977.625 675.125 950 675.125C922.375 675.125 900 652.751 900 625.125C900 597.5 922.375 575.125 950 575.125ZM600 1125.13H700V1175.13H600V1125.13Z" fill="currentColor"/></svg>

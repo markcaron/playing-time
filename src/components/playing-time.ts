@@ -644,6 +644,7 @@ export class PlayingTime extends LitElement {
           .halfLength="${this.halfLength}"
           .teams="${this.teams}"
           .activeTeamId="${this.activeTeamId}"
+          .showRosterHint="${this.roster.length === 0 && this.activeTeamId != null}"
           @roster-updated="${this.#onRosterUpdated}"
           @game-format-changed="${this.#onGameFormatChanged}"
           @formation-changed="${this.#onFormationChanged}"
@@ -679,6 +680,28 @@ export class PlayingTime extends LitElement {
                   fill="url(#grass-stripes)" rx="0.5" />
 
             ${renderHalfField()}
+
+            ${this.roster.length === 0 && this.activeTeamId != null ? svg`
+              <g style="pointer-events: none">
+                <rect x="${FIELD.WIDTH / 2 - 18}" y="${FIELD.HALF_LENGTH / 2 - 4.5}"
+                      width="36" height="9" rx="1.5"
+                      fill="#16213e" fill-opacity="0.9"
+                      filter="url(#player-shadow)" />
+                <text x="${FIELD.WIDTH / 2 - 1.5}" y="${FIELD.HALF_LENGTH / 2}"
+                      text-anchor="middle" dominant-baseline="central"
+                      fill="#e0e0e0" font-size="${NAME_FONT_SIZE}"
+                      font-family="system-ui, sans-serif">
+                  Add players to your team.
+                </text>
+                <svg x="${FIELD.WIDTH / 2 + 11.5}" y="${FIELD.HALF_LENGTH / 2 - 2.4}"
+                     width="4.8" height="4.8"
+                     viewBox="0 0 1600 1600">
+                  <path d="M1250.75 484.752L1150 585.501V790.128L1350 650.128L1250.75 484.752Z" fill="#e0e0e0"/>
+                  <path d="M450 585.499L349.251 484.75L250 650.123L450 790.123V585.499Z" fill="#e0e0e0"/>
+                  <path d="M500 575.125V1275.13H1100V575.125C1100 568.5 1102.63 562.125 1107.31 557.437L1224.25 440.5L1210 416.688C1203.62 406.001 1193.44 398.063 1181.5 394.5L950.059 325.063L947.497 330.125C925.059 375 884.871 410.188 835.871 421.063C761.371 437.625 687.991 400.937 655.311 335.563L650.061 325L418.621 394.437C406.684 398 396.496 405.937 390.121 416.625L375.871 440.437L492.808 557.375C497.495 562.062 500.121 568.437 500.121 575.063L500 575.125ZM950 575.125C977.625 575.125 1000 597.5 1000 625.125C1000 652.751 977.625 675.125 950 675.125C922.375 675.125 900 652.751 900 625.125C900 597.5 922.375 575.125 950 575.125ZM600 1125.13H700V1175.13H600V1125.13Z" fill="#e0e0e0"/>
+                </svg>
+              </g>
+            ` : nothing}
 
             <g class="players-layer">
               ${this.fieldPlayers

@@ -4,6 +4,7 @@ import { enableDragDropTouch } from '@dragdroptouch/drag-drop-touch';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam } from '../lib/types.js';
 import { FORMATIONS_BY_FORMAT, GAME_FORMATS, formatTime, getPlayerCount } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
+import { parseRoster } from '../lib/roster-parser.js';
 
 export class RosterUpdatedEvent extends Event {
   static readonly eventName = 'roster-updated' as const;
@@ -161,8 +162,7 @@ export class PtSettingsBar extends LitElement {
       padding: 0;
       width: calc(100% - 32px);
       max-width: 520px;
-      height: calc(100vh - 32px);
-      max-height: calc(100vh - 32px);
+      max-height: calc(100dvh - 32px);
       display: flex;
       flex-direction: column;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -171,6 +171,11 @@ export class PtSettingsBar extends LitElement {
 
     dialog::backdrop {
       background: rgba(0, 0, 0, 0.6);
+    }
+
+    dialog#roster-dialog,
+    dialog#settings-dialog {
+      height: calc(100dvh - 32px);
     }
 
     dialog.settings-dialog {
@@ -459,6 +464,64 @@ export class PtSettingsBar extends LitElement {
       margin-top: 2px;
       font-size: 0.8rem;
       color: #aaa;
+    }
+
+    .drop-zone {
+      border: 2px dashed rgba(255, 255, 255, 0.25);
+      border-radius: 10px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: #4ea8de;
+      background: rgba(78, 168, 222, 0.05);
+    }
+
+    .drop-zone:focus-visible {
+      outline: 2px solid #4ea8de;
+      outline-offset: 2px;
+    }
+
+    .drop-zone p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+
+    .drop-zone .drop-hint {
+      font-size: 0.75rem;
+      color: #666;
+    }
+
+    .drop-zone .browse-btn {
+      padding: 6px 16px;
+      min-height: 36px;
+      font-size: 0.8rem;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      background: transparent;
+      color: #e0e0e0;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .drop-zone .browse-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .drop-zone .drop-error {
+      color: #f87171;
+      font-size: 0.8rem;
     }
 
     .section-separator {
@@ -783,6 +846,8 @@ export class PtSettingsBar extends LitElement {
   @state() private _addName = '';
   @state() private _dragIdx: number | null = null;
   @state() private _dragOverIdx: number | null = null;
+  @state() private _dropZoneDragover = false;
+  @state() private _dropError = '';
 
   @query('#roster-dialog') private _rosterDialog!: HTMLDialogElement;
   @query('#settings-dialog') private _settingsDialog!: HTMLDialogElement;
@@ -878,6 +943,71 @@ export class PtSettingsBar extends LitElement {
   private _removePlayer(id: string) {
     const updated = this.roster.filter(p => p.id !== id);
     this.dispatchEvent(new RosterUpdatedEvent(this.teamName, updated));
+  }
+
+  // --- Roster import ---
+
+  private _importRoster(text: string) {
+    const parsed = parseRoster(text);
+    if (parsed.length === 0) {
+      this._dropError = 'Could not parse roster. Check the format.';
+      setTimeout(() => this._dropError = '', 4000);
+      return;
+    }
+    this._dropError = '';
+    const entries: RosterEntry[] = parsed.map(p => ({
+      id: uid('p'),
+      number: p.number,
+      name: p.name,
+      half1Time: 0,
+      half2Time: 0,
+      benchTime: 0,
+      onFieldTime: 0,
+    }));
+    this.dispatchEvent(new RosterUpdatedEvent(this.teamName, entries));
+  }
+
+  private _onDropZoneDragover(e: DragEvent) {
+    e.preventDefault();
+    this._dropZoneDragover = true;
+  }
+
+  private _onDropZoneDragleave() {
+    this._dropZoneDragover = false;
+  }
+
+  private _onDropZoneDrop(e: DragEvent) {
+    e.preventDefault();
+    this._dropZoneDragover = false;
+    const file = e.dataTransfer?.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => this._importRoster(reader.result as string);
+      reader.readAsText(file);
+    }
+  }
+
+  private _onDropZoneClick(e: Event) {
+    e.stopPropagation();
+    const input = this.shadowRoot?.querySelector('#roster-file-input') as HTMLInputElement;
+    input?.click();
+  }
+
+  private _onFileSelected(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => this._importRoster(reader.result as string);
+      reader.readAsText(file);
+    }
+  }
+
+  private _onDropZonePaste(e: ClipboardEvent) {
+    const text = e.clipboardData?.getData('text/plain');
+    if (text) {
+      e.preventDefault();
+      this._importRoster(text);
+    }
   }
 
   private _onDragStart(idx: number) { this._dragIdx = idx; }
@@ -1000,6 +1130,22 @@ export class PtSettingsBar extends LitElement {
                       <span class="caret"></span>
                     </span>
                   </div>
+                  ${this.roster.length === 0 ? html`
+                    <div class="drop-zone ${this._dropZoneDragover ? 'dragover' : ''}"
+                         tabindex="0"
+                         @dragover="${this._onDropZoneDragover}"
+                         @dragleave="${this._onDropZoneDragleave}"
+                         @drop="${this._onDropZoneDrop}"
+                         @paste="${this._onDropZonePaste}">
+                      <input type="file" id="roster-file-input" accept=".md,.csv,.txt" hidden
+                             @change="${this._onFileSelected}" />
+                      <p>Drag & drop a roster file, or paste</p>
+                      <button class="browse-btn" @click="${this._onDropZoneClick}">Browse files</button>
+                      <p class="drop-hint">Supports .csv and .md formats</p>
+                      ${this._dropError ? html`<p class="drop-error">${this._dropError}</p>` : nothing}
+                    </div>
+                  ` : nothing}
+
                   <div class="roster-list">
                     ${this.roster.map((p, i) => html`
                       <div class="roster-row ${this._dragIdx === i ? 'dragging' : ''} ${this._dragOverIdx === i ? 'drag-over' : ''}"

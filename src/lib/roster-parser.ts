@@ -13,9 +13,9 @@ export function parseRoster(text: string): { number: string; name: string }[] {
       continue;
     }
 
-    const csvMatch = trimmed.match(/^(\d+)\s*,\s*(.+)/);
+    const csvMatch = trimmed.match(/^(\d*)\s*,\s*(.+)/);
     if (csvMatch) {
-      results.push({ number: csvMatch[1], name: csvMatch[2].trim() });
+      results.push({ number: csvMatch[1].trim(), name: csvMatch[2].trim() });
       continue;
     }
 

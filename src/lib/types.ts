@@ -19,15 +19,19 @@ export interface FieldPlayer {
 
 export type GameFormat = '11v11' | '9v9' | '7v7' | '4v4';
 
-export const GAME_FORMATS: { key: GameFormat; label: string; playerCount: number }[] = [
-  { key: '11v11', label: '11v11', playerCount: 11 },
-  { key: '9v9',   label: '9v9',   playerCount: 9 },
-  { key: '7v7',   label: '7v7',   playerCount: 7 },
-  { key: '4v4',   label: '4v4',   playerCount: 4 },
+export const GAME_FORMATS: { key: GameFormat; label: string; playerCount: number; halfLength: number }[] = [
+  { key: '11v11', label: '11v11', playerCount: 11, halfLength: 45 },
+  { key: '9v9',   label: '9v9',   playerCount: 9,  halfLength: 30 },
+  { key: '7v7',   label: '7v7',   playerCount: 7,  halfLength: 25 },
+  { key: '4v4',   label: '4v4',   playerCount: 4,  halfLength: 12 },
 ];
 
 export function getPlayerCount(format: GameFormat): number {
   return GAME_FORMATS.find(f => f.key === format)?.playerCount ?? 11;
+}
+
+export function getStandardHalfLength(format: GameFormat): number {
+  return GAME_FORMATS.find(f => f.key === format)?.halfLength ?? 45;
 }
 
 export type FormationKey =

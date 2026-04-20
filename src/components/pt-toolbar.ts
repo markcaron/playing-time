@@ -2,7 +2,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
 import { enableDragDropTouch } from '@dragdroptouch/drag-drop-touch';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam } from '../lib/types.js';
-import { FORMATIONS_BY_FORMAT, GAME_FORMATS, getPlayerCount } from '../lib/types.js';
+import { FORMATIONS_BY_FORMAT, GAME_FORMATS, getPlayerCount, getStandardHalfLength } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
 import { parseRoster } from '../lib/roster-parser.js';
 
@@ -83,6 +83,18 @@ export class PtSettingsBar extends LitElement {
       display: block;
       z-index: 100;
       font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
     .settings-bar {
@@ -412,6 +424,7 @@ export class PtSettingsBar extends LitElement {
       font-weight: bold;
       color: var(--pt-text);
       cursor: pointer;
+      margin-left: auto;
     }
 
 
@@ -419,6 +432,17 @@ export class PtSettingsBar extends LitElement {
       width: 100%;
       border-collapse: collapse;
       font-size: 0.85rem;
+    }
+
+    .view-team-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .view-meta {
+      font-size: 0.75rem;
+      color: var(--pt-text-muted);
     }
 
     .roster-table th {
@@ -453,6 +477,7 @@ export class PtSettingsBar extends LitElement {
       border: 2px dashed rgba(255, 255, 255, 0.25);
       border-radius: 10px;
       padding: 24px 16px;
+      margin-bottom: 6px;
       text-align: center;
       cursor: pointer;
       transition: border-color 0.15s, background 0.15s;
@@ -518,6 +543,21 @@ export class PtSettingsBar extends LitElement {
       border-top: 1px solid rgba(255, 255, 255, 0.15);
       padding-top: 16px;
       margin-top: 2px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button.export-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--pt-accent);
+      color: var(--pt-accent);
+      background: transparent;
+    }
+
+    button.export-btn:hover {
+      background: rgba(78, 168, 222, 0.1);
     }
 
     button.delete-team-btn {
@@ -685,12 +725,52 @@ export class PtSettingsBar extends LitElement {
       font-size: 0.85rem;
       border: 1px solid rgba(255, 255, 255, 0.25);
       white-space: nowrap;
+      margin-left: auto;
     }
 
     .team-name-row {
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .team-name-row label,
+    .format-field label {
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 80px;
+    }
+
+    .format-half-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 16px;
+    }
+
+    .format-field,
+    .half-length-field {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .format-field label,
+    .half-length-field label {
+      font-size: 0.8rem;
+      color: var(--pt-text-muted);
+      white-space: nowrap;
+    }
+
+    .half-length-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .half-length-unit {
+      font-size: 0.8rem;
+      color: var(--pt-text-muted);
     }
 
     .team-name-input {
@@ -727,6 +807,9 @@ export class PtSettingsBar extends LitElement {
     .name-input { flex: 1; min-width: 0; margin-right: 8px; }
 
     .roster-list {
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 16px;
+      margin-top: 2px;
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -855,6 +938,20 @@ export class PtSettingsBar extends LitElement {
 
   private _requestDeleteTeam() { this._confirmDialog?.showModal(); }
 
+  private _exportRoster() {
+    if (this.roster.length === 0) return;
+    const header = 'Number,Name';
+    const rows = this.roster.map(p => `${p.number},${p.name}`);
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${this.teamName || 'roster'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   private _confirmDeleteTeam() {
     this._confirmDialog?.close();
     if (this.activeTeamId) {
@@ -877,6 +974,8 @@ export class PtSettingsBar extends LitElement {
   private _onGameFormatChange(e: Event) {
     const val = (e.target as HTMLSelectElement).value as GameFormat;
     this.dispatchEvent(new GameFormatChangedEvent(val));
+    const standardHL = getStandardHalfLength(val);
+    this.dispatchEvent(new SettingsChangedEvent(standardHL));
   }
 
   private _onBenchTimeToggle(e: Event) {
@@ -1018,8 +1117,8 @@ export class PtSettingsBar extends LitElement {
       <div class="settings-bar">
         <button class="roster-btn ${this._rosterOpen ? 'open' : ''} ${this.showRosterHint && !this._rosterOpen ? 'hint' : ''}"
                 @click="${this._openRoster}"
-                aria-label="Roster${this.roster.length ? ` (${this.roster.length})` : ''}"
-                title="Roster">
+                aria-label="Rosters${this.roster.length ? ` (${this.roster.length})` : ''}"
+                title="Rosters">
           <svg viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px"><path d="M1250.75 484.752L1150 585.501V790.128L1350 650.128L1250.75 484.752Z" fill="currentColor"/><path d="M450 585.499L349.251 484.75L250 650.123L450 790.123V585.499Z" fill="currentColor"/><path d="M500 575.125V1275.13H1100V575.125C1100 568.5 1102.63 562.125 1107.31 557.437L1224.25 440.5L1210 416.688C1203.62 406.001 1193.44 398.063 1181.5 394.5L950.059 325.063L947.497 330.125C925.059 375 884.871 410.188 835.871 421.063C761.371 437.625 687.991 400.937 655.311 335.563L650.061 325L418.621 394.437C406.684 398 396.496 405.937 390.121 416.625L375.871 440.437L492.808 557.375C497.495 562.062 500.121 568.437 500.121 575.063L500 575.125ZM950 575.125C977.625 575.125 1000 597.5 1000 625.125C1000 652.751 977.625 675.125 950 675.125C922.375 675.125 900 652.751 900 625.125C900 597.5 922.375 575.125 950 575.125ZM600 1125.13H700V1175.13H600V1125.13Z" fill="currentColor"/></svg>
         </button>
         ${this.teamName ? html`
@@ -1028,7 +1127,8 @@ export class PtSettingsBar extends LitElement {
         ${this.roster.length > 0 ? html`<span class="roster-badge">${this.roster.length}</span>` : nothing}
         <span class="spacer"></span>
         <span class="select-wrap">
-          <select @change="${this._onFormationChange}">
+          <label for="formation-select" class="visually-hidden">Formation</label>
+          <select id="formation-select" @change="${this._onFormationChange}">
             ${FORMATIONS_BY_FORMAT[this.gameFormat].map(f => html`
               <option value="${f.key}" .selected="${f.key === this.formation}">${f.label}</option>
             `)}
@@ -1045,7 +1145,7 @@ export class PtSettingsBar extends LitElement {
 
       <dialog id="roster-dialog" @close="${() => this._rosterOpen = false}">
             <div class="roster-dialog-header">
-              <h2>Roster</h2>
+              <h2>Rosters</h2>
               <button class="roster-dialog-close" @click="${this._closeRoster}" aria-label="Close" title="Close">
                 <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
@@ -1060,7 +1160,8 @@ export class PtSettingsBar extends LitElement {
                 <div class="drawer-header">
                   <div class="team-row">
                     <span class="select-wrap team-select-wrap">
-                      <select @change="${this._onTeamSwitch}">
+                      <label for="team-select" class="visually-hidden">Team</label>
+                      <select id="team-select" @change="${this._onTeamSwitch}">
                         ${this.teams.map(t => html`
                           <option value="${t.id}" .selected="${t.id === this.activeTeamId}">${t.teamName || 'Untitled'}</option>
                         `)}
@@ -1073,9 +1174,11 @@ export class PtSettingsBar extends LitElement {
 
                 <div class="drawer-header section-separator">
                   ${!this._editMode ? html`
-                    <span class="team-label">${this.teamName || 'Roster'}</span>
+                    <div class="view-team-info">
+                      <span class="team-label">${this.teamName || 'Roster'}</span>
+                      <span class="view-meta">${this.gameFormat} &middot; ${this.halfLength} min halves &middot; ${this.roster.length} player${this.roster.length !== 1 ? 's' : ''}</span>
+                    </div>
                   ` : nothing}
-                  <span class="spacer"></span>
                   <label class="mode-toggle">
                     Edit
                     <span class="slide-toggle">
@@ -1089,27 +1192,77 @@ export class PtSettingsBar extends LitElement {
                 </div>
 
                 ${this._editMode ? html`
-                  <div class="drawer-header">
-                    <div class="team-name-row">
-                      <label>Team name</label>
-                      <input
-                        class="team-name-input"
-                        type="text"
-                        placeholder="Enter team name"
-                        .value="${this.teamName}"
-                        @input="${this._onTeamNameInput}" />
-                    </div>
-                    <span class="select-wrap">
-                      <select
-                        .value="${this.gameFormat}"
-                        @change="${this._onGameFormatChange}">
-                        ${GAME_FORMATS.map(f => html`
-                          <option value="${f.key}" ?selected="${f.key === this.gameFormat}">${f.label}</option>
-                        `)}
-                      </select>
-                      <span class="caret"></span>
-                    </span>
+                  <div class="team-name-row">
+                    <label for="team-name-input">Team name</label>
+                    <input
+                      id="team-name-input"
+                      class="team-name-input"
+                      type="text"
+                      placeholder="Enter team name"
+                      .value="${this.teamName}"
+                      @input="${this._onTeamNameInput}" />
                   </div>
+                  <div class="format-half-row">
+                    <div class="format-field">
+                      <label for="format-select">Format</label>
+                      <span class="select-wrap">
+                        <select
+                          id="format-select"
+                          .value="${this.gameFormat}"
+                          @change="${this._onGameFormatChange}">
+                          ${GAME_FORMATS.map(f => html`
+                            <option value="${f.key}" ?selected="${f.key === this.gameFormat}">${f.label}</option>
+                          `)}
+                        </select>
+                        <span class="caret"></span>
+                      </span>
+                    </div>
+                    <div class="half-length-field">
+                      <label for="half-length">Half length</label>
+                      <div class="half-length-input-wrap">
+                        <input
+                          id="half-length"
+                          class="player-input settings-number"
+                          type="text"
+                          inputmode="numeric"
+                          maxlength="3"
+                          .value="${String(this.halfLength)}"
+                          ?disabled="${this.timerRunning}"
+                          @input="${this._onHalfLengthInput}" />
+                        <span class="half-length-unit">min</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="roster-list">
+                    ${this.roster.map((p, i) => html`
+                      <div class="roster-row ${this._dragIdx === i ? 'dragging' : ''} ${this._dragOverIdx === i ? 'drag-over' : ''}"
+                           draggable="true"
+                           @dragstart="${() => this._onDragStart(i)}"
+                           @dragover="${(e: DragEvent) => this._onDragOver(e, i)}"
+                           @dragend="${this._onDragEnd}">
+                        <span class="row-idx">${i + 1}</span>
+                        <span class="drag-handle"><svg viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="2" r="1" fill="currentColor"/><circle cx="7" cy="2" r="1" fill="currentColor"/><circle cx="3" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/></svg></span>
+                        <input
+                          class="player-input number-input"
+                          type="text"
+                          inputmode="numeric"
+                          maxlength="2"
+                          placeholder="#"
+                          aria-label="Jersey number for player ${i + 1}"
+                          .value="${p.number}"
+                          @input="${(e: InputEvent) => this._updatePlayer(p.id, 'number', (e.target as HTMLInputElement).value)}" />
+                        <input
+                          class="player-input name-input"
+                          type="text"
+                          placeholder="Player name"
+                          aria-label="Name for player ${i + 1}"
+                          .value="${p.name}"
+                          @input="${(e: InputEvent) => this._updatePlayer(p.id, 'name', (e.target as HTMLInputElement).value)}" />
+                        <button class="danger" aria-label="Remove player" title="Remove player" @click="${() => this._removePlayer(p.id)}"><svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+                      </div>
+                    `)}
+                  </div>
+
                   ${this.roster.length === 0 ? html`
                     <div class="drop-zone ${this._dropZoneDragover ? 'dragover' : ''}"
                          tabindex="0"
@@ -1126,34 +1279,6 @@ export class PtSettingsBar extends LitElement {
                     </div>
                   ` : nothing}
 
-                  <div class="roster-list">
-                    ${this.roster.map((p, i) => html`
-                      <div class="roster-row ${this._dragIdx === i ? 'dragging' : ''} ${this._dragOverIdx === i ? 'drag-over' : ''}"
-                           draggable="true"
-                           @dragstart="${() => this._onDragStart(i)}"
-                           @dragover="${(e: DragEvent) => this._onDragOver(e, i)}"
-                           @dragend="${this._onDragEnd}">
-                        <span class="row-idx">${i + 1}</span>
-                        <span class="drag-handle"><svg viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="2" r="1" fill="currentColor"/><circle cx="7" cy="2" r="1" fill="currentColor"/><circle cx="3" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/></svg></span>
-                        <input
-                          class="player-input number-input"
-                          type="text"
-                          inputmode="numeric"
-                          maxlength="2"
-                          placeholder="#"
-                          .value="${p.number}"
-                          @input="${(e: InputEvent) => this._updatePlayer(p.id, 'number', (e.target as HTMLInputElement).value)}" />
-                        <input
-                          class="player-input name-input"
-                          type="text"
-                          placeholder="Player name"
-                          .value="${p.name}"
-                          @input="${(e: InputEvent) => this._updatePlayer(p.id, 'name', (e.target as HTMLInputElement).value)}" />
-                        <button class="danger" aria-label="Remove player" title="Remove player" @click="${() => this._removePlayer(p.id)}"><svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-                      </div>
-                    `)}
-                  </div>
-
                   <label class="add-player-label">Add player</label>
                   <div class="add-row">
                     <input
@@ -1162,6 +1287,7 @@ export class PtSettingsBar extends LitElement {
                       inputmode="numeric"
                       maxlength="2"
                       placeholder="#"
+                      aria-label="New player jersey number"
                       .value="${this._addNumber}"
                       @input="${this._onAddNumberInput}"
                       @keydown="${this._addPlayerKeydown}" />
@@ -1169,6 +1295,7 @@ export class PtSettingsBar extends LitElement {
                       class="player-input name-input"
                       type="text"
                       placeholder="Player name"
+                      aria-label="New player name"
                       .value="${this._addName}"
                       @input="${this._onAddNameInput}"
                       @keydown="${this._addPlayerKeydown}" />
@@ -1177,6 +1304,7 @@ export class PtSettingsBar extends LitElement {
 
                   <div class="delete-team-section">
                     <button class="delete-team-btn" @click="${this._requestDeleteTeam}">Delete team</button>
+                    <button class="export-btn" @click="${this._exportRoster}" ?disabled="${this.roster.length === 0}">Export roster</button>
                   </div>
                 ` : html`
                   ${this.roster.length === 0 ? html`
@@ -1220,18 +1348,6 @@ export class PtSettingsBar extends LitElement {
               </button>
             </div>
             <div class="roster-dialog-body">
-              <div class="settings-row">
-                <label for="half-length">Half length (min):</label>
-                <input
-                  id="half-length"
-                  class="player-input settings-number"
-                  type="text"
-                  inputmode="numeric"
-                  maxlength="2"
-                  .value="${String(this.halfLength)}"
-                  ?disabled="${this.timerRunning}"
-                  @input="${this._onHalfLengthInput}" />
-              </div>
               <label class="settings-row">
                 Show on-field time:
                 <span class="slide-toggle">

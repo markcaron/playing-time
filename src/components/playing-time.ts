@@ -841,6 +841,8 @@ export class PlayingTime extends LitElement {
 
         <pt-timer-bar
           .halfLength="${this.halfLength}"
+          .teamName="${this.teamName}"
+          .roster="${this.roster}"
           @timer-tick="${this.#onTimerTick}"
           @reset-half="${this.#onResetHalf}"
           @reset-game="${this.#onResetGame}">

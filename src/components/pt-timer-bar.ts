@@ -1,5 +1,6 @@
 import { LitElement, html, svg, css, nothing } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
+import type { RosterEntry } from '../lib/types.js';
 import { formatTime } from '../lib/types.js';
 
 export class TimerTickEvent extends Event {
@@ -52,7 +53,12 @@ export class PtTimerBar extends LitElement {
       align-items: center;
       justify-self: center;
     }
-    .timer-right { justify-self: end; }
+    .timer-right {
+      justify-self: end;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
 
     .timer-display {
       font-size: 1.1rem;
@@ -167,24 +173,55 @@ export class PtTimerBar extends LitElement {
       outline-offset: 2px;
     }
 
-    .reset-btn {
-      padding: 6px 14px;
+    .reset-btn,
+    .times-btn {
+      width: 44px;
+      height: 44px;
       min-height: 44px;
-      font-size: 0.85rem;
       border: 1px solid #e94560;
       border-radius: 6px;
       background: transparent;
       color: #e94560;
       cursor: pointer;
       transition: background 0.15s;
-      font: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+    }
+
+    .reset-btn svg,
+    .times-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .times-btn {
+      border-color: #16213e;
+      color: #16213e;
+    }
+
+    .times-btn:hover {
+      background: rgba(0,0,0,0.05);
+    }
+
+    .times-btn.hint {
+      outline: 2px solid #7fff00;
+      outline-offset: 2px;
+      animation: hintPulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes hintPulse {
+      0%, 100% { outline-color: #7fff00; }
+      50% { outline-color: rgba(127, 255, 0, 0.4); }
     }
 
     .reset-btn:hover {
       background: rgba(233, 69, 96, 0.1);
     }
 
-    .reset-btn:focus-visible {
+    .reset-btn:focus-visible,
+    .times-btn:focus-visible {
       outline: 2px solid #4ea8de;
       outline-offset: 2px;
     }
@@ -329,9 +366,88 @@ export class PtTimerBar extends LitElement {
     .confirm-actions .confirm-warn:hover {
       background: #d4a830;
     }
+
+    #times-dialog {
+      height: calc(100dvh - 32px);
+    }
+
+    .times-dialog-body {
+      padding: 16px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .times-dialog-footer {
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: flex-end;
+      flex-shrink: 0;
+    }
+
+    .times-dialog-footer button {
+      padding: 8px 24px;
+      min-height: 44px;
+      font-size: 0.85rem;
+      border: 1px solid #4ea8de;
+      border-radius: 6px;
+      background: #4ea8de;
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .times-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .times-table th {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+      color: #aaa;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .times-table th.time-col {
+      text-align: right;
+      min-width: 50px;
+    }
+
+    .times-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      color: #e0e0e0;
+    }
+
+    .times-table td.jersey-col {
+      color: #aaa;
+      width: 32px;
+    }
+
+    .times-table td.time-col {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: #aaa;
+    }
+
+    .times-table td.time-col.total {
+      color: #e0e0e0;
+      font-weight: bold;
+    }
+
+    .times-table th.total-col {
+      color: #e0e0e0;
+    }
   `;
 
   @property({ type: Number }) halfLength = 45;
+  @property({ type: String }) teamName = '';
+  @property({ type: Array }) roster: RosterEntry[] = [];
+  @state() private _showTimesHint = false;
 
   @state() private _elapsed = 0;
   @state() private _running = false;
@@ -341,6 +457,7 @@ export class PtTimerBar extends LitElement {
   private _timerInterval: ReturnType<typeof setInterval> | null = null;
 
   @query('#confirm-dialog') private _confirmDialog!: HTMLDialogElement;
+  @query('#times-dialog') private _timesDialog!: HTMLDialogElement;
 
   disconnectedCallback() {
     super.disconnectedCallback();
@@ -369,6 +486,9 @@ export class PtTimerBar extends LitElement {
     if (this._timerInterval) {
       clearInterval(this._timerInterval);
       this._timerInterval = null;
+    }
+    if (this._half === 2 && this._elapsed >= this.halfLength * 60) {
+      this._showTimesHint = true;
     }
   }
 
@@ -415,6 +535,12 @@ export class PtTimerBar extends LitElement {
     this._confirmDialog?.close();
   }
 
+  private _openTimes() {
+    this._showTimesHint = false;
+    this._timesDialog?.showModal();
+  }
+  private _closeTimes() { this._timesDialog?.close(); }
+
   render() {
     return html`
       <div class="timer-bar">
@@ -434,7 +560,8 @@ export class PtTimerBar extends LitElement {
         <div class="timer-center">
           <button class="play-btn ${this._running ? 'running' : ''}"
                   @click="${this._toggleTimer}"
-                  aria-label="${this._running ? 'Stop' : 'Play'}">
+                  aria-label="${this._running ? 'Stop' : 'Play'}"
+                  title="${this._running ? 'Stop' : 'Play'}">
             ${this._running ? svg`
               <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
                 <rect x="2" y="1" width="10" height="12" rx="1" fill="currentColor"/>
@@ -448,15 +575,32 @@ export class PtTimerBar extends LitElement {
           <span class="timer-display ${this._inStoppage ? 'stoppage' : ''}">${this._timeDisplay}</span>
         </div>
         <div class="timer-right">
+          <button class="times-btn ${this._showTimesHint ? 'hint' : ''}"
+                  aria-label="Times/Stats"
+                  title="Times/Stats"
+                  @click="${this._openTimes}">
+            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
+              <path d="m660 243.6v-63.602h60v-120h-240v120h60v63.602c-219.6 30-390 218.4-390 446.4 0 248.4 201.6 450 450 450s450-201.6 450-450c0-228-170.4-416.4-390-446.4zm-60 776.4c-182.4 0-330-147.6-330-330s147.6-330 330-330 330 147.6 330 330-147.6 330-330 330z" fill="currentColor"/>
+              <path d="m151.2 247.2 85.199 84c48-49.199 104.4-86.398 168-112.8l-45.598-110.4c-78 32.398-148.8 79.199-207.6 139.2z" fill="currentColor"/>
+              <path d="m1042.8 241.2c-58.801-57.598-126-102-201.6-133.2l-45.602 110.4c61.199 25.199 116.4 61.199 163.2 108z" fill="currentColor"/>
+              <path d="m642.48 732.32-84.863-84.852 179.89-179.91 84.863 84.852z" fill="currentColor"/>
+            </svg>
+          </button>
           <button class="reset-btn"
-                  @click="${this._requestReset}">Reset</button>
+                  aria-label="Reset"
+                  title="Reset"
+                  @click="${this._requestReset}">
+            <svg viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M515.399 422.213C594.372 362.859 692.519 327.687 798.799 327.687C1059.49 327.687 1271.12 539.313 1271.12 800.007C1271.12 1060.7 1059.49 1272.33 798.799 1272.33C550.319 1272.33 346.439 1080.03 327.866 836.273C325.22 801.607 351.199 771.347 385.866 768.7C420.532 766.053 450.792 792.033 453.439 826.7C467.075 1005.43 616.612 1146.37 798.799 1146.37C989.959 1146.37 1145.16 991.167 1145.16 799.993C1145.16 608.833 989.959 453.633 798.799 453.633C724.736 453.633 656.066 476.931 599.732 516.607H641.358C676.118 516.607 704.331 544.82 704.331 579.58C704.331 614.345 676.118 642.559 641.358 642.559H452.424C417.627 642.559 389.446 614.376 389.446 579.58V390.647C389.446 355.887 417.659 327.673 452.424 327.673C487.184 327.673 515.398 355.887 515.398 390.647L515.399 422.213Z" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
       </div>
 
       <dialog id="confirm-dialog">
         <div class="dialog-header">
           <h2>${this._confirmType === 'switch-half' ? 'Start 2nd half' : this._confirmType === 'reset-game' ? 'Reset game' : 'Reset'}</h2>
-          <button class="dialog-close" @click="${this._cancelConfirm}" aria-label="Close">
+          <button class="dialog-close" @click="${this._cancelConfirm}" aria-label="Close" title="Close">
             <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
         </div>
@@ -490,6 +634,42 @@ export class PtTimerBar extends LitElement {
               </div>
             </div>
           `}
+        </div>
+      </dialog>
+
+      <dialog id="times-dialog" @close="${this._closeTimes}">
+        <div class="dialog-header">
+          <h2>${this.teamName || 'Times'}</h2>
+          <button class="dialog-close" @click="${this._closeTimes}" aria-label="Close" title="Close">
+            <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="times-dialog-body">
+          <table class="times-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player name</th>
+                <th class="time-col">1st</th>
+                <th class="time-col">2nd</th>
+                <th class="time-col total-col">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${this.roster.map(p => html`
+                <tr>
+                  <td class="jersey-col">${p.number}</td>
+                  <td>${p.name}</td>
+                  <td class="time-col">${formatTime(p.half1Time)}</td>
+                  <td class="time-col">${formatTime(p.half2Time)}</td>
+                  <td class="time-col total">${formatTime(p.half1Time + p.half2Time)}</td>
+                </tr>
+              `)}
+            </tbody>
+          </table>
+        </div>
+        <div class="times-dialog-footer">
+          <button @click="${this._closeTimes}">Done</button>
         </div>
       </dialog>
     `;

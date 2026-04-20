@@ -2,7 +2,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
 import { enableDragDropTouch } from '@dragdroptouch/drag-drop-touch';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam } from '../lib/types.js';
-import { FORMATIONS_BY_FORMAT, GAME_FORMATS, formatTime, getPlayerCount } from '../lib/types.js';
+import { FORMATIONS_BY_FORMAT, GAME_FORMATS, getPlayerCount } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
 import { parseRoster } from '../lib/roster-parser.js';
 
@@ -430,11 +430,6 @@ export class PtSettingsBar extends LitElement {
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .roster-table th.time-col {
-      text-align: right;
-      width: 50px;
-    }
-
     .roster-table td {
       padding: 5px 8px 5px 0;
       color: #e0e0e0;
@@ -444,18 +439,6 @@ export class PtSettingsBar extends LitElement {
     .roster-table td.jersey-col {
       color: #aaa;
       width: 32px;
-    }
-
-    .roster-table td.time-col {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-      font-size: 0.8rem;
-      color: #aaa;
-    }
-
-    .roster-table td.time-col.total {
-      font-weight: bold;
-      color: #e0e0e0;
     }
 
     .add-player-label {
@@ -579,11 +562,6 @@ export class PtSettingsBar extends LitElement {
     }
 
     button.edit-team-btn:hover { background: #15803d; }
-
-    .roster-table th.total-col {
-      font-weight: bold;
-      color: #e0e0e0;
-    }
 
     .slide-toggle {
       position: relative;
@@ -860,7 +838,7 @@ export class PtSettingsBar extends LitElement {
   }
 
   private _openRoster() { this._rosterOpen = true; this._rosterDialog?.showModal(); }
-  private _closeRoster() { this._rosterOpen = false; this._rosterDialog?.close(); }
+  private _closeRoster() { this._rosterOpen = false; this._editMode = false; this._rosterDialog?.close(); }
   private _openSettings() { this._settingsOpen = true; this._settingsDialog?.showModal(); }
   private _closeSettings() { this._settingsOpen = false; this._settingsDialog?.close(); }
 
@@ -1040,7 +1018,8 @@ export class PtSettingsBar extends LitElement {
       <div class="settings-bar">
         <button class="roster-btn ${this._rosterOpen ? 'open' : ''} ${this.showRosterHint && !this._rosterOpen ? 'hint' : ''}"
                 @click="${this._openRoster}"
-                aria-label="Roster${this.roster.length ? ` (${this.roster.length})` : ''}">
+                aria-label="Roster${this.roster.length ? ` (${this.roster.length})` : ''}"
+                title="Roster">
           <svg viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px"><path d="M1250.75 484.752L1150 585.501V790.128L1350 650.128L1250.75 484.752Z" fill="currentColor"/><path d="M450 585.499L349.251 484.75L250 650.123L450 790.123V585.499Z" fill="currentColor"/><path d="M500 575.125V1275.13H1100V575.125C1100 568.5 1102.63 562.125 1107.31 557.437L1224.25 440.5L1210 416.688C1203.62 406.001 1193.44 398.063 1181.5 394.5L950.059 325.063L947.497 330.125C925.059 375 884.871 410.188 835.871 421.063C761.371 437.625 687.991 400.937 655.311 335.563L650.061 325L418.621 394.437C406.684 398 396.496 405.937 390.121 416.625L375.871 440.437L492.808 557.375C497.495 562.062 500.121 568.437 500.121 575.063L500 575.125ZM950 575.125C977.625 575.125 1000 597.5 1000 625.125C1000 652.751 977.625 675.125 950 675.125C922.375 675.125 900 652.751 900 625.125C900 597.5 922.375 575.125 950 575.125ZM600 1125.13H700V1175.13H600V1125.13Z" fill="currentColor"/></svg>
         </button>
         ${this.teamName ? html`
@@ -1058,7 +1037,8 @@ export class PtSettingsBar extends LitElement {
         </span>
         <button class="settings-btn ${this._settingsOpen ? 'open' : ''}"
                 @click="${this._openSettings}"
-                aria-label="Settings">
+                aria-label="Settings"
+                title="Settings">
           <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px"><path d="m1170 681.6v-163.2l-186-51.598c-4.8008-14.398-10.801-30-18-44.398l94.801-166.8-116.4-116.4-168 94.801c-13.199-7.1992-28.801-13.199-43.199-18l-50.402-186h-165.6l-50.398 186c-14.398 6-30 12-43.199 18l-168-94.801-116.4 116.4 94.801 166.8c-7.1992 14.398-13.199 28.801-18 44.398l-186 51.602v164.4l186 50.402c4.8008 14.398 10.801 28.801 18 43.199l-94.801 166.8 116.4 116.4 168-94.801c13.199 7.1992 28.801 13.199 43.199 18l51.602 186h164.4l50.402-184.8c14.398-6 30-12 43.199-18l168 94.801 116.4-116.4-94.801-166.8c7.1992-14.398 13.199-28.801 18-43.199zm-570 112.8c-108 0-194.4-86.398-194.4-194.4s86.398-194.4 194.4-194.4 194.4 87.598 194.4 194.4-86.398 194.4-194.4 194.4z" fill="currentColor"/></svg>
         </button>
       </div>
@@ -1066,7 +1046,7 @@ export class PtSettingsBar extends LitElement {
       <dialog id="roster-dialog" @close="${() => this._rosterOpen = false}">
             <div class="roster-dialog-header">
               <h2>Roster</h2>
-              <button class="roster-dialog-close" @click="${this._closeRoster}" aria-label="Close">
+              <button class="roster-dialog-close" @click="${this._closeRoster}" aria-label="Close" title="Close">
                 <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
             </div>
@@ -1169,7 +1149,7 @@ export class PtSettingsBar extends LitElement {
                           placeholder="Player name"
                           .value="${p.name}"
                           @input="${(e: InputEvent) => this._updatePlayer(p.id, 'name', (e.target as HTMLInputElement).value)}" />
-                        <button class="danger" @click="${() => this._removePlayer(p.id)}"><svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+                        <button class="danger" aria-label="Remove player" title="Remove player" @click="${() => this._removePlayer(p.id)}"><svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
                       </div>
                     `)}
                   </div>
@@ -1210,9 +1190,6 @@ export class PtSettingsBar extends LitElement {
                         <tr>
                           <th>#</th>
                           <th>Player name</th>
-                          <th class="time-col">1st</th>
-                          <th class="time-col">2nd</th>
-                          <th class="time-col total-col">Total</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1220,9 +1197,6 @@ export class PtSettingsBar extends LitElement {
                           <tr>
                             <td class="jersey-col">${p.number}</td>
                             <td>${p.name}</td>
-                            <td class="time-col">${formatTime(p.half1Time)}</td>
-                            <td class="time-col">${formatTime(p.half2Time)}</td>
-                            <td class="time-col total">${formatTime(p.half1Time + p.half2Time)}</td>
                           </tr>
                         `)}
                       </tbody>
@@ -1241,7 +1215,7 @@ export class PtSettingsBar extends LitElement {
       <dialog id="settings-dialog" class="settings-dialog" @close="${() => this._settingsOpen = false}">
             <div class="roster-dialog-header">
               <h2>Settings</h2>
-              <button class="roster-dialog-close" @click="${this._closeSettings}" aria-label="Close">
+              <button class="roster-dialog-close" @click="${this._closeSettings}" aria-label="Close" title="Close">
                 <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
             </div>
@@ -1291,7 +1265,7 @@ export class PtSettingsBar extends LitElement {
       <dialog id="confirm-dialog" class="confirm-dialog">
         <div class="roster-dialog-header">
           <h2>Delete team</h2>
-          <button class="roster-dialog-close" @click="${this._cancelConfirm}" aria-label="Close">
+          <button class="roster-dialog-close" @click="${this._cancelConfirm}" aria-label="Close" title="Close">
             <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
         </div>

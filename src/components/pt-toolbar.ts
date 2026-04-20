@@ -161,6 +161,7 @@ export class PtSettingsBar extends LitElement {
       padding: 0;
       width: calc(100% - 32px);
       max-width: 520px;
+      height: calc(100vh - 32px);
       max-height: calc(100vh - 32px);
       display: flex;
       flex-direction: column;

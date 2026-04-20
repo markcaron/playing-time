@@ -11,9 +11,11 @@ const ATK_Y = 10;
 function distribute(lineCount: number): number[] {
   if (lineCount === 1) return [DEF_Y];
   if (lineCount === 2) return [DEF_Y, ATK_Y];
+  const defY = lineCount >= 4 ? DEF_Y + 3 : DEF_Y;
+  const atkY = lineCount >= 4 ? ATK_Y - 3 : ATK_Y;
   const positions: number[] = [];
   for (let i = 0; i < lineCount; i++) {
-    positions.push(DEF_Y - (DEF_Y - ATK_Y) * (i / (lineCount - 1)));
+    positions.push(defY - (defY - atkY) * (i / (lineCount - 1)));
   }
   return positions;
 }

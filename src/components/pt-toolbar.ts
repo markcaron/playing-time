@@ -198,46 +198,14 @@ export class PtToolbar extends LitElement {
       background: #3a8fc4;
     }
 
-    .settings-disclosure { position: relative; }
-
-    .settings-disclosure summary {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      min-height: 44px;
+    .settings-btn {
       border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 6px;
-      background: #0f3460;
-      color: #e0e0e0;
-      font: inherit;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-      list-style: none;
     }
 
-    .settings-disclosure summary::-webkit-details-marker { display: none; }
-    .settings-disclosure summary::marker { display: none; content: ''; }
-
-    .settings-disclosure summary:hover { background: #1a4a7a; }
-
-    .settings-disclosure summary:focus-visible {
-      outline: 2px solid #4ea8de;
-      outline-offset: 2px;
-    }
-
-    .settings-disclosure[open] > summary {
+    .settings-btn.open {
       background: #e94560;
       border-color: #e94560;
       color: #fff;
-    }
-
-    .drawer.settings-drawer {
-      right: 0;
-      left: auto;
-      min-width: 220px;
-      width: auto;
     }
 
     .settings-row {
@@ -248,7 +216,10 @@ export class PtToolbar extends LitElement {
 
     .settings-row label { white-space: nowrap; }
 
-    .settings-number { width: 40px; }
+    .settings-number {
+      width: 56px !important;
+      flex-shrink: 0;
+    }
 
     button {
       display: inline-flex;
@@ -535,35 +506,6 @@ export class PtToolbar extends LitElement {
       pointer-events: none;
     }
 
-    .drawer {
-      position: absolute;
-      top: calc(100% + 8px);
-      left: 0;
-      width: calc(100vw - 24px);
-      max-width: 456px;
-      z-index: 200;
-      background: #0f3460;
-      border: 1px solid #1a4a7a;
-      border-radius: 6px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      max-height: 60vh;
-      overflow-y: auto;
-      overflow-x: hidden;
-      box-sizing: border-box;
-      -webkit-overflow-scrolling: touch;
-      animation: slideDown 0.15s ease-out;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    }
-
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .drawer label,
     .roster-dialog-body label {
       font-size: 0.8rem;
       color: #aaa;
@@ -881,6 +823,7 @@ export class PtToolbar extends LitElement {
   @property({ type: String }) activeTeamId: string | null = null;
 
   @state() private _rosterOpen = false;
+  @state() private _settingsOpen = false;
   @state() private _editMode = false;
   @state() private _addNumber = '';
   @state() private _addName = '';
@@ -906,6 +849,16 @@ export class PtToolbar extends LitElement {
 
   private _closeRoster() {
     this._rosterOpen = false;
+  }
+
+  // --- Settings dialog ---
+
+  private _openSettings() {
+    this._settingsOpen = true;
+  }
+
+  private _closeSettings() {
+    this._settingsOpen = false;
   }
 
   // --- Timer ---
@@ -986,17 +939,6 @@ export class PtToolbar extends LitElement {
   }
 
   // --- Disclosure ---
-
-  private _onDisclosureKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      const details = (e.currentTarget as HTMLElement).closest('details') as HTMLDetailsElement;
-      if (details) {
-        details.open = false;
-        details.querySelector('summary')?.focus();
-      }
-      e.stopPropagation();
-    }
-  }
 
   // --- Team management ---
 
@@ -1123,27 +1065,11 @@ export class PtToolbar extends LitElement {
           </select>
           <span class="caret"></span>
         </span>
-        <details class="settings-disclosure"
-                 @keydown="${this._onDisclosureKeydown}">
-          <summary aria-label="Settings">
-            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px"><path d="m1170 681.6v-163.2l-186-51.598c-4.8008-14.398-10.801-30-18-44.398l94.801-166.8-116.4-116.4-168 94.801c-13.199-7.1992-28.801-13.199-43.199-18l-50.402-186h-165.6l-50.398 186c-14.398 6-30 12-43.199 18l-168-94.801-116.4 116.4 94.801 166.8c-7.1992 14.398-13.199 28.801-18 44.398l-186 51.602v164.4l186 50.402c4.8008 14.398 10.801 28.801 18 43.199l-94.801 166.8 116.4 116.4 168-94.801c13.199 7.1992 28.801 13.199 43.199 18l51.602 186h164.4l50.402-184.8c14.398-6 30-12 43.199-18l168 94.801 116.4-116.4-94.801-166.8c7.1992-14.398 13.199-28.801 18-43.199zm-570 112.8c-108 0-194.4-86.398-194.4-194.4s86.398-194.4 194.4-194.4 194.4 87.598 194.4 194.4-86.398 194.4-194.4 194.4z" fill="currentColor"/></svg>
-            <span class="caret"></span>
-          </summary>
-          <div class="drawer settings-drawer">
-            <div class="settings-row">
-              <label for="half-length">Half length (min):</label>
-              <input
-                id="half-length"
-                class="player-input settings-number"
-                type="text"
-                inputmode="numeric"
-                maxlength="2"
-                .value="${String(this.halfLength)}"
-                ?disabled="${this._running}"
-                @input="${this._onHalfLengthInput}" />
-            </div>
-          </div>
-        </details>
+        <button class="settings-btn ${this._settingsOpen ? 'open' : ''}"
+                @click="${this._openSettings}"
+                aria-label="Settings">
+          <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px"><path d="m1170 681.6v-163.2l-186-51.598c-4.8008-14.398-10.801-30-18-44.398l94.801-166.8-116.4-116.4-168 94.801c-13.199-7.1992-28.801-13.199-43.199-18l-50.402-186h-165.6l-50.398 186c-14.398 6-30 12-43.199 18l-168-94.801-116.4 116.4 94.801 166.8c-7.1992 14.398-13.199 28.801-18 44.398l-186 51.602v164.4l186 50.402c4.8008 14.398 10.801 28.801 18 43.199l-94.801 166.8 116.4 116.4 168-94.801c13.199 7.1992 28.801 13.199 43.199 18l51.602 186h164.4l50.402-184.8c14.398-6 30-12 43.199-18l168 94.801 116.4-116.4-94.801-166.8c7.1992-14.398 13.199-28.801 18-43.199zm-570 112.8c-108 0-194.4-86.398-194.4-194.4s86.398-194.4 194.4-194.4 194.4 87.598 194.4 194.4-86.398 194.4-194.4 194.4z" fill="currentColor"/></svg>
+        </button>
       </div>
 
       <div class="timer-bar">
@@ -1334,6 +1260,36 @@ export class PtToolbar extends LitElement {
                 <button @click="${this._closeRoster}">Done</button>
               </div>
             ` : nothing}
+          </div>
+        </div>
+      ` : nothing}
+
+      ${this._settingsOpen ? html`
+        <div class="roster-overlay" @click="${this._closeSettings}">
+          <div class="roster-dialog" @click="${(e: Event) => e.stopPropagation()}" style="max-width:360px">
+            <div class="roster-dialog-header">
+              <h2>Settings</h2>
+              <button class="roster-dialog-close" @click="${this._closeSettings}" aria-label="Close">
+                <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <div class="roster-dialog-body">
+              <div class="settings-row">
+                <label for="half-length">Half length (min):</label>
+                <input
+                  id="half-length"
+                  class="player-input settings-number"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="2"
+                  .value="${String(this.halfLength)}"
+                  ?disabled="${this._running}"
+                  @input="${this._onHalfLengthInput}" />
+              </div>
+            </div>
+            <div class="roster-dialog-footer">
+              <button @click="${this._closeSettings}">Done</button>
+            </div>
           </div>
         </div>
       ` : nothing}

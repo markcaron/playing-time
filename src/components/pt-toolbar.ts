@@ -537,7 +537,7 @@ export class PtToolbar extends LitElement {
 
     .mode-toggle {
       display: flex;
-      border: 1px solid #1a4a7a;
+      border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 6px;
     }
 
@@ -643,6 +643,40 @@ export class PtToolbar extends LitElement {
       background: #e9456020;
     }
 
+    .empty-warning {
+      background: #fef3c7;
+      border: 1px solid #f0c040;
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: #151515;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    .edit-team-action {
+      text-align: center;
+    }
+
+    button.edit-team-btn {
+      border: 1px solid #16a34a;
+      color: #fff;
+      background: #16a34a;
+      font-weight: bold;
+    }
+
+    button.edit-team-btn:hover {
+      background: #15803d;
+    }
+
+    .roster-table th.total-col {
+      font-weight: bold;
+      color: #e0e0e0;
+    }
+
+    .settings-dialog {
+      max-width: 360px;
+    }
+
     .team-row {
       display: flex;
       align-items: center;
@@ -685,10 +719,8 @@ export class PtToolbar extends LitElement {
     }
 
     button.add-team-btn {
-      padding: 4px 14px 6px;
-      font-size: 1rem;
-      font-weight: bold;
-      line-height: 1;
+      padding: 6px 14px;
+      font-size: 0.85rem;
       border: 1px solid rgba(255, 255, 255, 0.25);
       white-space: nowrap;
     }
@@ -1148,7 +1180,7 @@ export class PtToolbar extends LitElement {
                       </select>
                       <span class="caret"></span>
                     </span>
-                    <button class="add-team-btn" @click="${this._addTeam}" aria-label="Add team">+</button>
+                    <button class="add-team-btn" @click="${this._addTeam}">Add team</button>
                   </div>
                   <span class="spacer"></span>
                   <div class="mode-toggle">
@@ -1239,7 +1271,10 @@ export class PtToolbar extends LitElement {
                   </div>
                 ` : html`
                   ${this.roster.length === 0 ? html`
-                    <div style="color: #666; font-size: 0.8rem;">No players added yet</div>
+                    <div class="empty-warning">No players added yet</div>
+                    <div class="edit-team-action">
+                      <button class="edit-team-btn" @click="${() => this._editMode = true}">Edit team</button>
+                    </div>
                   ` : html`
                     <table class="roster-table">
                       <thead>
@@ -1248,7 +1283,7 @@ export class PtToolbar extends LitElement {
                           <th>Player name</th>
                           <th class="time-col">1H</th>
                           <th class="time-col">2H</th>
-                          <th class="time-col" style="font-weight:bold;color:#e0e0e0">Total</th>
+                          <th class="time-col total-col">Total</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1278,7 +1313,7 @@ export class PtToolbar extends LitElement {
 
       ${this._settingsOpen ? html`
         <div class="roster-overlay" @click="${this._closeSettings}">
-          <div class="roster-dialog" @click="${(e: Event) => e.stopPropagation()}" style="max-width:360px">
+          <div class="roster-dialog settings-dialog" @click="${(e: Event) => e.stopPropagation()}">
             <div class="roster-dialog-header">
               <h2>Settings</h2>
               <button class="roster-dialog-close" @click="${this._closeSettings}" aria-label="Close">

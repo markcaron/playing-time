@@ -101,51 +101,70 @@ export class PtTimerBar extends LitElement {
     }
 
     .half-toggle {
-      display: flex;
-      border: 1px solid rgba(0, 0, 0, 0.2);
-      border-radius: 6px;
-    }
-
-    .half-toggle button {
-      padding: 6px 12px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 0;
-      background: transparent;
-      color: #666;
-      transition: background 0.15s, color 0.15s;
-      min-width: 0;
-      min-height: 44px;
       display: inline-flex;
       align-items: center;
-      gap: 3px;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: #999;
+    }
+
+    .half-toggle .half-label {
+      font-weight: bold;
+    }
+
+    .half-toggle .half-label.active {
+      color: #16213e;
+    }
+
+    .half-slide {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      width: 72px;
+      height: 36px;
+      flex-shrink: 0;
       cursor: pointer;
-      font: inherit;
     }
 
-    .half-toggle button:first-child { border-radius: 5px 0 0 5px; }
-    .half-toggle button:last-child { border-radius: 0 5px 5px 0; }
-
-    .half-toggle button.active {
-      background: #16213e;
-      color: #fff;
-    }
-
-    .half-toggle button.active:disabled { opacity: 1; }
-    .half-toggle button:disabled:not(.active) { opacity: 0.35; }
-
-    .half-toggle button:disabled {
-      cursor: default;
+    .half-slide.disabled {
+      opacity: 0.35;
       pointer-events: none;
     }
 
-    .half-dot {
-      width: 6px;
-      height: 6px;
+    .half-slide .slide-track {
+      position: absolute;
+      inset: 0;
+      background: #16213e;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      border-radius: 18px;
+    }
+
+    .half-slide .slide-thumb {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
       border-radius: 50%;
-      background: #4ade80;
-      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: bold;
+      color: #16213e;
+      user-select: none;
+    }
+
+    .half-slide.on .slide-thumb {
+      transform: translateX(36px);
+    }
+
+    .half-slide:focus-visible .slide-track {
+      outline: 2px solid #4ea8de;
+      outline-offset: 2px;
     }
 
     .reset-btn {
@@ -360,12 +379,16 @@ export class PtTimerBar extends LitElement {
       <div class="timer-bar">
         <div class="timer-left">
           <div class="half-toggle">
-            <button class="${this._half === 1 ? 'active' : ''}"
-                    ?disabled="${this._half === 1 || this._running}"
-                    @click="${this._requestSwitchTo1H}">${this._half === 1 ? html`<span class="half-dot"></span>` : nothing}1H</button>
-            <button class="${this._half === 2 ? 'active' : ''}"
-                    ?disabled="${this._half === 2 || this._running}"
-                    @click="${this._requestSwitchTo2H}">2H${this._half === 2 ? html`<span class="half-dot"></span>` : nothing}</button>
+            <span class="half-label active">Half</span>
+            <div class="half-slide ${this._half === 2 ? 'on' : ''} ${this._running ? 'disabled' : ''}"
+                 tabindex="0"
+                 role="switch"
+                 aria-checked="${this._half === 2}"
+                 aria-label="Switch half"
+                 @click="${() => this._half === 1 ? this._requestSwitchTo2H() : this._requestSwitchTo1H()}">
+              <span class="slide-track"></span>
+              <span class="slide-thumb">${this._half === 1 ? '1st' : '2nd'}</span>
+            </div>
           </div>
         </div>
         <div class="timer-center">
@@ -399,7 +422,7 @@ export class PtTimerBar extends LitElement {
               <div class="confirm-actions">
                 <button @click="${this._cancelConfirm}">Cancel</button>
                 <div class="confirm-actions-right">
-                  <button class="confirm-yes" @click="${this._confirmSwitchHalf}">Start 2H</button>
+                  <button class="confirm-yes" @click="${this._confirmSwitchHalf}">Start 2nd Half</button>
                 </div>
               </div>
             ` : this._confirmAction === 'reset-game' ? html`

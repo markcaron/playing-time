@@ -1,4 +1,4 @@
-# Playing Time
+# PlayingTime
 
 A mobile-first soccer coaching app built with [Lit](https://lit.dev/) Web Components and [Vite](https://vite.dev/). Designed for managing rosters, formations, substitutions, and tracking individual playing time during games.
 

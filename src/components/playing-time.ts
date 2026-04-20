@@ -8,10 +8,11 @@ import { getFormationPositions } from '../lib/formations.js';
 import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadAppState, saveAppState, createNewTeam } from '../lib/storage.js';
 import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState } from '../lib/types.js';
-import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, getPlayerCount, getDefaultFormation } from '../lib/types.js';
+import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, getPlayerCount, getDefaultFormation, formatTime } from '../lib/types.js';
 import type {
   RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent,
   GameFormatChangedEvent, TeamSwitchedEvent, TeamAddedEvent, TeamDeletedEvent,
+  BenchTimeToggleEvent,
 } from './pt-toolbar.js';
 import type { TimerTickEvent, ResetHalfEvent, ResetGameEvent } from './pt-timer-bar.js';
 
@@ -25,7 +26,7 @@ const SEL_RING_OFFSET = 0.6;
 const SWAP_THRESHOLD = PLAYER_RADIUS * 2;
 const BENCH_TOP = FIELD.LENGTH + GOAL_DEPTH + PADDING + 2;
 const BENCH_LABEL_SIZE = NAME_FONT_SIZE;
-const BENCH_ROW_SPACING = PLAYER_RADIUS * 2 + NAME_FONT_SIZE + 3;
+const BENCH_ROW_SPACING = PLAYER_RADIUS * 2 + NAME_FONT_SIZE * 2 + 4;
 const BENCH_COL_SPACING = FIELD.WIDTH / 5;
 
 function layoutBench(count: number): { x: number; y: number }[] {
@@ -164,6 +165,7 @@ export class PlayingTime extends LitElement {
   @state() accessor fieldPlayers: FieldPlayer[] = [];
   @state() accessor subPlayers: FieldPlayer[] = [];
   @state() accessor halfLength = 45;
+  @state() accessor showBenchTime = true;
   @state() accessor selectedId: string | null = null;
   @state() accessor swapTargetId: string | null = null;
 
@@ -189,6 +191,11 @@ export class PlayingTime extends LitElement {
       this.#loadTeam(appState.activeTeamId);
     } else if (appState.teams.length > 0) {
       this.#loadTeam(appState.teams[0].id);
+    } else {
+      const newTeam = createNewTeam();
+      this.teams = [newTeam];
+      this.#loadTeam(newTeam.id);
+      this.#saveState();
     }
   }
 
@@ -199,6 +206,7 @@ export class PlayingTime extends LitElement {
     this.activeTeamId = teamId;
     this.teamName = team.teamName;
     this.halfLength = team.halfLength;
+    this.showBenchTime = team.showBenchTime ?? true;
     this.gameFormat = team.gameFormat;
     this.formation = team.formation;
     this.roster = team.players.map(p => ({
@@ -207,6 +215,7 @@ export class PlayingTime extends LitElement {
       name: p.name,
       half1Time: p.half1Time ?? 0,
       half2Time: p.half2Time ?? 0,
+      benchTime: p.benchTime ?? 0,
     }));
 
     this.#rebuildFieldPlayers();
@@ -263,8 +272,10 @@ export class PlayingTime extends LitElement {
         name: p.name,
         half1Time: p.half1Time,
         half2Time: p.half2Time,
+        benchTime: p.benchTime,
       })),
       halfLength: this.halfLength,
+      showBenchTime: this.showBenchTime,
       gameFormat: this.gameFormat,
       formation: this.formation,
       fieldPositions: this.fieldPlayers.map(fp => ({
@@ -317,6 +328,7 @@ export class PlayingTime extends LitElement {
       ...p,
       half1Time: p.half1Time ?? 0,
       half2Time: p.half2Time ?? 0,
+      benchTime: p.benchTime ?? 0,
     }));
     this.#saveState();
     this.#rebuildFieldPlayers();
@@ -328,23 +340,33 @@ export class PlayingTime extends LitElement {
     this.#saveState();
   }
 
+  #onBenchTimeToggle(e: BenchTimeToggleEvent) {
+    this.showBenchTime = e.showBenchTime;
+    this.#saveState();
+  }
+
   #onTimerTick(e: TimerTickEvent) {
     const field = e.half === 1 ? 'half1Time' : 'half2Time';
     const fieldPlayerIds = new Set(this.fieldPlayers.map(fp => fp.id));
     this.roster = this.roster.map(p =>
-      fieldPlayerIds.has(p.id) ? { ...p, [field]: p[field] + 1 } : p,
+      fieldPlayerIds.has(p.id)
+        ? { ...p, [field]: p[field] + 1 }
+        : { ...p, benchTime: p.benchTime + 1 },
     );
+    this.#rebuildSubPlayers();
     this.#saveState();
   }
 
   #onResetHalf(e: ResetHalfEvent) {
     const field = e.half === 1 ? 'half1Time' : 'half2Time';
-    this.roster = this.roster.map(p => ({ ...p, [field]: 0 }));
+    this.roster = this.roster.map(p => ({ ...p, [field]: 0, benchTime: 0 }));
+    this.#rebuildSubPlayers();
     this.#saveState();
   }
 
   #onResetGame(_e: ResetGameEvent) {
-    this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0 }));
+    this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0, benchTime: 0 }));
+    this.#rebuildSubPlayers();
     this.#saveState();
   }
 
@@ -404,7 +426,7 @@ export class PlayingTime extends LitElement {
     if (fieldIdx === -1 || subIdx === -1) return;
 
     const tmp = rosterCopy[fieldIdx];
-    rosterCopy[fieldIdx] = rosterCopy[subIdx];
+    rosterCopy[fieldIdx] = { ...rosterCopy[subIdx], benchTime: 0 };
     rosterCopy[subIdx] = tmp;
 
     const newFieldEntry = rosterCopy[fieldIdx];
@@ -473,6 +495,16 @@ export class PlayingTime extends LitElement {
     const newX = pt.x - this.#dragState.offsetX;
     const newY = pt.y - this.#dragState.offsetY;
 
+    const tolerance = PLAYER_RADIUS * 0.25;
+    const minX = -tolerance;
+    const maxX = FIELD.WIDTH + tolerance;
+    const minY = -tolerance;
+
+    if (newX < minX || newX > maxX || newY < minY) {
+      this.#snapBack();
+      return;
+    }
+
     const isField = this.#dragState.source === 'field';
     const currentList = isField ? this.fieldPlayers : this.subPlayers;
     const currentPlayer = currentList.find(p => p.id === this.#dragState!.id);
@@ -539,6 +571,11 @@ export class PlayingTime extends LitElement {
       } else if (!this.#dragState.moved) {
         this.#selectPlayer(this.#dragState.id);
       } else if (this.#dragState.source === 'field') {
+        const draggedPlayer = this.fieldPlayers.find(p => p.id === this.#dragState!.id);
+        if (draggedPlayer && draggedPlayer.y > FIELD.LENGTH + GOAL_DEPTH) {
+          this.#snapBack();
+          return;
+        }
         this.#saveState();
       } else {
         this.#rebuildSubPlayers();
@@ -546,6 +583,20 @@ export class PlayingTime extends LitElement {
       this.#dragState = null;
       this.swapTargetId = null;
     }
+  }
+
+  #snapBack() {
+    if (!this.#dragState) return;
+    const { id, originX, originY, source } = this.#dragState;
+    if (source === 'field') {
+      this.fieldPlayers = this.fieldPlayers.map(p =>
+        p.id === id ? { ...p, x: originX, y: originY } : p,
+      );
+    } else {
+      this.#rebuildSubPlayers();
+    }
+    this.#dragState = null;
+    this.swapTargetId = null;
   }
 
   #onPointerLeave(_e: PointerEvent) {
@@ -638,8 +689,22 @@ export class PlayingTime extends LitElement {
               style="pointer-events: none">
           ${truncName(p.name)}
         </text>
+        ${kind === 'sub' && this.showBenchTime && this.#getBenchTime(p.id) > 0 ? svg`
+          <text x="${p.x}" y="${p.y + PLAYER_RADIUS + 2 + NAME_FONT_SIZE + 1}"
+                text-anchor="middle" dominant-baseline="central"
+                fill="#e94560" font-size="${NAME_FONT_SIZE * 0.75}"
+                font-family="system-ui, sans-serif"
+                filter="url(#text-shadow)"
+                style="pointer-events: none">
+            ${formatTime(this.#getBenchTime(p.id))}
+          </text>
+        ` : nothing}
       </g>
     `;
+  }
+
+  #getBenchTime(playerId: string): number {
+    return this.roster.find(r => r.id === playerId)?.benchTime ?? 0;
   }
 
   render() {
@@ -665,8 +730,10 @@ export class PlayingTime extends LitElement {
           .halfLength="${this.halfLength}"
           .teams="${this.teams}"
           .activeTeamId="${this.activeTeamId}"
-          .showRosterHint="${this.roster.length === 0 && this.activeTeamId != null}"
+          .showRosterHint="${this.roster.length === 0}"
+          .showBenchTime="${this.showBenchTime}"
           @roster-updated="${this.#onRosterUpdated}"
+          @bench-time-toggle="${this.#onBenchTimeToggle}"
           @game-format-changed="${this.#onGameFormatChanged}"
           @formation-changed="${this.#onFormationChanged}"
           @settings-changed="${this.#onSettingsChanged}"
@@ -742,7 +809,7 @@ export class PlayingTime extends LitElement {
               </g>
             ` : nothing}
           </svg>
-          ${this.roster.length === 0 && this.activeTeamId != null ? html`
+          ${this.roster.length === 0 ? html`
             <div class="onboarding-card">
               Add players to your team.
               <svg viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg"><path d="M1250.75 484.752L1150 585.501V790.128L1350 650.128L1250.75 484.752Z" fill="currentColor"/><path d="M450 585.499L349.251 484.75L250 650.123L450 790.123V585.499Z" fill="currentColor"/><path d="M500 575.125V1275.13H1100V575.125C1100 568.5 1102.63 562.125 1107.31 557.437L1224.25 440.5L1210 416.688C1203.62 406.001 1193.44 398.063 1181.5 394.5L950.059 325.063L947.497 330.125C925.059 375 884.871 410.188 835.871 421.063C761.371 437.625 687.991 400.937 655.311 335.563L650.061 325L418.621 394.437C406.684 398 396.496 405.937 390.121 416.625L375.871 440.437L492.808 557.375C497.495 562.062 500.121 568.437 500.121 575.063L500 575.125ZM950 575.125C977.625 575.125 1000 597.5 1000 625.125C1000 652.751 977.625 675.125 950 675.125C922.375 675.125 900 652.751 900 625.125C900 597.5 922.375 575.125 950 575.125ZM600 1125.13H700V1175.13H600V1125.13Z" fill="currentColor"/></svg>

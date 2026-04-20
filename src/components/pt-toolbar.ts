@@ -1,5 +1,6 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { enableDragDropTouch } from '@dragdroptouch/drag-drop-touch';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam } from '../lib/types.js';
 import { FORMATIONS_BY_FORMAT, GAME_FORMATS, formatTime, getPlayerCount } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
@@ -32,6 +33,13 @@ export class SettingsChangedEvent extends Event {
   static readonly eventName = 'settings-changed' as const;
   constructor(public halfLength: number) {
     super(SettingsChangedEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class BenchTimeToggleEvent extends Event {
+  static readonly eventName = 'bench-time-toggle' as const;
+  constructor(public showBenchTime: boolean) {
+    super(BenchTimeToggleEvent.eventName, { bubbles: true, composed: true });
   }
 }
 
@@ -238,6 +246,7 @@ export class PtSettingsBar extends LitElement {
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-bottom: 12px;
     }
 
     .settings-row label { white-space: nowrap; }
@@ -381,41 +390,21 @@ export class PtSettingsBar extends LitElement {
     }
 
     .mode-toggle {
-      display: flex;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 6px;
-    }
-
-    .mode-toggle button {
-      padding: 6px 14px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 0;
-      background: transparent;
-      color: #aaa;
-      transition: background 0.15s, color 0.15s;
-      min-width: 0;
       display: inline-flex;
       align-items: center;
-      gap: 3px;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: #aaa;
     }
 
-    .mode-toggle button:first-child { border-radius: 5px 0 0 5px; }
-    .mode-toggle button:last-child { border-radius: 0 5px 5px 0; }
-
-    .mode-toggle button.active {
-      background: #fff;
-      color: #16213e;
+    .mode-toggle .mode-label {
+      font-weight: bold;
     }
 
-    .half-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #4ade80;
-      flex-shrink: 0;
+    .mode-toggle .mode-label.active {
+      color: #e0e0e0;
     }
+
 
     .roster-table {
       width: 100%;
@@ -496,12 +485,23 @@ export class PtSettingsBar extends LitElement {
       border: 1px solid #f0c040;
       border-radius: 6px;
       padding: 10px 14px;
+      margin-top: 8px;
       color: #151515;
       font-size: 0.85rem;
-      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
-    .edit-team-action { text-align: center; }
+    .empty-warning .warning-icon {
+      flex-shrink: 0;
+      font-size: 1.1rem;
+    }
+
+    .edit-team-action {
+      text-align: center;
+      margin-top: 8px;
+    }
 
     button.edit-team-btn {
       border: 1px solid #16a34a;
@@ -515,6 +515,64 @@ export class PtSettingsBar extends LitElement {
     .roster-table th.total-col {
       font-weight: bold;
       color: #e0e0e0;
+    }
+
+    .slide-toggle {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      width: 72px;
+      height: 36px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .slide-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+
+    .slide-track {
+      position: absolute;
+      inset: 0;
+      background: #16213e;
+      border: 1px solid #1a4a7a;
+      border-radius: 18px;
+      transition: background 0.2s;
+    }
+
+    .slide-thumb {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: bold;
+      color: #666;
+      user-select: none;
+    }
+
+    .slide-toggle input:checked ~ .slide-track {
+      background: #16a34a;
+    }
+
+    .slide-toggle input:checked ~ .slide-thumb {
+      transform: translateX(36px);
+      color: #16a34a;
+    }
+
+    .slide-toggle input:focus-visible ~ .slide-track {
+      outline: 2px solid #4ea8de;
+      outline-offset: 2px;
     }
 
     .settings-dialog { max-width: 360px; }
@@ -706,6 +764,7 @@ export class PtSettingsBar extends LitElement {
   @property({ type: Array }) teams: StoredTeam[] = [];
   @property({ type: String }) activeTeamId: string | null = null;
   @property({ type: Boolean }) timerRunning = false;
+  @property({ type: Boolean }) showBenchTime = true;
 
   @state() private _rosterOpen = false;
   @state() private _settingsOpen = false;
@@ -715,6 +774,12 @@ export class PtSettingsBar extends LitElement {
   @state() private _dragIdx: number | null = null;
   @state() private _dragOverIdx: number | null = null;
   @state() private _confirmAction: 'delete-team' | null = null;
+
+  firstUpdated() {
+    if (this.shadowRoot) {
+      enableDragDropTouch(this.shadowRoot, this.shadowRoot);
+    }
+  }
 
   private _openRoster() { this._rosterOpen = true; }
   private _closeRoster() { this._rosterOpen = false; }
@@ -758,6 +823,11 @@ export class PtSettingsBar extends LitElement {
     this.dispatchEvent(new GameFormatChangedEvent(val));
   }
 
+  private _onBenchTimeToggle(e: Event) {
+    const checked = (e.target as HTMLInputElement).checked;
+    this.dispatchEvent(new BenchTimeToggleEvent(checked));
+  }
+
   private _onHalfLengthInput(e: InputEvent) {
     const val = parseInt((e.target as HTMLInputElement).value, 10);
     if (!isNaN(val) && val > 0) {
@@ -776,6 +846,7 @@ export class PtSettingsBar extends LitElement {
       name: this._addName.trim(),
       half1Time: 0,
       half2Time: 0,
+      benchTime: 0,
     };
     const updated = [...this.roster, entry];
     this._addNumber = '';
@@ -873,10 +944,14 @@ export class PtSettingsBar extends LitElement {
                   </div>
                   <span class="spacer"></span>
                   <div class="mode-toggle">
-                    <button class="${!this._editMode ? 'active' : ''}"
-                            @click="${() => this._editMode = false}">${!this._editMode ? html`<span class="half-dot"></span>` : nothing}View</button>
-                    <button class="${this._editMode ? 'active' : ''}"
-                            @click="${() => this._editMode = true}">Edit${this._editMode ? html`<span class="half-dot"></span>` : nothing}</button>
+                    <span class="mode-label ${this._editMode ? 'active' : ''}">Edit</span>
+                    <label class="slide-toggle">
+                      <input type="checkbox"
+                             .checked="${this._editMode}"
+                             @change="${(e: Event) => this._editMode = (e.target as HTMLInputElement).checked}" />
+                      <span class="slide-track"></span>
+                      <span class="slide-thumb">${this._editMode ? 'On' : 'Off'}</span>
+                    </label>
                   </div>
                 </div>
 
@@ -961,7 +1036,7 @@ export class PtSettingsBar extends LitElement {
                   </div>
                 ` : html`
                   ${this.roster.length === 0 ? html`
-                    <div class="empty-warning">No players added yet</div>
+                    <div class="empty-warning"><span class="warning-icon">&#9888;</span> No players added yet</div>
                     <div class="edit-team-action">
                       <button class="edit-team-btn" @click="${() => this._editMode = true}">Edit team</button>
                     </div>
@@ -971,8 +1046,8 @@ export class PtSettingsBar extends LitElement {
                         <tr>
                           <th>#</th>
                           <th>Player name</th>
-                          <th class="time-col">1H</th>
-                          <th class="time-col">2H</th>
+                          <th class="time-col">1st</th>
+                          <th class="time-col">2nd</th>
                           <th class="time-col total-col">Total</th>
                         </tr>
                       </thead>
@@ -1023,9 +1098,19 @@ export class PtSettingsBar extends LitElement {
                   ?disabled="${this.timerRunning}"
                   @input="${this._onHalfLengthInput}" />
               </div>
+              <div class="settings-row">
+                <label for="bench-time-toggle">Show bench time:</label>
+                <label class="slide-toggle">
+                  <input type="checkbox" id="bench-time-toggle"
+                         .checked="${this.showBenchTime}"
+                         @change="${this._onBenchTimeToggle}" />
+                  <span class="slide-track"></span>
+                  <span class="slide-thumb">${this.showBenchTime ? 'On' : 'Off'}</span>
+                </label>
+              </div>
               <div class="settings-branding">
                 <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" class="branding-icon"><path d="m660 243.6v-63.602h60v-120h-240v120h60v63.602c-219.6 30-390 218.4-390 446.4 0 248.4 201.6 450 450 450s450-201.6 450-450c0-228-170.4-416.4-390-446.4zm-60 776.4c-182.4 0-330-147.6-330-330s147.6-330 330-330 330 147.6 330 330-147.6 330-330 330z" fill="currentColor"/><path d="m151.2 247.2 85.199 84c48-49.199 104.4-86.398 168-112.8l-45.598-110.4c-78 32.398-148.8 79.199-207.6 139.2z" fill="currentColor"/><path d="m1042.8 241.2c-58.801-57.598-126-102-201.6-133.2l-45.602 110.4c61.199 25.199 116.4 61.199 163.2 108z" fill="currentColor"/><path d="m642.48 732.32-84.863-84.852 179.89-179.91 84.863 84.852z" fill="currentColor"/></svg>
-                Playing Time by Mark Caron
+                PlayingTime by Mark Caron
               </div>
             </div>
             <div class="roster-dialog-footer">

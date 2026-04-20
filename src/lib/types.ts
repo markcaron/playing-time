@@ -4,6 +4,7 @@ export interface RosterEntry {
   name: string;
   half1Time: number;
   half2Time: number;
+  benchTime: number;
 }
 
 export interface FieldPlayer {
@@ -76,6 +77,7 @@ export interface StoredPlayer {
   name: string;
   half1Time?: number;
   half2Time?: number;
+  benchTime?: number;
 }
 
 export interface StoredPosition {
@@ -92,6 +94,7 @@ export interface StoredTeam {
   gameFormat: GameFormat;
   formation: FormationKey;
   fieldPositions?: StoredPosition[];
+  showBenchTime?: boolean;
 }
 
 export interface StoredAppState {

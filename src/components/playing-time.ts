@@ -16,12 +16,17 @@ import type {
 import type { TimerTickEvent, ResetHalfEvent, ResetGameEvent } from './pt-timer-bar.js';
 
 const GOAL_DEPTH = 2;
+const MAX_NAME_CHARS = 8;
+
+function truncName(name: string): string {
+  return name.length > MAX_NAME_CHARS ? name.slice(0, MAX_NAME_CHARS) + '\u2026' : name;
+}
 const SEL_RING_OFFSET = 0.6;
 const SWAP_THRESHOLD = PLAYER_RADIUS * 2;
 const BENCH_TOP = FIELD.LENGTH + GOAL_DEPTH + PADDING + 2;
 const BENCH_LABEL_SIZE = NAME_FONT_SIZE;
 const BENCH_ROW_SPACING = PLAYER_RADIUS * 2 + NAME_FONT_SIZE + 3;
-const BENCH_COL_SPACING = PLAYER_RADIUS * 2 + 3;
+const BENCH_COL_SPACING = FIELD.WIDTH / 5;
 
 function layoutBench(count: number): { x: number; y: number }[] {
   if (count === 0) return [];
@@ -606,7 +611,7 @@ export class PlayingTime extends LitElement {
               font-family="system-ui, sans-serif"
               filter="url(#text-shadow)"
               style="pointer-events: none">
-          ${p.name}
+          ${truncName(p.name)}
         </text>
       </g>
     `;

@@ -149,37 +149,6 @@ export class PtTimerBar extends LitElement {
     }
 
     .reset-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 1px solid rgba(0, 0, 0, 0.15);
-      background: transparent;
-      color: #666;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      transition: background 0.15s, color 0.15s;
-      font: inherit;
-    }
-
-    .reset-btn:hover {
-      background: rgba(0, 0, 0, 0.08);
-      color: #16213e;
-    }
-
-    .reset-btn:focus-visible {
-      outline: 2px solid #4ea8de;
-      outline-offset: 2px;
-    }
-
-    .reset-btn svg {
-      width: 12px;
-      height: 12px;
-    }
-
-    .reset-game-btn {
       padding: 6px 14px;
       min-height: 44px;
       font-size: 0.85rem;
@@ -192,11 +161,11 @@ export class PtTimerBar extends LitElement {
       font: inherit;
     }
 
-    .reset-game-btn:hover {
+    .reset-btn:hover {
       background: rgba(233, 69, 96, 0.1);
     }
 
-    .reset-game-btn:focus-visible {
+    .reset-btn:focus-visible {
       outline: 2px solid #4ea8de;
       outline-offset: 2px;
     }
@@ -262,6 +231,16 @@ export class PtTimerBar extends LitElement {
     .confirm-actions .confirm-yes:hover {
       background: #d13350;
     }
+
+    .confirm-actions .confirm-warn {
+      background: #f0c040;
+      border-color: #f0c040;
+      color: #151515;
+    }
+
+    .confirm-actions .confirm-warn:hover {
+      background: #d4a830;
+    }
   `;
 
   @property({ type: Number }) halfLength = 45;
@@ -269,7 +248,7 @@ export class PtTimerBar extends LitElement {
   @state() private _elapsed = 0;
   @state() private _running = false;
   @state() private _half: 1 | 2 = 1;
-  @state() private _confirmAction: 'reset' | 'switch-half' | 'reset-game' | null = null;
+  @state() private _confirmAction: 'reset-choice' | 'switch-half' | 'reset-game' | null = null;
 
   private _timerInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -338,10 +317,10 @@ export class PtTimerBar extends LitElement {
 
   private _requestReset() {
     this._stopTimer();
-    this._confirmAction = 'reset';
+    this._confirmAction = 'reset-choice';
   }
 
-  private _confirmReset() {
+  private _confirmResetHalf() {
     this._elapsed = 0;
     this.dispatchEvent(new ResetHalfEvent(this._half));
     this._confirmAction = null;
@@ -379,39 +358,36 @@ export class PtTimerBar extends LitElement {
             `}
           </button>
           <span class="timer-display ${this._inStoppage ? 'stoppage' : ''}">${this._timeDisplay}</span>
-          <button class="reset-btn"
-                  @click="${this._requestReset}"
-                  aria-label="Reset timer">
-            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m1011.6 216c-206.4-206.4-537.6-211.2-750-18l-49.199-49.199c-19.199-19.199-48-26.398-74.398-19.199-26.398 8.3984-46.801 30-51.602 56.398l-55.203 256.8c-4.8008 25.199 2.3984 50.398 20.398 68.398s43.199 25.199 68.398 20.398l256.8-54c14.398-3.6016 27.602-10.801 37.199-20.398 8.3984-8.3984 15.602-19.199 19.199-31.199 7.1992-26.398 0-55.199-19.199-74.398l-46.801-46.801c154.8-136.8 390-130.8 537.61 16.801 153.6 153.6 153.6 403.2 0 556.8-153.6 153.6-403.2 153.6-556.8-0.003906-49.199-49.199-84-110.4-102-177.6-10.801-39.602-51.602-63.602-91.199-52.801-39.602 10.801-63.602 51.602-52.801 91.199 24 92.398 73.199 177.6 141.6 244.8 212.4 212.4 556.8 212.4 769.2 0 210-211.2 210-556.8-1.1992-768z" fill="currentColor"/></svg>
-          </button>
         </div>
         <div class="timer-right">
-          <button class="reset-game-btn"
-                  @click="${this._requestSwitchTo1H}">Reset Game</button>
+          <button class="reset-btn"
+                  @click="${this._requestReset}">Reset</button>
         </div>
       </div>
 
       ${this._confirmAction ? html`
         <div class="confirm-overlay" @click="${this._cancelConfirm}">
           <div class="confirm-dialog" @click="${(e: Event) => e.stopPropagation()}">
-            ${this._confirmAction === 'reset' ? html`
-              <p>Reset ${this._half === 1 ? '1H' : '2H'} clock?<br>All player time for this half will be cleared.</p>
-            ` : this._confirmAction === 'switch-half' ? html`
+            ${this._confirmAction === 'switch-half' ? html`
               <p>Start 2nd half?<br>The clock will reset to 00:00.</p>
-            ` : html`
+              <div class="confirm-actions">
+                <button @click="${this._cancelConfirm}">Cancel</button>
+                <button class="confirm-yes" @click="${this._confirmSwitchHalf}">Start 2H</button>
+              </div>
+            ` : this._confirmAction === 'reset-game' ? html`
               <p>Reset entire game?<br>The clock and all player times for both halves will be cleared.</p>
+              <div class="confirm-actions">
+                <button @click="${this._cancelConfirm}">Cancel</button>
+                <button class="confirm-yes" @click="${this._confirmResetGame}">Reset Game</button>
+              </div>
+            ` : html`
+              <p>Reset clock or entire game?</p>
+              <div class="confirm-actions">
+                <button @click="${this._cancelConfirm}">Cancel</button>
+                <button class="confirm-warn" @click="${this._confirmResetHalf}">Reset Half</button>
+                <button class="confirm-yes" @click="${this._confirmResetGame}">Reset Game</button>
+              </div>
             `}
-            <div class="confirm-actions">
-              <button @click="${this._cancelConfirm}">Cancel</button>
-              <button class="confirm-yes" @click="${
-                this._confirmAction === 'reset' ? this._confirmReset
-                : this._confirmAction === 'switch-half' ? this._confirmSwitchHalf
-                : this._confirmResetGame}">
-                ${this._confirmAction === 'reset' ? 'Reset'
-                  : this._confirmAction === 'switch-half' ? 'Start 2H'
-                  : 'Reset Game'}
-              </button>
-            </div>
           </div>
         </div>
       ` : nothing}

@@ -206,6 +206,19 @@ export class PtTimerBar extends LitElement {
       line-height: 1.4;
     }
 
+    .confirm-list {
+      margin: 0 0 20px;
+      padding: 0 0 0 20px;
+      text-align: left;
+      font-size: 0.85rem;
+      color: #aaa;
+      line-height: 1.6;
+    }
+
+    .confirm-list strong {
+      color: #e0e0e0;
+    }
+
     .confirm-actions {
       display: flex;
       gap: 8px;
@@ -399,7 +412,11 @@ export class PtTimerBar extends LitElement {
                 </div>
               </div>
             ` : html`
-              <h3>Reset current half or entire game?</h3>
+              <h3>Reset half or game?</h3>
+              <ul class="confirm-list">
+                <li><strong>Reset half</strong> will reset the current half's clock</li>
+                <li><strong>Reset game</strong> will reset the entire game and player times</li>
+              </ul>
               <div class="confirm-actions">
                 <button @click="${this._cancelConfirm}">Cancel</button>
                 <div class="confirm-actions-right">

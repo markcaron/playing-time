@@ -78,10 +78,10 @@ export function renderHalfField() {
 
       <!-- Corner arcs (bottom two) -->
       <path d="M 0 ${HALF_LENGTH - CORNER_ARC_R}
-               A ${CORNER_ARC_R} ${CORNER_ARC_R} 0 0 0 ${CORNER_ARC_R} ${HALF_LENGTH}"
+               A ${CORNER_ARC_R} ${CORNER_ARC_R} 0 0 1 ${CORNER_ARC_R} ${HALF_LENGTH}"
             fill="none" stroke="white" stroke-width="${LW}" />
       <path d="M ${FIELD_W} ${HALF_LENGTH - CORNER_ARC_R}
-               A ${CORNER_ARC_R} ${CORNER_ARC_R} 0 0 1 ${FIELD_W - CORNER_ARC_R} ${HALF_LENGTH}"
+               A ${CORNER_ARC_R} ${CORNER_ARC_R} 0 0 0 ${FIELD_W - CORNER_ARC_R} ${HALF_LENGTH}"
             fill="none" stroke="white" stroke-width="${LW}" />
     </g>
   `;

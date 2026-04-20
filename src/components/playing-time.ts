@@ -16,7 +16,37 @@ import type {
 
 const GOAL_DEPTH = 2;
 const SEL_RING_OFFSET = 0.6;
-const SWAP_BTN_GAP = 1.5;
+const SWAP_THRESHOLD = PLAYER_RADIUS * 2;
+const BENCH_TOP = FIELD.HALF_LENGTH + GOAL_DEPTH + PADDING + 2;
+const BENCH_LABEL_SIZE = 1.6;
+const BENCH_ROW_SPACING = PLAYER_RADIUS * 2 + NAME_FONT_SIZE + 3;
+const BENCH_COL_SPACING = PLAYER_RADIUS * 2 + 3;
+
+function layoutBench(count: number): { x: number; y: number }[] {
+  if (count === 0) return [];
+  const maxPerRow = Math.floor(FIELD.WIDTH / BENCH_COL_SPACING);
+  const positions: { x: number; y: number }[] = [];
+  const labelY = BENCH_TOP;
+  const startY = labelY + BENCH_LABEL_SIZE + 3;
+
+  const startX = PADDING + PLAYER_RADIUS;
+  for (let i = 0; i < count; i++) {
+    const row = Math.floor(i / maxPerRow);
+    const col = i % maxPerRow;
+    positions.push({
+      x: startX + col * BENCH_COL_SPACING,
+      y: startY + row * BENCH_ROW_SPACING,
+    });
+  }
+  return positions;
+}
+
+function getBenchHeight(subCount: number): number {
+  if (subCount === 0) return 0;
+  const maxPerRow = Math.floor(FIELD.WIDTH / BENCH_COL_SPACING);
+  const rows = Math.ceil(subCount / maxPerRow);
+  return BENCH_LABEL_SIZE + 3 + rows * BENCH_ROW_SPACING + 4;
+}
 
 @customElement('playing-time')
 export class PlayingTime extends LitElement {
@@ -48,90 +78,6 @@ export class PlayingTime extends LitElement {
       height: auto;
       cursor: default;
       user-select: none;
-    }
-
-    .subs-section {
-      background: #16213e;
-      padding: 12px;
-    }
-
-    .subs-heading {
-      font-size: 0.8rem;
-      color: #aaa;
-      margin-bottom: 8px;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-
-    .subs-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px 32px;
-      padding-bottom: 4px;
-    }
-
-    .sub-player {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      flex-shrink: 0;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      position: relative;
-    }
-
-    .sub-player .circle-svg {
-      width: 44px;
-      height: 44px;
-      min-width: 44px;
-      min-height: 44px;
-      flex-shrink: 0;
-    }
-
-    .sub-player.swap-target {
-      animation: pulse 0.8s ease-in-out infinite alternate;
-    }
-
-    @keyframes pulse {
-      from { opacity: 1; }
-      to { opacity: 0.5; }
-    }
-
-    .sub-swap-btn {
-      position: absolute;
-      top: 0;
-      left: calc(100% + 4px);
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: #151515;
-      border: 1px solid white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 10;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-    }
-
-    .sub-swap-btn.active {
-      background: #e94560;
-    }
-
-    .sub-swap-btn svg {
-      width: 14px;
-      height: 14px;
-    }
-
-    .sub-name {
-      font-size: 0.7rem;
-      color: #ccc;
-      text-align: center;
-      max-width: 56px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      font-family: system-ui, -apple-system, sans-serif;
     }
 
     .empty-state {
@@ -168,14 +114,22 @@ export class PlayingTime extends LitElement {
   @state() accessor gameFormat: GameFormat = '11v11';
   @state() accessor formation: FormationKey = '4-3-3';
   @state() accessor fieldPlayers: FieldPlayer[] = [];
+  @state() accessor subPlayers: FieldPlayer[] = [];
   @state() accessor halfLength = 45;
   @state() accessor selectedId: string | null = null;
-  @state() accessor selectedSource: 'field' | 'sub' | null = null;
-  @state() accessor swapMode = false;
+  @state() accessor swapTargetId: string | null = null;
 
   @query('svg.field') accessor svgEl!: SVGSVGElement;
 
-  #dragState: { id: string; offsetX: number; offsetY: number; moved: boolean } | null = null;
+  #dragState: {
+    id: string;
+    offsetX: number;
+    offsetY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+    source: 'field' | 'sub';
+  } | null = null;
 
   connectedCallback() {
     super.connectedCallback();
@@ -217,8 +171,7 @@ export class PlayingTime extends LitElement {
     }
 
     this.selectedId = null;
-    this.selectedSource = null;
-    this.swapMode = false;
+    this.swapTargetId = null;
   }
 
   #rebuildFieldPlayers() {
@@ -230,6 +183,21 @@ export class PlayingTime extends LitElement {
       rosterId: entry.id,
       x: positions[i]?.x ?? FIELD.WIDTH / 2,
       y: positions[i]?.y ?? FIELD.HALF_LENGTH / 2,
+      number: entry.number,
+      name: entry.name,
+    }));
+    this.#rebuildSubPlayers();
+  }
+
+  #rebuildSubPlayers() {
+    const count = getPlayerCount(this.gameFormat);
+    const subs = this.roster.slice(count);
+    const benchPositions = layoutBench(subs.length);
+    this.subPlayers = subs.map((entry, i) => ({
+      id: entry.id,
+      rosterId: entry.id,
+      x: benchPositions[i]?.x ?? FIELD.WIDTH / 2,
+      y: benchPositions[i]?.y ?? BENCH_TOP + 5,
       number: entry.number,
       name: entry.name,
     }));
@@ -261,10 +229,6 @@ export class PlayingTime extends LitElement {
     saveAppState({ activeTeamId: this.activeTeamId, teams: this.teams });
   }
 
-  get #subs(): RosterEntry[] {
-    return this.roster.slice(getPlayerCount(this.gameFormat));
-  }
-
   // --- Team management ---
 
   #onTeamSwitched(e: TeamSwitchedEvent) {
@@ -290,6 +254,7 @@ export class PlayingTime extends LitElement {
       this.teamName = '';
       this.roster = [];
       this.fieldPlayers = [];
+      this.subPlayers = [];
     }
     saveAppState({ activeTeamId: this.activeTeamId, teams: this.teams });
   }
@@ -306,7 +271,6 @@ export class PlayingTime extends LitElement {
     this.#saveState();
     this.#rebuildFieldPlayers();
     this.selectedId = null;
-    this.swapMode = false;
   }
 
   #onSettingsChanged(e: SettingsChangedEvent) {
@@ -340,7 +304,6 @@ export class PlayingTime extends LitElement {
     this.#rebuildFieldPlayers();
     this.#saveState();
     this.selectedId = null;
-    this.swapMode = false;
   }
 
   #onFormationChanged(e: FormationChangedEvent) {
@@ -348,87 +311,80 @@ export class PlayingTime extends LitElement {
     this.#rebuildFieldPlayers();
     this.#saveState();
     this.selectedId = null;
-    this.swapMode = false;
   }
 
   // --- Selection ---
 
-  #selectFieldPlayer(id: string) {
+  #selectPlayer(id: string) {
     if (this.selectedId === id) {
       this.selectedId = null;
-      this.selectedSource = null;
-      this.swapMode = false;
     } else {
       this.selectedId = id;
-      this.selectedSource = 'field';
-      this.swapMode = false;
-    }
-  }
-
-  #selectSub(id: string) {
-    if (this.selectedId === id) {
-      this.selectedId = null;
-      this.selectedSource = null;
-      this.swapMode = false;
-    } else {
-      this.selectedId = id;
-      this.selectedSource = 'sub';
-      this.swapMode = false;
     }
   }
 
   #clearSelection() {
     this.selectedId = null;
-    this.selectedSource = null;
-    this.swapMode = false;
-  }
-
-  #toggleSwapMode() {
-    this.swapMode = !this.swapMode;
   }
 
   // --- Swap logic ---
 
-  #swapFieldPlayers(targetId: string) {
-    const srcId = this.selectedId!;
-    const srcIdx = this.fieldPlayers.findIndex(p => p.id === srcId);
-    const tgtIdx = this.fieldPlayers.findIndex(p => p.id === targetId);
-    if (srcIdx === -1 || tgtIdx === -1) return;
+  #swapFieldPositions(draggedId: string, targetId: string, originX: number, originY: number) {
+    const target = this.fieldPlayers.find(p => p.id === targetId);
+    if (!target) return;
 
-    const updated = [...this.fieldPlayers];
-    const srcPlayer = updated[srcIdx];
-    const tgtPlayer = updated[tgtIdx];
-    updated[srcIdx] = { ...tgtPlayer, x: srcPlayer.x, y: srcPlayer.y };
-    updated[tgtIdx] = { ...srcPlayer, x: tgtPlayer.x, y: tgtPlayer.y };
-    this.fieldPlayers = updated;
+    const targetX = target.x;
+    const targetY = target.y;
+
+    this.fieldPlayers = this.fieldPlayers.map(p => {
+      if (p.id === draggedId) return { ...p, x: targetX, y: targetY };
+      if (p.id === targetId) return { ...p, x: originX, y: originY };
+      return p;
+    });
 
     this.selectedId = null;
-    this.selectedSource = null;
-    this.swapMode = false;
+    this.swapTargetId = null;
     this.#saveState();
   }
 
-  #doSubstitution(fieldId: string, subId: string) {
-    const fieldIdx = this.roster.findIndex(p => p.id === fieldId);
-    const subIdx = this.roster.findIndex(p => p.id === subId);
+  #doSubstitution(fieldId: string, subId: string, restoreX?: number, restoreY?: number) {
+    const rosterCopy = [...this.roster];
+    const fieldIdx = rosterCopy.findIndex(p => p.id === fieldId);
+    const subIdx = rosterCopy.findIndex(p => p.id === subId);
     if (fieldIdx === -1 || subIdx === -1) return;
 
-    const updatedRoster = [...this.roster];
-    const tmp = updatedRoster[fieldIdx];
-    updatedRoster[fieldIdx] = updatedRoster[subIdx];
-    updatedRoster[subIdx] = tmp;
-    this.roster = updatedRoster;
+    const tmp = rosterCopy[fieldIdx];
+    rosterCopy[fieldIdx] = rosterCopy[subIdx];
+    rosterCopy[subIdx] = tmp;
 
-    const subEntry = this.roster[fieldIdx];
-    this.fieldPlayers = this.fieldPlayers.map(fp =>
-      fp.id === fieldId
-        ? { ...fp, id: subEntry.id, rosterId: subEntry.id, number: subEntry.number, name: subEntry.name }
-        : fp,
-    );
+    const newFieldEntry = rosterCopy[fieldIdx];
+    const updatedFieldPlayers = this.fieldPlayers.map(fp => {
+      if (fp.id !== fieldId) return fp;
+      const restored = { ...fp, id: newFieldEntry.id, rosterId: newFieldEntry.id, number: newFieldEntry.number, name: newFieldEntry.name };
+      if (restoreX != null && restoreY != null) {
+        restored.x = restoreX;
+        restored.y = restoreY;
+      }
+      return restored;
+    });
 
+    const count = getPlayerCount(this.gameFormat);
+    const newSubs = rosterCopy.slice(count);
+    const benchPositions = layoutBench(newSubs.length);
+    const updatedSubPlayers = newSubs.map((entry, i) => ({
+      id: entry.id,
+      rosterId: entry.id,
+      x: benchPositions[i]?.x ?? FIELD.WIDTH / 2,
+      y: benchPositions[i]?.y ?? BENCH_TOP + 5,
+      number: entry.number,
+      name: entry.name,
+    }));
+
+    this.roster = rosterCopy;
+    this.fieldPlayers = updatedFieldPlayers;
+    this.subPlayers = updatedSubPlayers;
     this.selectedId = null;
-    this.selectedSource = null;
-    this.swapMode = false;
+    this.swapTargetId = null;
     this.#saveState();
   }
 
@@ -437,36 +393,21 @@ export class PlayingTime extends LitElement {
   #onPointerDown(e: PointerEvent) {
     const hit = this.#resolveHit(e.target);
 
-    if (hit?.kind === 'swap-btn') {
-      this.#toggleSwapMode();
-      e.preventDefault();
-      return;
-    }
-
-    if (hit?.kind === 'player') {
-      if (this.swapMode && this.selectedId && hit.id !== this.selectedId) {
-        if (this.selectedSource === 'field') {
-          this.#swapFieldPlayers(hit.id);
-        } else if (this.selectedSource === 'sub') {
-          this.#doSubstitution(hit.id, this.selectedId);
-        }
-        e.preventDefault();
-        return;
-      }
-      if (this.swapMode && this.selectedSource === 'sub') {
-        e.preventDefault();
-        return;
-      }
-
-      const pt = screenToSVG(this.svgEl, e.clientX, e.clientY);
-      const player = this.fieldPlayers.find(p => p.id === hit.id);
+    if (hit?.kind === 'player' || hit?.kind === 'sub') {
+      const isField = hit.kind === 'player';
+      const allPlayers = isField ? this.fieldPlayers : this.subPlayers;
+      const player = allPlayers.find(p => p.id === hit.id);
       if (!player) return;
 
+      const pt = screenToSVG(this.svgEl, e.clientX, e.clientY);
       this.#dragState = {
         id: hit.id,
         offsetX: pt.x - player.x,
         offsetY: pt.y - player.y,
+        originX: player.x,
+        originY: player.y,
         moved: false,
+        source: isField ? 'field' : 'sub',
       };
       this.svgEl.setPointerCapture(e.pointerId);
       e.preventDefault();
@@ -482,23 +423,84 @@ export class PlayingTime extends LitElement {
     const newX = pt.x - this.#dragState.offsetX;
     const newY = pt.y - this.#dragState.offsetY;
 
-    const dx = Math.abs(newX - (this.fieldPlayers.find(p => p.id === this.#dragState!.id)?.x ?? 0));
-    const dy = Math.abs(newY - (this.fieldPlayers.find(p => p.id === this.#dragState!.id)?.y ?? 0));
-    if (dx > 0.3 || dy > 0.3) this.#dragState.moved = true;
+    const isField = this.#dragState.source === 'field';
+    const currentList = isField ? this.fieldPlayers : this.subPlayers;
+    const currentPlayer = currentList.find(p => p.id === this.#dragState!.id);
+    if (currentPlayer) {
+      const dx = Math.abs(newX - currentPlayer.x);
+      const dy = Math.abs(newY - currentPlayer.y);
+      if (dx > 0.3 || dy > 0.3) this.#dragState.moved = true;
+    }
 
-    this.fieldPlayers = this.fieldPlayers.map(p =>
-      p.id === this.#dragState!.id ? { ...p, x: newX, y: newY } : p,
-    );
+    let updatedField = this.fieldPlayers;
+    let updatedSubs = this.subPlayers;
+
+    if (isField) {
+      updatedField = this.fieldPlayers.map(p =>
+        p.id === this.#dragState!.id ? { ...p, x: newX, y: newY } : p,
+      );
+    } else {
+      updatedSubs = this.subPlayers.map(p =>
+        p.id === this.#dragState!.id ? { ...p, x: newX, y: newY } : p,
+      );
+    }
+
+    const allTargets = isField
+      ? [...updatedField, ...updatedSubs]
+      : [...updatedField];
+
+    let closest: string | null = null;
+    for (const other of allTargets) {
+      if (other.id === this.#dragState.id) continue;
+      const dist = Math.hypot(newX - other.x, newY - other.y);
+      if (dist < SWAP_THRESHOLD) {
+        closest = other.id;
+        break;
+      }
+    }
+
+    this.fieldPlayers = updatedField;
+    this.subPlayers = updatedSubs;
+    this.swapTargetId = closest;
   }
 
   #onPointerUp(_e: PointerEvent) {
     if (this.#dragState) {
-      if (!this.#dragState.moved) {
-        this.#selectFieldPlayer(this.#dragState.id);
-      } else {
+      const targetId = this.swapTargetId;
+      if (targetId) {
+        const dragId = this.#dragState.id;
+        const origX = this.#dragState.originX;
+        const origY = this.#dragState.originY;
+        const dragSource = this.#dragState.source;
+        const fieldIds = new Set(this.fieldPlayers.map(p => p.id));
+        const subIds = new Set(this.subPlayers.map(p => p.id));
+
+        this.#dragState = null;
+        this.swapTargetId = null;
+
+        if (dragSource === 'field' && fieldIds.has(targetId)) {
+          this.#swapFieldPositions(dragId, targetId, origX, origY);
+        } else if (dragSource === 'field' && subIds.has(targetId)) {
+          this.#doSubstitution(dragId, targetId, origX, origY);
+        } else if (dragSource === 'sub' && fieldIds.has(targetId)) {
+          this.#doSubstitution(targetId, dragId);
+        }
+        return;
+      } else if (!this.#dragState.moved) {
+        this.#selectPlayer(this.#dragState.id);
+      } else if (this.#dragState.source === 'field') {
         this.#saveState();
+      } else {
+        this.#rebuildSubPlayers();
       }
       this.#dragState = null;
+      this.swapTargetId = null;
+    }
+  }
+
+  #onPointerLeave(_e: PointerEvent) {
+    if (!this.#dragState) {
+      this.#clearSelection();
     }
   }
 
@@ -546,24 +548,19 @@ export class PlayingTime extends LitElement {
     `;
   }
 
-  #renderPlayer(p: FieldPlayer) {
-    const selected = p.id === this.selectedId && this.selectedSource === 'field';
-    const isSwapTarget = this.swapMode && this.selectedId != null && p.id !== this.selectedId;
+  #renderPlayerCircle(p: FieldPlayer, kind: string) {
+    const selected = p.id === this.selectedId;
+    const isSwapTarget = p.id === this.swapTargetId;
     const selR = PLAYER_RADIUS + SEL_RING_OFFSET;
-    const bx = p.x + PLAYER_RADIUS + SWAP_BTN_GAP + PLAYER_RADIUS;
+    const fillColor = isSwapTarget ? '#e94560' : '#ffffff';
+    const textColor = isSwapTarget ? '#ffffff' : '#151515';
 
     return svg`
-      <g class="player" data-id="${p.id}" data-kind="player"
-         style="cursor: ${isSwapTarget ? 'pointer' : 'grab'}">
+      <g data-id="${p.id}" data-kind="${kind}" style="cursor: grab">
         ${selected ? svg`
           <circle cx="${p.x}" cy="${p.y}" r="${selR}"
                   fill="none" stroke="white" stroke-width="0.2"
                   stroke-dasharray="0.5,0.3" />
-        ` : nothing}
-        ${isSwapTarget ? svg`
-          <circle cx="${p.x}" cy="${p.y}" r="${selR}"
-                  fill="none" stroke="white" stroke-width="0.15"
-                  stroke-dasharray="0.4,0.3" opacity="0.5" />
         ` : nothing}
         <circle cx="${p.x}" cy="${p.y}" r="${PLAYER_HIT_RADIUS}"
                 fill="transparent" />
@@ -572,12 +569,12 @@ export class PlayingTime extends LitElement {
                 filter="url(#player-shadow)"
                 style="pointer-events: none" />
         <circle cx="${p.x}" cy="${p.y}" r="${PLAYER_RADIUS}"
-                fill="#ffffff"
+                fill="${fillColor}"
                 style="pointer-events: none" />
         ${p.number ? svg`
           <text x="${p.x}" y="${p.y}"
                 text-anchor="middle" dominant-baseline="central"
-                fill="#151515" font-size="${PLAYER_FONT_SIZE}" font-weight="bold"
+                fill="${textColor}" font-size="${PLAYER_FONT_SIZE}" font-weight="bold"
                 font-family="system-ui, sans-serif"
                 style="pointer-events: none">
             ${p.number}
@@ -592,25 +589,6 @@ export class PlayingTime extends LitElement {
           ${p.name}
         </text>
       </g>
-      ${selected ? svg`
-        <g data-kind="swap-btn" data-id="${p.id}"
-           role="button" aria-label="Swap player"
-           style="cursor: pointer"
-           @pointerdown="${(e: PointerEvent) => { e.stopPropagation(); this.#toggleSwapMode(); }}">
-          <circle cx="${bx}" cy="${p.y}" r="${PLAYER_RADIUS}"
-                  fill="${this.swapMode ? '#e94560' : '#151515'}"
-                  stroke="white" stroke-width="0.15"
-                  filter="url(#player-shadow)" />
-          <polyline points="${bx - 0.5},${p.y + 1.1} ${bx - 0.5},${p.y - 0.7} ${bx - 1.2},${p.y + 0.1}"
-                    fill="none" stroke="${this.swapMode ? 'white' : '#4ade80'}" stroke-width="0.4"
-                    stroke-linecap="round" stroke-linejoin="round"
-                    style="pointer-events: none" />
-          <polyline points="${bx + 0.5},${p.y - 1.1} ${bx + 0.5},${p.y + 0.7} ${bx + 1.2},${p.y - 0.1}"
-                    fill="none" stroke="${this.swapMode ? 'white' : '#f87171'}" stroke-width="0.4"
-                    stroke-linecap="round" stroke-linejoin="round"
-                    style="pointer-events: none" />
-        </g>
-      ` : nothing}
     `;
   }
 
@@ -618,9 +596,11 @@ export class PlayingTime extends LitElement {
     const vbX = -PADDING;
     const vbY = -PADDING;
     const vbW = FIELD.WIDTH + PADDING * 2;
-    const vbH = FIELD.HALF_LENGTH + PADDING + GOAL_DEPTH + PADDING;
+    const subCount = this.subPlayers.length;
+    const benchH = subCount > 0 ? getBenchHeight(subCount) + 2 : 0;
+    const vbH = FIELD.HALF_LENGTH + PADDING + GOAL_DEPTH + PADDING + benchH;
 
-    const subs = this.#subs;
+    const dragId = this.#dragState?.id;
 
     return html`
       <div class="app-container">
@@ -654,7 +634,7 @@ export class PlayingTime extends LitElement {
             @pointerdown="${this.#onPointerDown}"
             @pointermove="${this.#onPointerMove}"
             @pointerup="${this.#onPointerUp}"
-            @pointerleave="${this.#onPointerUp}">
+            @pointerleave="${this.#onPointerLeave}">
 
             ${this.#renderDefs()}
 
@@ -670,96 +650,51 @@ export class PlayingTime extends LitElement {
 
             <g class="players-layer">
               ${this.fieldPlayers
-                .filter(p => p.id !== this.selectedId)
-                .map(p => this.#renderPlayer(p))}
+                .filter(p => p.id !== dragId && p.id !== this.selectedId)
+                .map(p => this.#renderPlayerCircle(p, 'player'))}
               ${this.fieldPlayers
-                .filter(p => p.id === this.selectedId)
-                .map(p => this.#renderPlayer(p))}
+                .filter(p => p.id === this.selectedId && p.id !== dragId)
+                .map(p => this.#renderPlayerCircle(p, 'player'))}
             </g>
+
+            ${subCount > 0 ? svg`
+              <text x="${PADDING}" y="${BENCH_TOP}"
+                    fill="#aaa" font-size="${BENCH_LABEL_SIZE}"
+                    font-family="system-ui, sans-serif"
+                    style="pointer-events: none">
+                Substitutes
+              </text>
+              <g class="subs-layer">
+                ${this.subPlayers
+                  .filter(p => p.id !== dragId && p.id !== this.selectedId)
+                  .map(p => this.#renderPlayerCircle(p, 'sub'))}
+                ${this.subPlayers
+                  .filter(p => p.id === this.selectedId && p.id !== dragId)
+                  .map(p => this.#renderPlayerCircle(p, 'sub'))}
+              </g>
+            ` : this.roster.length === 0 ? svg`
+              <text x="${FIELD.WIDTH / 2}" y="${BENCH_TOP + 3}"
+                    text-anchor="middle"
+                    fill="#666" font-size="${BENCH_LABEL_SIZE}"
+                    font-family="system-ui, sans-serif"
+                    style="pointer-events: none">
+                Open the Roster to add players
+              </text>
+            ` : nothing}
+
+            ${dragId ? svg`
+              <g class="drag-layer">
+                ${[...this.fieldPlayers, ...this.subPlayers]
+                  .filter(p => p.id === dragId)
+                  .map(p => this.#renderPlayerCircle(p, this.#dragState?.source === 'field' ? 'player' : 'sub'))}
+              </g>
+            ` : nothing}
           </svg>
         </div>
-
-        ${subs.length > 0 || this.roster.length === 0 ? html`
-          <div class="subs-section">
-            ${this.roster.length === 0 ? html`
-              <div class="empty-state">Open the Roster to add players</div>
-            ` : html`
-              <div class="subs-heading">Subs</div>
-              <div class="subs-list">
-                ${subs.map(s => this.#renderSubPlayer(s))}
-              </div>
-            `}
-          </div>
-        ` : nothing}
 
         <footer class="app-footer"><svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" class="footer-icon"><path d="m660 243.6v-63.602h60v-120h-240v120h60v63.602c-219.6 30-390 218.4-390 446.4 0 248.4 201.6 450 450 450s450-201.6 450-450c0-228-170.4-416.4-390-446.4zm-60 776.4c-182.4 0-330-147.6-330-330s147.6-330 330-330 330 147.6 330 330-147.6 330-330 330z" fill="currentColor"/><path d="m151.2 247.2 85.199 84c48-49.199 104.4-86.398 168-112.8l-45.598-110.4c-78 32.398-148.8 79.199-207.6 139.2z" fill="currentColor"/><path d="m1042.8 241.2c-58.801-57.598-126-102-201.6-133.2l-45.602 110.4c61.199 25.199 116.4 61.199 163.2 108z" fill="currentColor"/><path d="m642.48 732.32-84.863-84.852 179.89-179.91 84.863 84.852z" fill="currentColor"/></svg> Playing Time by Mark Caron</footer>
       </div>
     `;
-  }
-
-  #renderSubPlayer(entry: RosterEntry) {
-    const selected = entry.id === this.selectedId;
-    const isSwapTarget = this.swapMode && this.selectedId != null && !selected && this.selectedSource === 'field';
-
-    const arrowUpColor = this.swapMode ? 'white' : '#4ade80';
-    const arrowDownColor = this.swapMode ? 'white' : '#f87171';
-
-    return html`
-      <div class="sub-player ${isSwapTarget ? 'swap-target' : ''} ${selected ? 'selected' : ''}"
-           @click="${() => this.#onSubClick(entry.id)}">
-        <svg class="circle-svg" viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg">
-          ${selected ? svg`
-            <circle cx="5" cy="5" r="4.7"
-                    fill="none" stroke="white" stroke-width="0.3"
-                    stroke-dasharray="0.8,0.5" />
-          ` : nothing}
-          ${isSwapTarget ? svg`
-            <circle cx="5" cy="5" r="4.7"
-                    fill="none" stroke="white" stroke-width="0.25"
-                    stroke-dasharray="0.7,0.4" opacity="0.5" />
-          ` : nothing}
-          <circle cx="5" cy="5" r="4.4"
-                  fill="none" stroke="white" stroke-width="0.5" stroke-opacity="0.8" />
-          <circle cx="5" cy="5" r="4"
-                  fill="#ffffff" />
-          ${entry.number ? svg`
-            <text x="5" y="5"
-                  text-anchor="middle" dominant-baseline="central"
-                  fill="#151515" font-size="3.5" font-weight="bold"
-                  font-family="system-ui, sans-serif">
-              ${entry.number}
-            </text>
-          ` : nothing}
-        </svg>
-        ${selected ? html`
-          <div class="sub-swap-btn ${this.swapMode ? 'active' : ''}"
-               role="button" aria-label="Swap player"
-               @click="${(e: Event) => { e.stopPropagation(); this.#toggleSwapMode(); }}">
-            <svg viewBox="-1.2 -1.2 2.4 2.4" xmlns="http://www.w3.org/2000/svg">
-              <polyline points="-0.375,0.825 -0.375,-0.525 -0.9,0.075"
-                        fill="none" stroke="${arrowUpColor}" stroke-width="0.3"
-                        stroke-linecap="round" stroke-linejoin="round" />
-              <polyline points="0.375,-0.825 0.375,0.525 0.9,-0.075"
-                        fill="none" stroke="${arrowDownColor}" stroke-width="0.3"
-                        stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-        ` : nothing}
-        <span class="sub-name">${entry.name || entry.number}</span>
-      </div>
-    `;
-  }
-
-  #onSubClick(subId: string) {
-    if (this.swapMode && this.selectedId && this.selectedSource === 'field') {
-      this.#doSubstitution(this.selectedId, subId);
-      return;
-    }
-    if (this.swapMode && this.selectedId && this.selectedSource === 'sub' && subId !== this.selectedId) {
-      this.#selectSub(subId);
-      return;
-    }
-    this.#selectSub(subId);
   }
 }
 

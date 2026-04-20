@@ -823,7 +823,7 @@ export class PtSettingsBar extends LitElement {
       transition: opacity 0.15s;
     }
 
-    .roster-row.dragging { opacity: 0.4; }
+    .roster-row.dragging { opacity: 0.4; touch-action: none; }
     .roster-row.drag-over { border-top: 2px solid var(--pt-accent); }
 
     .drag-handle {
@@ -1087,7 +1087,11 @@ export class PtSettingsBar extends LitElement {
     }
   }
 
-  private _onDragStart(idx: number) { this._dragIdx = idx; }
+  private _onDragStart(idx: number) {
+    this._dragIdx = idx;
+    const body = this.shadowRoot?.querySelector('.roster-dialog-body') as HTMLElement | null;
+    if (body) body.style.overflow = 'hidden';
+  }
 
   private _onDragOver(e: DragEvent, idx: number) {
     e.preventDefault();
@@ -1095,6 +1099,8 @@ export class PtSettingsBar extends LitElement {
   }
 
   private _onDragEnd() {
+    const body = this.shadowRoot?.querySelector('.roster-dialog-body') as HTMLElement | null;
+    if (body) body.style.overflow = '';
     if (this._dragIdx != null && this._dragOverIdx != null && this._dragIdx !== this._dragOverIdx) {
       const updated = [...this.roster];
       const [moved] = updated.splice(this._dragIdx, 1);

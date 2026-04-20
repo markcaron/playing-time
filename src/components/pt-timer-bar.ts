@@ -44,6 +44,7 @@ export class PtTimerBar extends LitElement {
       padding: 10px 12px;
       background: var(--pt-text-white);
       user-select: none;
+      box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);
     }
 
     .timer-left { justify-self: start; }

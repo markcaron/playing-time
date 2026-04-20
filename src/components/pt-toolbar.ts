@@ -104,6 +104,8 @@ export class PtSettingsBar extends LitElement {
       padding: 8px 12px;
       background: var(--pt-bg-primary);
       user-select: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      z-index: 1;
     }
 
     .roster-btn {

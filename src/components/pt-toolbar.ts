@@ -90,7 +90,7 @@ export class PtSettingsBar extends LitElement {
       gap: 8px;
       align-items: center;
       padding: 8px 12px;
-      background: #16213e;
+      background: var(--pt-bg-primary);
       user-select: none;
     }
 
@@ -103,7 +103,7 @@ export class PtSettingsBar extends LitElement {
       margin-left: 8px;
       font-size: 0.85rem;
       font-weight: bold;
-      color: #e0e0e0;
+      color: var(--pt-text);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -116,8 +116,8 @@ export class PtSettingsBar extends LitElement {
       height: 20px;
       padding: 0 5px;
       border-radius: 10px;
-      background: #4ea8de;
-      color: #fff;
+      background: var(--pt-accent);
+      color: var(--pt-text-white);
       font-size: 0.7rem;
       font-weight: bold;
       display: inline-flex;
@@ -128,27 +128,27 @@ export class PtSettingsBar extends LitElement {
 
     .row-idx {
       font-size: 0.65rem;
-      color: #555;
+      color: var(--pt-text-muted);
       width: 14px;
       text-align: right;
       flex-shrink: 0;
     }
 
     .roster-btn.hint {
-      outline: 2px solid #7fff00;
+      outline: 2px solid var(--pt-hint);
       outline-offset: 2px;
       animation: hintPulse 1.5s ease-in-out infinite;
     }
 
     @keyframes hintPulse {
-      0%, 100% { outline-color: #7fff00; }
+      0%, 100% { outline-color: var(--pt-hint); }
       50% { outline-color: rgba(127, 255, 0, 0.4); }
     }
 
     .roster-btn.open {
-      background: #e94560;
-      border-color: #e94560;
-      color: #fff;
+      background: var(--pt-danger);
+      border-color: var(--pt-danger);
+      color: var(--pt-text-white);
     }
 
     dialog:not([open]) {
@@ -156,8 +156,8 @@ export class PtSettingsBar extends LitElement {
     }
 
     dialog {
-      background: #0f3460;
-      border: 1px solid #1a4a7a;
+      background: var(--pt-bg-surface);
+      border: 1px solid var(--pt-border);
       border-radius: 10px;
       padding: 0;
       width: calc(100% - 32px);
@@ -166,7 +166,7 @@ export class PtSettingsBar extends LitElement {
       display: flex;
       flex-direction: column;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-      color: #e0e0e0;
+      color: var(--pt-text);
     }
 
     dialog::backdrop {
@@ -195,13 +195,13 @@ export class PtSettingsBar extends LitElement {
       margin: 0;
       font-size: 0.95rem;
       font-weight: bold;
-      color: #e0e0e0;
+      color: var(--pt-text);
     }
 
     .roster-dialog-close {
       background: transparent;
       border: none;
-      color: #aaa;
+      color: var(--pt-text-muted);
       cursor: pointer;
       padding: 10px 14px;
       display: flex;
@@ -211,7 +211,7 @@ export class PtSettingsBar extends LitElement {
       transition: color 0.15s;
     }
 
-    .roster-dialog-close:hover { color: #fff; }
+    .roster-dialog-close:hover { color: var(--pt-text-white); }
 
     .roster-dialog-close svg {
       width: 14px;
@@ -238,14 +238,14 @@ export class PtSettingsBar extends LitElement {
 
     .roster-dialog-footer button {
       padding: 8px 24px;
-      background: #4ea8de;
+      background: var(--pt-accent);
       border: none;
-      color: #fff;
+      color: var(--pt-text-white);
       font-weight: bold;
     }
 
     .roster-dialog-footer button:hover {
-      background: #3a8fc4;
+      background: var(--pt-accent-hover);
     }
 
     .settings-btn {
@@ -253,9 +253,9 @@ export class PtSettingsBar extends LitElement {
     }
 
     .settings-btn.open {
-      background: #e94560;
-      border-color: #e94560;
-      color: #fff;
+      background: var(--pt-danger);
+      border-color: var(--pt-danger);
+      color: var(--pt-text-white);
     }
 
     .settings-row {
@@ -281,18 +281,18 @@ export class PtSettingsBar extends LitElement {
       min-height: 44px;
       border: 1px solid transparent;
       border-radius: 6px;
-      background: #0f3460;
-      color: #e0e0e0;
+      background: var(--pt-bg-surface);
+      color: var(--pt-text);
       font: inherit;
       font-size: 0.85rem;
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s;
     }
 
-    button:hover { background: #1a4a7a; }
+    button:hover { background: var(--pt-border); }
 
     button:focus-visible {
-      outline: 2px solid #4ea8de;
+      outline: 2px solid var(--pt-accent);
       outline-offset: 2px;
     }
 
@@ -311,7 +311,7 @@ export class PtSettingsBar extends LitElement {
     dialog.confirm-dialog .roster-dialog-body p {
       margin: 0;
       font-size: 0.85rem;
-      color: #e0e0e0;
+      color: var(--pt-text);
       line-height: 1.4;
     }
 
@@ -332,8 +332,8 @@ export class PtSettingsBar extends LitElement {
     }
 
     .confirm-actions .cancel-btn {
-      border: 1px solid #4ea8de;
-      color: #fff;
+      border: 1px solid var(--pt-accent);
+      color: var(--pt-text-white);
       background: transparent;
     }
 
@@ -342,13 +342,13 @@ export class PtSettingsBar extends LitElement {
     }
 
     .confirm-actions .confirm-yes {
-      background: #e94560;
-      border-color: #e94560;
-      color: #fff;
+      background: var(--pt-danger);
+      border-color: var(--pt-danger);
+      color: var(--pt-text-white);
     }
 
     .confirm-actions .confirm-yes:hover {
-      background: #d13350;
+      background: var(--pt-danger-hover);
     }
 
     select {
@@ -358,8 +358,8 @@ export class PtSettingsBar extends LitElement {
       min-height: 44px;
       border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 6px;
-      background: #0f3460;
-      color: #e0e0e0;
+      background: var(--pt-bg-surface);
+      color: var(--pt-text);
       font: inherit;
       font-size: 0.85rem;
       cursor: pointer;
@@ -367,7 +367,7 @@ export class PtSettingsBar extends LitElement {
     }
 
     select:focus-visible {
-      outline: 2px solid #4ea8de;
+      outline: 2px solid var(--pt-accent);
       outline-offset: 2px;
     }
 
@@ -385,7 +385,7 @@ export class PtSettingsBar extends LitElement {
 
     .roster-dialog-body label {
       font-size: 0.8rem;
-      color: #aaa;
+      color: var(--pt-text-muted);
     }
 
     .drawer-header {
@@ -397,7 +397,7 @@ export class PtSettingsBar extends LitElement {
 
     .drawer-header .team-label {
       font-size: 0.9rem;
-      color: #e0e0e0;
+      color: var(--pt-text);
       font-weight: bold;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -410,7 +410,7 @@ export class PtSettingsBar extends LitElement {
       gap: 6px;
       font-size: 0.75rem;
       font-weight: bold;
-      color: #e0e0e0;
+      color: var(--pt-text);
       cursor: pointer;
     }
 
@@ -424,7 +424,7 @@ export class PtSettingsBar extends LitElement {
     .roster-table th {
       text-align: left;
       font-size: 0.75rem;
-      color: #aaa;
+      color: var(--pt-text-muted);
       font-weight: normal;
       padding: 2px 8px 6px 0;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -432,12 +432,12 @@ export class PtSettingsBar extends LitElement {
 
     .roster-table td {
       padding: 5px 8px 5px 0;
-      color: #e0e0e0;
+      color: var(--pt-text);
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .roster-table td.jersey-col {
-      color: #aaa;
+      color: var(--pt-text-muted);
       width: 32px;
     }
 
@@ -446,7 +446,7 @@ export class PtSettingsBar extends LitElement {
       padding-top: 16px;
       margin-top: 2px;
       font-size: 0.8rem;
-      color: #aaa;
+      color: var(--pt-text-muted);
     }
 
     .drop-zone {
@@ -466,24 +466,24 @@ export class PtSettingsBar extends LitElement {
 
     .drop-zone:hover,
     .drop-zone.dragover {
-      border-color: #4ea8de;
+      border-color: var(--pt-accent);
       background: rgba(78, 168, 222, 0.05);
     }
 
     .drop-zone:focus-visible {
-      outline: 2px solid #4ea8de;
+      outline: 2px solid var(--pt-accent);
       outline-offset: 2px;
     }
 
     .drop-zone p {
       margin: 0;
       font-size: 0.85rem;
-      color: #aaa;
+      color: var(--pt-text-muted);
     }
 
     .drop-zone .drop-hint {
       font-size: 0.75rem;
-      color: #666;
+      color: var(--pt-text-muted);
     }
 
     .drop-zone .browse-btn {
@@ -493,7 +493,7 @@ export class PtSettingsBar extends LitElement {
       border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 6px;
       background: transparent;
-      color: #e0e0e0;
+      color: var(--pt-text);
       cursor: pointer;
       font: inherit;
     }
@@ -503,7 +503,7 @@ export class PtSettingsBar extends LitElement {
     }
 
     .drop-zone .drop-error {
-      color: #f87171;
+      color: var(--pt-danger-light);
       font-size: 0.8rem;
     }
 
@@ -522,8 +522,8 @@ export class PtSettingsBar extends LitElement {
 
     button.delete-team-btn {
       background: transparent;
-      color: #f87171;
-      border: 1px solid #f87171;
+      color: var(--pt-danger-light);
+      border: 1px solid var(--pt-danger-light);
       padding: 8px 14px;
     }
 
@@ -532,12 +532,12 @@ export class PtSettingsBar extends LitElement {
     }
 
     .empty-warning {
-      background: #fef3c7;
-      border: 1px solid #f0c040;
+      background: var(--pt-bg-warning);
+      border: 1px solid var(--pt-warning);
       border-radius: 6px;
       padding: 10px 14px;
       margin-top: 8px;
-      color: #151515;
+      color: var(--pt-bg-dark);
       font-size: 0.85rem;
       display: flex;
       align-items: center;
@@ -555,13 +555,13 @@ export class PtSettingsBar extends LitElement {
     }
 
     button.edit-team-btn {
-      border: 1px solid #16a34a;
-      color: #fff;
-      background: #16a34a;
+      border: 1px solid var(--pt-success);
+      color: var(--pt-text-white);
+      background: var(--pt-success);
       font-weight: bold;
     }
 
-    button.edit-team-btn:hover { background: #15803d; }
+    button.edit-team-btn:hover { background: var(--pt-success-hover); }
 
     .slide-toggle {
       position: relative;
@@ -583,8 +583,8 @@ export class PtSettingsBar extends LitElement {
     .slide-track {
       position: absolute;
       inset: 0;
-      background: #16213e;
-      border: 1px solid #1a4a7a;
+      background: var(--pt-bg-primary);
+      border: 1px solid var(--pt-border);
       border-radius: 18px;
       transition: background 0.2s;
     }
@@ -595,7 +595,7 @@ export class PtSettingsBar extends LitElement {
       height: 30px;
       left: 3px;
       top: 3px;
-      background: #fff;
+      background: var(--pt-text-white);
       border-radius: 50%;
       transition: transform 0.2s;
       display: flex;
@@ -603,21 +603,21 @@ export class PtSettingsBar extends LitElement {
       justify-content: center;
       font-size: 0.65rem;
       font-weight: bold;
-      color: #666;
+      color: var(--pt-text-on-light);
       user-select: none;
     }
 
     .slide-toggle input:checked ~ .slide-track {
-      background: #16a34a;
+      background: var(--pt-success);
     }
 
     .slide-toggle input:checked ~ .slide-thumb {
       transform: translateX(36px);
-      color: #16a34a;
+      color: var(--pt-success);
     }
 
     .slide-toggle input:focus-visible ~ .slide-track {
-      outline: 2px solid #4ea8de;
+      outline: 2px solid var(--pt-accent);
       outline-offset: 2px;
     }
 
@@ -665,7 +665,7 @@ export class PtSettingsBar extends LitElement {
     .drawer-empty p {
       margin: 0;
       font-size: 0.85rem;
-      color: #666;
+      color: var(--pt-text-muted);
     }
 
     button.add-team-btn-lg {
@@ -673,12 +673,12 @@ export class PtSettingsBar extends LitElement {
       font-size: 0.85rem;
       border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 6px;
-      background: #0f3460;
-      color: #e0e0e0;
+      background: var(--pt-bg-surface);
+      color: var(--pt-text);
       cursor: pointer;
     }
 
-    button.add-team-btn-lg:hover { background: #1a4a7a; }
+    button.add-team-btn-lg:hover { background: var(--pt-border); }
 
     button.add-team-btn {
       padding: 6px 14px;
@@ -697,10 +697,10 @@ export class PtSettingsBar extends LitElement {
       width: 60%;
       padding: 6px 10px;
       min-height: 44px;
-      border: 1px solid #1a4a7a;
+      border: 1px solid var(--pt-border);
       border-radius: 6px;
-      background: #16213e;
-      color: #e0e0e0;
+      background: var(--pt-bg-primary);
+      color: var(--pt-text);
       font: inherit;
       font-size: 0.85rem;
     }
@@ -709,10 +709,10 @@ export class PtSettingsBar extends LitElement {
       width: 100%;
       padding: 6px 10px;
       min-height: 44px;
-      border: 1px solid #1a4a7a;
+      border: 1px solid var(--pt-border);
       border-radius: 6px;
-      background: #16213e;
-      color: #e0e0e0;
+      background: var(--pt-bg-primary);
+      color: var(--pt-text);
       font: inherit;
       font-size: 0.85rem;
     }
@@ -720,7 +720,7 @@ export class PtSettingsBar extends LitElement {
     .team-name-input:focus,
     .player-input:focus {
       outline: none;
-      border-color: #4ea8de;
+      border-color: var(--pt-accent);
     }
 
     .number-input { width: 48px; flex-shrink: 0; }
@@ -741,11 +741,11 @@ export class PtSettingsBar extends LitElement {
     }
 
     .roster-row.dragging { opacity: 0.4; }
-    .roster-row.drag-over { border-top: 2px solid #4ea8de; }
+    .roster-row.drag-over { border-top: 2px solid var(--pt-accent); }
 
     .drag-handle {
       cursor: grab;
-      color: #666;
+      color: var(--pt-text-muted);
       font-size: 0.85rem;
       flex-shrink: 0;
       touch-action: none;
@@ -767,15 +767,15 @@ export class PtSettingsBar extends LitElement {
     button.sm {
       padding: 6px 10px;
       font-size: 0.85rem;
-      border: 1px solid #86efac;
-      color: #86efac;
+      border: 1px solid var(--pt-success-light);
+      color: var(--pt-success-light);
       background: transparent;
       align-self: stretch;
     }
 
     button.danger {
       background: transparent;
-      color: #f87171;
+      color: var(--pt-danger-light);
       border-color: transparent;
       padding: 6px 10px;
       align-self: stretch;
@@ -788,7 +788,7 @@ export class PtSettingsBar extends LitElement {
 
     button.danger:hover,
     button.danger:focus-visible {
-      border-color: #f87171;
+      border-color: var(--pt-danger-light);
       background: rgba(248, 113, 113, 0.1);
     }
 

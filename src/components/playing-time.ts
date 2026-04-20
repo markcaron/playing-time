@@ -7,7 +7,7 @@ import { renderField, FIELD, PADDING } from '../lib/field.js';
 import { getFormationPositions } from '../lib/formations.js';
 import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadAppState, saveAppState, createNewTeam } from '../lib/storage.js';
-import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState } from '../lib/types.js';
+import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState, GameEvent } from '../lib/types.js';
 import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, getPlayerCount, getDefaultFormation, formatTime } from '../lib/types.js';
 import type {
   RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent,
@@ -63,8 +63,8 @@ export class PlayingTime extends LitElement {
       position: relative;
       height: 100vh;
       overflow: hidden;
-      --field-stripe-light: #2d6a4f;
-      --field-stripe-dark: #276749;
+      --field-stripe-light: var(--pt-field-stripe-light);
+      --field-stripe-dark: var(--pt-field-stripe-dark);
     }
 
     .app-container {
@@ -103,7 +103,7 @@ export class PlayingTime extends LitElement {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: #16213e;
+      background: var(--pt-bg-primary);
       border-radius: 10px;
       padding: 16px 24px;
       display: flex;
@@ -114,7 +114,7 @@ export class PlayingTime extends LitElement {
       white-space: nowrap;
       font-family: system-ui, -apple-system, sans-serif;
       font-size: 0.9rem;
-      color: #e0e0e0;
+      color: var(--pt-text);
     }
 
     .onboarding-card svg {
@@ -125,7 +125,7 @@ export class PlayingTime extends LitElement {
 
     .empty-state {
       font-size: 0.8rem;
-      color: #666;
+      color: var(--pt-text-muted);
       text-align: center;
       padding: 16px;
       font-family: system-ui, -apple-system, sans-serif;
@@ -169,6 +169,7 @@ export class PlayingTime extends LitElement {
   @state() accessor showOnFieldTime = true;
   @state() accessor selectedId: string | null = null;
   @state() accessor swapTargetId: string | null = null;
+  @state() accessor gameEvents: GameEvent[] = [];
 
   @query('svg.field') accessor svgEl!: SVGSVGElement;
   @query('pt-timer-bar') accessor timerBar!: import('./pt-timer-bar.js').PtTimerBar;
@@ -299,6 +300,7 @@ export class PlayingTime extends LitElement {
   #onTeamSwitched(e: TeamSwitchedEvent) {
     this.timerBar?.stopTimer();
     this.#saveState();
+    this.gameEvents = [];
     this.#loadTeam(e.teamId);
     this.#saveState();
   }
@@ -371,12 +373,14 @@ export class PlayingTime extends LitElement {
   #onResetHalf(e: ResetHalfEvent) {
     const field = e.half === 1 ? 'half1Time' : 'half2Time';
     this.roster = this.roster.map(p => ({ ...p, [field]: 0, benchTime: 0, onFieldTime: 0 }));
+    this.gameEvents = this.gameEvents.filter(ev => ev.half !== e.half);
     this.#rebuildSubPlayers();
     this.#saveState();
   }
 
   #onResetGame(_e: ResetGameEvent) {
     this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0, benchTime: 0, onFieldTime: 0 }));
+    this.gameEvents = [];
     this.#rebuildSubPlayers();
     this.#saveState();
   }
@@ -416,6 +420,17 @@ export class PlayingTime extends LitElement {
     const target = this.fieldPlayers.find(p => p.id === targetId);
     if (!target) return;
 
+    const dragged = this.fieldPlayers.find(p => p.id === draggedId);
+    if (dragged) {
+      this.gameEvents = [...this.gameEvents, {
+        type: 'swap',
+        half: this.timerBar?.half ?? 1,
+        elapsed: this.timerBar?.elapsed ?? 0,
+        playerA: dragged.name,
+        playerB: target.name,
+      }];
+    }
+
     const targetX = target.x;
     const targetY = target.y;
 
@@ -435,6 +450,14 @@ export class PlayingTime extends LitElement {
     const fieldIdx = rosterCopy.findIndex(p => p.id === fieldId);
     const subIdx = rosterCopy.findIndex(p => p.id === subId);
     if (fieldIdx === -1 || subIdx === -1) return;
+
+    this.gameEvents = [...this.gameEvents, {
+      type: 'sub',
+      half: this.timerBar?.half ?? 1,
+      elapsed: this.timerBar?.elapsed ?? 0,
+      playerA: rosterCopy[subIdx].name,
+      playerB: rosterCopy[fieldIdx].name,
+    }];
 
     const tmp = { ...rosterCopy[fieldIdx], onFieldTime: 0 };
     rosterCopy[fieldIdx] = { ...rosterCopy[subIdx], benchTime: 0, onFieldTime: 0 };
@@ -634,8 +657,8 @@ export class PlayingTime extends LitElement {
       <defs>
         <pattern id="grass-stripes" width="68" height="10"
                  patternUnits="userSpaceOnUse">
-          <rect width="68" height="5" fill="var(--field-stripe-light, #2d6a4f)" />
-          <rect y="5" width="68" height="5" fill="var(--field-stripe-dark, #276749)" />
+          <rect width="68" height="5" fill="var(--field-stripe-light)" />
+          <rect y="5" width="68" height="5" fill="var(--field-stripe-dark)" />
         </pattern>
 
         <filter id="player-shadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -664,8 +687,8 @@ export class PlayingTime extends LitElement {
     const selected = p.id === this.selectedId;
     const isSwapTarget = p.id === this.swapTargetId;
     const selR = PLAYER_RADIUS + SEL_RING_OFFSET;
-    const fillColor = isSwapTarget ? '#e94560' : '#ffffff';
-    const textColor = isSwapTarget ? '#ffffff' : '#151515';
+    const fillColor = isSwapTarget ? 'var(--pt-danger)' : 'var(--pt-text-white)';
+    const textColor = isSwapTarget ? 'var(--pt-text-white)' : 'var(--pt-bg-dark)';
 
     const onFieldTime = kind === 'player' ? this.#getOnFieldTime(p.id) : 0;
 
@@ -715,7 +738,7 @@ export class PlayingTime extends LitElement {
         ${kind === 'sub' && this.showBenchTime && this.#getBenchTime(p.id) > 0 ? svg`
           <text x="${p.x}" y="${p.y + PLAYER_RADIUS + 2 + NAME_FONT_SIZE + 1}"
                 text-anchor="middle" dominant-baseline="central"
-                fill="#e94560" font-size="${NAME_FONT_SIZE * 0.75}"
+                fill="var(--pt-danger)" font-size="${NAME_FONT_SIZE * 0.75}"
                 font-family="system-ui, sans-serif"
                 filter="url(#text-shadow)"
                 style="pointer-events: none">
@@ -788,7 +811,7 @@ export class PlayingTime extends LitElement {
 
             <rect x="${vbX}" y="${vbY}"
                   width="${vbW}" height="${vbH}"
-                  fill="#1a1a2e" />
+                  fill="var(--pt-bg-body)" />
 
             <rect x="0" y="0"
                   width="${FIELD.WIDTH}" height="${FIELD.LENGTH}"
@@ -807,7 +830,7 @@ export class PlayingTime extends LitElement {
 
             ${subCount > 0 ? svg`
               <text x="${PADDING}" y="${BENCH_TOP}"
-                    fill="#aaa" font-size="${NAME_FONT_SIZE}" font-weight="bold"
+                    fill="var(--pt-text-muted)" font-size="${NAME_FONT_SIZE}" font-weight="bold"
                     font-family="system-ui, sans-serif"
                     style="pointer-events: none">
                 Substitutes
@@ -843,6 +866,7 @@ export class PlayingTime extends LitElement {
           .halfLength="${this.halfLength}"
           .teamName="${this.teamName}"
           .roster="${this.roster}"
+          .gameEvents="${this.gameEvents}"
           @timer-tick="${this.#onTimerTick}"
           @reset-half="${this.#onResetHalf}"
           @reset-game="${this.#onResetGame}">

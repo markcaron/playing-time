@@ -1,6 +1,6 @@
 import { LitElement, html, svg, css, nothing } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
-import type { RosterEntry } from '../lib/types.js';
+import type { RosterEntry, GameEvent } from '../lib/types.js';
 import { formatTime } from '../lib/types.js';
 
 export class TimerTickEvent extends Event {
@@ -42,7 +42,7 @@ export class PtTimerBar extends LitElement {
       gap: 12px;
       align-items: center;
       padding: 10px 12px;
-      background: #ffffff;
+      background: var(--pt-text-white);
       user-select: none;
     }
 
@@ -64,21 +64,21 @@ export class PtTimerBar extends LitElement {
       font-size: 1.1rem;
       font-weight: bold;
       font-variant-numeric: tabular-nums;
-      color: #16213e;
+      color: var(--pt-bg-primary);
       min-width: 48px;
       text-align: center;
       letter-spacing: 0.5px;
     }
 
-    .timer-display.stoppage { color: #e94560; }
+    .timer-display.stoppage { color: var(--pt-danger); }
 
     .play-btn {
       width: 44px;
       height: 44px;
       border-radius: 50%;
       border: 1px solid rgba(0, 0, 0, 0.15);
-      background: #16213e;
-      color: #fff;
+      background: var(--pt-bg-primary);
+      color: var(--pt-text-white);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -88,17 +88,17 @@ export class PtTimerBar extends LitElement {
       font: inherit;
     }
 
-    .play-btn:hover { background: #1a4a7a; }
+    .play-btn:hover { background: var(--pt-border); }
 
     .play-btn:focus-visible {
-      outline: 2px solid #4ea8de;
+      outline: 2px solid var(--pt-accent);
       outline-offset: 2px;
     }
 
     .play-btn.running {
-      background: #e94560;
-      border-color: #e94560;
-      color: #fff;
+      background: var(--pt-danger);
+      border-color: var(--pt-danger);
+      color: var(--pt-text-white);
     }
 
     .play-btn svg {
@@ -112,7 +112,7 @@ export class PtTimerBar extends LitElement {
       gap: 6px;
       font-size: 0.75rem;
       font-weight: bold;
-      color: #16213e;
+      color: var(--pt-bg-primary);
       cursor: pointer;
     }
 
@@ -140,7 +140,7 @@ export class PtTimerBar extends LitElement {
     .half-slide .slide-track {
       position: absolute;
       inset: 0;
-      background: #16213e;
+      background: var(--pt-bg-primary);
       border: 1px solid rgba(0, 0, 0, 0.15);
       border-radius: 18px;
     }
@@ -151,7 +151,7 @@ export class PtTimerBar extends LitElement {
       height: 30px;
       left: 3px;
       top: 3px;
-      background: #fff;
+      background: var(--pt-text-white);
       border-radius: 50%;
       box-shadow: 0 1px 3px rgba(0,0,0,0.2);
       transition: transform 0.2s;
@@ -160,7 +160,7 @@ export class PtTimerBar extends LitElement {
       justify-content: center;
       font-size: 0.65rem;
       font-weight: bold;
-      color: #16213e;
+      color: var(--pt-bg-primary);
       user-select: none;
     }
 
@@ -169,7 +169,7 @@ export class PtTimerBar extends LitElement {
     }
 
     .half-slide input:focus-visible ~ .slide-track {
-      outline: 2px solid #4ea8de;
+      outline: 2px solid var(--pt-accent);
       outline-offset: 2px;
     }
 
@@ -178,10 +178,10 @@ export class PtTimerBar extends LitElement {
       width: 44px;
       height: 44px;
       min-height: 44px;
-      border: 1px solid #e94560;
+      border: 1px solid var(--pt-danger);
       border-radius: 6px;
       background: transparent;
-      color: #e94560;
+      color: var(--pt-danger);
       cursor: pointer;
       transition: background 0.15s;
       display: flex;
@@ -197,8 +197,8 @@ export class PtTimerBar extends LitElement {
     }
 
     .times-btn {
-      border-color: #16213e;
-      color: #16213e;
+      border-color: var(--pt-bg-primary);
+      color: var(--pt-bg-primary);
     }
 
     .times-btn:hover {
@@ -206,13 +206,13 @@ export class PtTimerBar extends LitElement {
     }
 
     .times-btn.hint {
-      outline: 2px solid #7fff00;
+      outline: 2px solid var(--pt-hint);
       outline-offset: 2px;
       animation: hintPulse 1.5s ease-in-out infinite;
     }
 
     @keyframes hintPulse {
-      0%, 100% { outline-color: #7fff00; }
+      0%, 100% { outline-color: var(--pt-hint); }
       50% { outline-color: rgba(127, 255, 0, 0.4); }
     }
 
@@ -222,7 +222,7 @@ export class PtTimerBar extends LitElement {
 
     .reset-btn:focus-visible,
     .times-btn:focus-visible {
-      outline: 2px solid #4ea8de;
+      outline: 2px solid var(--pt-accent);
       outline-offset: 2px;
     }
 
@@ -231,14 +231,14 @@ export class PtTimerBar extends LitElement {
     }
 
     dialog {
-      background: #0f3460;
-      border: 1px solid #1a4a7a;
+      background: var(--pt-bg-surface);
+      border: 1px solid var(--pt-border);
       border-radius: 10px;
       padding: 0;
       max-width: 480px;
       width: calc(100% - 32px);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-      color: #e0e0e0;
+      color: var(--pt-text);
       display: flex;
       flex-direction: column;
     }
@@ -260,13 +260,13 @@ export class PtTimerBar extends LitElement {
       margin: 0;
       font-size: 0.95rem;
       font-weight: bold;
-      color: #e0e0e0;
+      color: var(--pt-text);
     }
 
     .dialog-close {
       background: transparent;
       border: none;
-      color: #aaa;
+      color: var(--pt-text-muted);
       cursor: pointer;
       padding: 10px 14px;
       display: flex;
@@ -277,7 +277,7 @@ export class PtTimerBar extends LitElement {
       font: inherit;
     }
 
-    .dialog-close:hover { color: #fff; }
+    .dialog-close:hover { color: var(--pt-text-white); }
 
     .dialog-close svg {
       width: 14px;
@@ -291,7 +291,7 @@ export class PtTimerBar extends LitElement {
     .dialog-body p {
       margin: 0 0 0;
       font-size: 0.85rem;
-      color: #e0e0e0;
+      color: var(--pt-text);
       line-height: 1.4;
     }
 
@@ -300,12 +300,12 @@ export class PtTimerBar extends LitElement {
       padding: 0 0 0 20px;
       text-align: left;
       font-size: 0.85rem;
-      color: #aaa;
+      color: var(--pt-text-muted);
       line-height: 1.6;
     }
 
     .confirm-list strong {
-      color: #e0e0e0;
+      color: var(--pt-text);
     }
 
     .confirm-actions {
@@ -324,8 +324,8 @@ export class PtTimerBar extends LitElement {
       font-size: 0.85rem;
       border: 1px solid transparent;
       border-radius: 6px;
-      background: #0f3460;
-      color: #e0e0e0;
+      background: var(--pt-bg-surface);
+      color: var(--pt-text);
       cursor: pointer;
       font: inherit;
     }
@@ -335,17 +335,17 @@ export class PtTimerBar extends LitElement {
       gap: 8px;
     }
 
-    .confirm-actions button:hover { background: #1a4a7a; }
+    .confirm-actions button:hover { background: var(--pt-border); }
 
     .confirm-actions .confirm-yes {
-      background: #e94560;
-      border-color: #e94560;
-      color: #fff;
+      background: var(--pt-danger);
+      border-color: var(--pt-danger);
+      color: var(--pt-text-white);
     }
 
     .confirm-actions .cancel-btn {
-      border: 1px solid #4ea8de;
-      color: #fff;
+      border: 1px solid var(--pt-accent);
+      color: var(--pt-text-white);
       background: transparent;
     }
 
@@ -354,17 +354,17 @@ export class PtTimerBar extends LitElement {
     }
 
     .confirm-actions .confirm-yes:hover {
-      background: #d13350;
+      background: var(--pt-danger-hover);
     }
 
     .confirm-actions .confirm-warn {
-      background: #f0c040;
-      border-color: #f0c040;
-      color: #151515;
+      background: var(--pt-warning);
+      border-color: var(--pt-warning);
+      color: var(--pt-bg-dark);
     }
 
     .confirm-actions .confirm-warn:hover {
-      background: #d4a830;
+      background: var(--pt-warning-hover);
     }
 
     #times-dialog {
@@ -389,10 +389,10 @@ export class PtTimerBar extends LitElement {
       padding: 8px 24px;
       min-height: 44px;
       font-size: 0.85rem;
-      border: 1px solid #4ea8de;
+      border: 1px solid var(--pt-accent);
       border-radius: 6px;
-      background: #4ea8de;
-      color: #fff;
+      background: var(--pt-accent);
+      color: var(--pt-text-white);
       cursor: pointer;
       font: inherit;
     }
@@ -407,7 +407,7 @@ export class PtTimerBar extends LitElement {
       text-align: left;
       padding: 6px 8px;
       border-bottom: 1px solid rgba(255,255,255,0.15);
-      color: #aaa;
+      color: var(--pt-text-muted);
       font-weight: bold;
       white-space: nowrap;
     }
@@ -420,33 +420,65 @@ export class PtTimerBar extends LitElement {
     .times-table td {
       padding: 6px 8px;
       border-bottom: 1px solid rgba(255,255,255,0.06);
-      color: #e0e0e0;
+      color: var(--pt-text);
     }
 
     .times-table td.jersey-col {
-      color: #aaa;
+      color: var(--pt-text-muted);
       width: 32px;
     }
 
     .times-table td.time-col {
       text-align: right;
       font-variant-numeric: tabular-nums;
-      color: #aaa;
+      color: var(--pt-text-muted);
     }
 
     .times-table td.time-col.total {
-      color: #e0e0e0;
+      color: var(--pt-text);
       font-weight: bold;
     }
 
     .times-table th.total-col {
-      color: #e0e0e0;
+      color: var(--pt-text);
+    }
+
+    .section-heading {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--pt-text);
+      margin: 0 0 10px 0;
+    }
+
+    .section-heading + .times-table {
+      margin-bottom: 24px;
+    }
+
+    .no-events {
+      font-size: 0.85rem;
+      color: var(--pt-text-muted);
+      margin: 0;
+    }
+
+    .events-table td {
+      vertical-align: top;
+    }
+
+    .event-sub {
+      color: var(--pt-success-light);
+      font-size: 0.7rem;
+    }
+
+    .event-sub-out {
+      color: var(--pt-danger-light);
+      font-size: 0.7rem;
     }
   `;
 
   @property({ type: Number }) halfLength = 45;
   @property({ type: String }) teamName = '';
   @property({ type: Array }) roster: RosterEntry[] = [];
+  @property({ type: Array }) gameEvents: GameEvent[] = [];
   @state() private _showTimesHint = false;
 
   @state() private _elapsed = 0;
@@ -493,6 +525,8 @@ export class PtTimerBar extends LitElement {
   }
 
   stopTimer() { this._stopTimer(); }
+  get elapsed() { return this._elapsed; }
+  get half(): 1 | 2 { return this._half; }
 
   private get _timeDisplay(): string {
     return formatTime(this._elapsed);
@@ -639,12 +673,13 @@ export class PtTimerBar extends LitElement {
 
       <dialog id="times-dialog" @close="${this._closeTimes}">
         <div class="dialog-header">
-          <h2>${this.teamName || 'Times'}</h2>
+          <h2>${this.teamName ? `${this.teamName} Times & Stats` : 'Times & Stats'}</h2>
           <button class="dialog-close" @click="${this._closeTimes}" aria-label="Close" title="Close">
             <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
         </div>
         <div class="times-dialog-body">
+          <h3 class="section-heading">Playing Time</h3>
           <table class="times-table">
             <thead>
               <tr>
@@ -667,6 +702,32 @@ export class PtTimerBar extends LitElement {
               `)}
             </tbody>
           </table>
+
+          <h3 class="section-heading">Substitutions & Swaps</h3>
+          ${this.gameEvents.length === 0 ? html`
+            <p class="no-events">No substitutions or swaps yet</p>
+          ` : html`
+            <table class="times-table events-table">
+              <thead>
+                <tr>
+                  <th>Half</th>
+                  <th class="time-col">Time</th>
+                  <th>Event</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${this.gameEvents.map(ev => html`
+                  <tr>
+                    <td class="jersey-col">${ev.half === 1 ? '1H' : '2H'}</td>
+                    <td class="time-col">${formatTime(ev.elapsed)}</td>
+                    <td>${ev.type === 'sub'
+                      ? html`<span class="event-sub">&#x25B2;</span> ${ev.playerA} <span class="event-sub-out">&#x25BC;</span> ${ev.playerB}`
+                      : html`${ev.playerA} &#x21C4; ${ev.playerB}`}</td>
+                  </tr>
+                `)}
+              </tbody>
+            </table>
+          `}
         </div>
         <div class="times-dialog-footer">
           <button @click="${this._closeTimes}">Done</button>

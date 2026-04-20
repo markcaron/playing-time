@@ -114,6 +114,14 @@ export interface StoredRoster {
   formation?: FormationKey;
 }
 
+export interface GameEvent {
+  type: 'sub' | 'swap';
+  half: 1 | 2;
+  elapsed: number;
+  playerA: string;
+  playerB: string;
+}
+
 export function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;

@@ -823,7 +823,7 @@ export class PtSettingsBar extends LitElement {
       transition: opacity 0.15s;
     }
 
-    .roster-row.dragging { opacity: 0.4; touch-action: none; }
+    .roster-row.dragging { opacity: 0.4; }
     .roster-row.drag-over { border-top: 2px solid var(--pt-accent); }
 
     .drag-handle {
@@ -1242,12 +1242,12 @@ export class PtSettingsBar extends LitElement {
                   <div class="roster-list">
                     ${this.roster.map((p, i) => html`
                       <div class="roster-row ${this._dragIdx === i ? 'dragging' : ''} ${this._dragOverIdx === i ? 'drag-over' : ''}"
-                           draggable="true"
-                           @dragstart="${() => this._onDragStart(i)}"
                            @dragover="${(e: DragEvent) => this._onDragOver(e, i)}"
                            @dragend="${this._onDragEnd}">
                         <span class="row-idx">${i + 1}</span>
-                        <span class="drag-handle"><svg viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="2" r="1" fill="currentColor"/><circle cx="7" cy="2" r="1" fill="currentColor"/><circle cx="3" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/></svg></span>
+                        <span class="drag-handle"
+                              draggable="true"
+                              @dragstart="${() => this._onDragStart(i)}"><svg viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="2" r="1" fill="currentColor"/><circle cx="7" cy="2" r="1" fill="currentColor"/><circle cx="3" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/></svg></span>
                         <input
                           class="player-input number-input"
                           type="text"

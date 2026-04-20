@@ -1,5 +1,5 @@
 import { LitElement, html, css, nothing } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property, state, query } from 'lit/decorators.js';
 import { enableDragDropTouch } from '@dragdroptouch/drag-drop-touch';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam } from '../lib/types.js';
 import { FORMATIONS_BY_FORMAT, GAME_FORMATS, formatTime, getPlayerCount } from '../lib/types.js';
@@ -40,6 +40,13 @@ export class BenchTimeToggleEvent extends Event {
   static readonly eventName = 'bench-time-toggle' as const;
   constructor(public showBenchTime: boolean) {
     super(BenchTimeToggleEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class OnFieldTimeToggleEvent extends Event {
+  static readonly eventName = 'on-field-time-toggle' as const;
+  constructor(public showOnFieldTime: boolean) {
+    super(OnFieldTimeToggleEvent.eventName, { bubbles: true, composed: true });
   }
 }
 
@@ -143,27 +150,30 @@ export class PtSettingsBar extends LitElement {
       color: #fff;
     }
 
-    .roster-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 300;
-      background: rgba(0, 0, 0, 0.6);
-      display: flex;
-      align-items: stretch;
-      justify-content: center;
-      padding: 16px;
+    dialog:not([open]) {
+      display: none;
     }
 
-    .roster-dialog {
+    dialog {
       background: #0f3460;
       border: 1px solid #1a4a7a;
       border-radius: 10px;
-      width: 100%;
+      padding: 0;
+      width: calc(100% - 32px);
       max-width: 520px;
-      height: 100%;
+      max-height: calc(100vh - 32px);
       display: flex;
       flex-direction: column;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      color: #e0e0e0;
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    dialog.settings-dialog {
+      max-width: 360px;
     }
 
     .roster-dialog-header {
@@ -205,7 +215,7 @@ export class PtSettingsBar extends LitElement {
     .roster-dialog-body {
       flex: 1;
       overflow-y: auto;
-      padding: 12px 16px;
+      padding: 20px 16px;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -288,33 +298,19 @@ export class PtSettingsBar extends LitElement {
 
     .spacer { flex: 1; }
 
-    .confirm-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 500;
-      background: rgba(0, 0, 0, 0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
+    dialog.confirm-dialog {
+      max-width: 400px;
     }
 
-    .confirm-dialog {
-      background: #16213e;
-      border: 1px solid #1a4a7a;
-      border-radius: 10px;
-      padding: 24px;
-      max-width: 320px;
-      width: 100%;
-      text-align: center;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    }
-
-    .confirm-dialog p {
-      margin: 0 0 16px;
-      font-size: 0.9rem;
+    dialog.confirm-dialog .roster-dialog-body p {
+      margin: 0;
+      font-size: 0.85rem;
       color: #e0e0e0;
       line-height: 1.4;
+    }
+
+    dialog.confirm-dialog .confirm-actions {
+      margin-top: 32px;
     }
 
     .confirm-actions {
@@ -327,6 +323,16 @@ export class PtSettingsBar extends LitElement {
       padding: 8px 20px;
       font-size: 0.85rem;
       border-radius: 6px;
+    }
+
+    .confirm-actions .cancel-btn {
+      border: 1px solid #4ea8de;
+      color: #fff;
+      background: transparent;
+    }
+
+    .confirm-actions .cancel-btn:hover {
+      background: rgba(78, 168, 222, 0.15);
     }
 
     .confirm-actions .confirm-yes {
@@ -387,6 +393,9 @@ export class PtSettingsBar extends LitElement {
       font-size: 0.9rem;
       color: #e0e0e0;
       font-weight: bold;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .mode-toggle {
@@ -394,15 +403,9 @@ export class PtSettingsBar extends LitElement {
       align-items: center;
       gap: 6px;
       font-size: 0.75rem;
-      color: #aaa;
-    }
-
-    .mode-toggle .mode-label {
       font-weight: bold;
-    }
-
-    .mode-toggle .mode-label.active {
       color: #e0e0e0;
+      cursor: pointer;
     }
 
 
@@ -461,6 +464,7 @@ export class PtSettingsBar extends LitElement {
       border-top: 1px solid rgba(255, 255, 255, 0.15);
       padding-top: 10px;
       margin-top: 2px;
+      margin-bottom: 10px;
     }
 
     .delete-team-section {
@@ -471,13 +475,13 @@ export class PtSettingsBar extends LitElement {
 
     button.delete-team-btn {
       background: transparent;
-      color: #e94560;
-      border: 1px solid #e94560;
+      color: #f87171;
+      border: 1px solid #f87171;
       padding: 8px 14px;
     }
 
     button.delete-team-btn:hover {
-      background: #e9456020;
+      background: rgba(248, 113, 113, 0.1);
     }
 
     .empty-warning {
@@ -575,7 +579,6 @@ export class PtSettingsBar extends LitElement {
       outline-offset: 2px;
     }
 
-    .settings-dialog { max-width: 360px; }
 
     .settings-branding {
       display: flex;
@@ -599,9 +602,14 @@ export class PtSettingsBar extends LitElement {
       min-width: 0;
     }
 
-    .team-row select {
-      flex: 1;
+    .team-select-wrap {
+      max-width: 160px;
+    }
+
+    .team-select-wrap select {
+      width: 100%;
       min-width: 0;
+      text-overflow: ellipsis;
     }
 
     .drawer-empty {
@@ -717,15 +725,15 @@ export class PtSettingsBar extends LitElement {
     button.sm {
       padding: 6px 10px;
       font-size: 0.85rem;
-      border: 1px solid #4ade80;
-      color: #4ade80;
+      border: 1px solid #86efac;
+      color: #86efac;
       background: transparent;
       align-self: stretch;
     }
 
     button.danger {
       background: transparent;
-      color: #e94560;
+      color: #f87171;
       border-color: transparent;
       padding: 6px 10px;
       align-self: stretch;
@@ -738,8 +746,8 @@ export class PtSettingsBar extends LitElement {
 
     button.danger:hover,
     button.danger:focus-visible {
-      border-color: #e94560;
-      background: #e9456020;
+      border-color: #f87171;
+      background: rgba(248, 113, 113, 0.1);
     }
 
     .caret {
@@ -765,6 +773,7 @@ export class PtSettingsBar extends LitElement {
   @property({ type: String }) activeTeamId: string | null = null;
   @property({ type: Boolean }) timerRunning = false;
   @property({ type: Boolean }) showBenchTime = true;
+  @property({ type: Boolean }) showOnFieldTime = true;
 
   @state() private _rosterOpen = false;
   @state() private _settingsOpen = false;
@@ -773,7 +782,10 @@ export class PtSettingsBar extends LitElement {
   @state() private _addName = '';
   @state() private _dragIdx: number | null = null;
   @state() private _dragOverIdx: number | null = null;
-  @state() private _confirmAction: 'delete-team' | null = null;
+
+  @query('#roster-dialog') private _rosterDialog!: HTMLDialogElement;
+  @query('#settings-dialog') private _settingsDialog!: HTMLDialogElement;
+  @query('#confirm-dialog') private _confirmDialog!: HTMLDialogElement;
 
   firstUpdated() {
     if (this.shadowRoot) {
@@ -781,10 +793,10 @@ export class PtSettingsBar extends LitElement {
     }
   }
 
-  private _openRoster() { this._rosterOpen = true; }
-  private _closeRoster() { this._rosterOpen = false; }
-  private _openSettings() { this._settingsOpen = true; }
-  private _closeSettings() { this._settingsOpen = false; }
+  private _openRoster() { this._rosterOpen = true; this._rosterDialog?.showModal(); }
+  private _closeRoster() { this._rosterOpen = false; this._rosterDialog?.close(); }
+  private _openSettings() { this._settingsOpen = true; this._settingsDialog?.showModal(); }
+  private _closeSettings() { this._settingsOpen = false; this._settingsDialog?.close(); }
 
   private _onTeamSwitch(e: Event) {
     const val = (e.target as HTMLSelectElement).value;
@@ -793,20 +805,20 @@ export class PtSettingsBar extends LitElement {
 
   private _addTeam() {
     this._editMode = true;
-    this._rosterOpen = true;
     this.dispatchEvent(new TeamAddedEvent());
+    requestAnimationFrame(() => this._rosterDialog?.showModal());
   }
 
-  private _requestDeleteTeam() { this._confirmAction = 'delete-team'; }
+  private _requestDeleteTeam() { this._confirmDialog?.showModal(); }
 
   private _confirmDeleteTeam() {
+    this._confirmDialog?.close();
     if (this.activeTeamId) {
       this.dispatchEvent(new TeamDeletedEvent(this.activeTeamId));
     }
-    this._confirmAction = null;
   }
 
-  private _cancelConfirm() { this._confirmAction = null; }
+  private _cancelConfirm() { this._confirmDialog?.close(); }
 
   private _onTeamNameInput(e: InputEvent) {
     const val = (e.target as HTMLInputElement).value;
@@ -828,6 +840,11 @@ export class PtSettingsBar extends LitElement {
     this.dispatchEvent(new BenchTimeToggleEvent(checked));
   }
 
+  private _onOnFieldTimeToggle(e: Event) {
+    const checked = (e.target as HTMLInputElement).checked;
+    this.dispatchEvent(new OnFieldTimeToggleEvent(checked));
+  }
+
   private _onHalfLengthInput(e: InputEvent) {
     const val = parseInt((e.target as HTMLInputElement).value, 10);
     if (!isNaN(val) && val > 0) {
@@ -847,6 +864,7 @@ export class PtSettingsBar extends LitElement {
       half1Time: 0,
       half2Time: 0,
       benchTime: 0,
+      onFieldTime: 0,
     };
     const updated = [...this.roster, entry];
     this._addNumber = '';
@@ -914,9 +932,7 @@ export class PtSettingsBar extends LitElement {
         </button>
       </div>
 
-      ${this._rosterOpen ? html`
-        <div class="roster-overlay" @click="${this._closeRoster}">
-          <div class="roster-dialog" @click="${(e: Event) => e.stopPropagation()}">
+      <dialog id="roster-dialog" @close="${() => this._rosterOpen = false}">
             <div class="roster-dialog-header">
               <h2>Roster</h2>
               <button class="roster-dialog-close" @click="${this._closeRoster}" aria-label="Close">
@@ -932,7 +948,7 @@ export class PtSettingsBar extends LitElement {
               ` : html`
                 <div class="drawer-header">
                   <div class="team-row">
-                    <span class="select-wrap">
+                    <span class="select-wrap team-select-wrap">
                       <select @change="${this._onTeamSwitch}">
                         ${this.teams.map(t => html`
                           <option value="${t.id}" .selected="${t.id === this.activeTeamId}">${t.teamName || 'Untitled'}</option>
@@ -942,22 +958,28 @@ export class PtSettingsBar extends LitElement {
                     </span>
                     <button class="add-team-btn" @click="${this._addTeam}">Add team</button>
                   </div>
+                </div>
+
+                <div class="drawer-header section-separator">
+                  ${!this._editMode ? html`
+                    <span class="team-label">${this.teamName || 'Roster'}</span>
+                  ` : nothing}
                   <span class="spacer"></span>
-                  <div class="mode-toggle">
-                    <span class="mode-label ${this._editMode ? 'active' : ''}">Edit</span>
-                    <label class="slide-toggle">
+                  <label class="mode-toggle">
+                    Edit
+                    <span class="slide-toggle">
                       <input type="checkbox"
                              .checked="${this._editMode}"
                              @change="${(e: Event) => this._editMode = (e.target as HTMLInputElement).checked}" />
                       <span class="slide-track"></span>
                       <span class="slide-thumb">${this._editMode ? 'On' : 'Off'}</span>
-                    </label>
-                  </div>
+                    </span>
+                  </label>
                 </div>
 
-                <div class="drawer-header section-separator">
-                  <div class="team-name-row">
-                    ${this._editMode ? html`
+                ${this._editMode ? html`
+                  <div class="drawer-header">
+                    <div class="team-name-row">
                       <label>Team name</label>
                       <input
                         class="team-name-input"
@@ -965,11 +987,7 @@ export class PtSettingsBar extends LitElement {
                         placeholder="Enter team name"
                         .value="${this.teamName}"
                         @input="${this._onTeamNameInput}" />
-                    ` : html`
-                      <span class="team-label">${this.teamName || 'Roster'}</span>
-                    `}
-                  </div>
-                  ${this._editMode ? html`
+                    </div>
                     <span class="select-wrap">
                       <select
                         .value="${this.gameFormat}"
@@ -980,10 +998,7 @@ export class PtSettingsBar extends LitElement {
                       </select>
                       <span class="caret"></span>
                     </span>
-                  ` : nothing}
-                </div>
-
-                ${this._editMode ? html`
+                  </div>
                   <div class="roster-list">
                     ${this.roster.map((p, i) => html`
                       <div class="roster-row ${this._dragIdx === i ? 'dragging' : ''} ${this._dragOverIdx === i ? 'drag-over' : ''}"
@@ -996,6 +1011,7 @@ export class PtSettingsBar extends LitElement {
                         <input
                           class="player-input number-input"
                           type="text"
+                          inputmode="numeric"
                           maxlength="2"
                           placeholder="#"
                           .value="${p.number}"
@@ -1016,6 +1032,7 @@ export class PtSettingsBar extends LitElement {
                     <input
                       class="player-input number-input"
                       type="text"
+                      inputmode="numeric"
                       maxlength="2"
                       placeholder="#"
                       .value="${this._addNumber}"
@@ -1072,13 +1089,9 @@ export class PtSettingsBar extends LitElement {
                 <button @click="${this._closeRoster}">Done</button>
               </div>
             ` : nothing}
-          </div>
-        </div>
-      ` : nothing}
+      </dialog>
 
-      ${this._settingsOpen ? html`
-        <div class="roster-overlay" @click="${this._closeSettings}">
-          <div class="roster-dialog settings-dialog" @click="${(e: Event) => e.stopPropagation()}">
+      <dialog id="settings-dialog" class="settings-dialog" @close="${() => this._settingsOpen = false}">
             <div class="roster-dialog-header">
               <h2>Settings</h2>
               <button class="roster-dialog-close" @click="${this._closeSettings}" aria-label="Close">
@@ -1098,16 +1111,26 @@ export class PtSettingsBar extends LitElement {
                   ?disabled="${this.timerRunning}"
                   @input="${this._onHalfLengthInput}" />
               </div>
-              <div class="settings-row">
-                <label for="bench-time-toggle">Show bench time:</label>
-                <label class="slide-toggle">
-                  <input type="checkbox" id="bench-time-toggle"
+              <label class="settings-row">
+                Show on-field time:
+                <span class="slide-toggle">
+                  <input type="checkbox"
+                         .checked="${this.showOnFieldTime}"
+                         @change="${this._onOnFieldTimeToggle}" />
+                  <span class="slide-track"></span>
+                  <span class="slide-thumb">${this.showOnFieldTime ? 'On' : 'Off'}</span>
+                </span>
+              </label>
+              <label class="settings-row">
+                Show bench time:
+                <span class="slide-toggle">
+                  <input type="checkbox"
                          .checked="${this.showBenchTime}"
                          @change="${this._onBenchTimeToggle}" />
                   <span class="slide-track"></span>
                   <span class="slide-thumb">${this.showBenchTime ? 'On' : 'Off'}</span>
-                </label>
-              </div>
+                </span>
+              </label>
               <div class="settings-branding">
                 <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" class="branding-icon"><path d="m660 243.6v-63.602h60v-120h-240v120h60v63.602c-219.6 30-390 218.4-390 446.4 0 248.4 201.6 450 450 450s450-201.6 450-450c0-228-170.4-416.4-390-446.4zm-60 776.4c-182.4 0-330-147.6-330-330s147.6-330 330-330 330 147.6 330 330-147.6 330-330 330z" fill="currentColor"/><path d="m151.2 247.2 85.199 84c48-49.199 104.4-86.398 168-112.8l-45.598-110.4c-78 32.398-148.8 79.199-207.6 139.2z" fill="currentColor"/><path d="m1042.8 241.2c-58.801-57.598-126-102-201.6-133.2l-45.602 110.4c61.199 25.199 116.4 61.199 163.2 108z" fill="currentColor"/><path d="m642.48 732.32-84.863-84.852 179.89-179.91 84.863 84.852z" fill="currentColor"/></svg>
                 PlayingTime by Mark Caron
@@ -1116,21 +1139,23 @@ export class PtSettingsBar extends LitElement {
             <div class="roster-dialog-footer">
               <button @click="${this._closeSettings}">Done</button>
             </div>
-          </div>
-        </div>
-      ` : nothing}
+      </dialog>
 
-      ${this._confirmAction ? html`
-        <div class="confirm-overlay" @click="${this._cancelConfirm}">
-          <div class="confirm-dialog" @click="${(e: Event) => e.stopPropagation()}">
-            <p>Delete "${this.teamName || 'Untitled'}"?<br>This cannot be undone.</p>
-            <div class="confirm-actions">
-              <button @click="${this._cancelConfirm}">Cancel</button>
-              <button class="confirm-yes" @click="${this._confirmDeleteTeam}">Delete</button>
-            </div>
+      <dialog id="confirm-dialog" class="confirm-dialog">
+        <div class="roster-dialog-header">
+          <h2>Delete team</h2>
+          <button class="roster-dialog-close" @click="${this._cancelConfirm}" aria-label="Close">
+            <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="roster-dialog-body">
+          <p>Delete "${this.teamName || 'Untitled'}"? This cannot be undone.</p>
+          <div class="confirm-actions">
+            <button class="cancel-btn" @click="${this._cancelConfirm}">Cancel</button>
+            <button class="confirm-yes" @click="${this._confirmDeleteTeam}">Delete</button>
           </div>
         </div>
-      ` : nothing}
+      </dialog>
     `;
   }
 }

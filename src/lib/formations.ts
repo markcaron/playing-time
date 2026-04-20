@@ -5,8 +5,8 @@ const W = FIELD.WIDTH;
 const H = FIELD.LENGTH;
 
 const GK_Y = 62;
-const DEF_Y = H - 20;
-const ATK_Y = 6;
+const DEF_Y = H - 24;
+const ATK_Y = 10;
 
 function distribute(lineCount: number): number[] {
   if (lineCount === 1) return [DEF_Y];

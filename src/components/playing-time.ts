@@ -12,7 +12,7 @@ import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, get
 import type {
   RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent,
   GameFormatChangedEvent, TeamSwitchedEvent, TeamAddedEvent, TeamDeletedEvent,
-  BenchTimeToggleEvent,
+  BenchTimeToggleEvent, OnFieldTimeToggleEvent,
 } from './pt-toolbar.js';
 import type { TimerTickEvent, ResetHalfEvent, ResetGameEvent } from './pt-timer-bar.js';
 
@@ -166,6 +166,7 @@ export class PlayingTime extends LitElement {
   @state() accessor subPlayers: FieldPlayer[] = [];
   @state() accessor halfLength = 45;
   @state() accessor showBenchTime = true;
+  @state() accessor showOnFieldTime = true;
   @state() accessor selectedId: string | null = null;
   @state() accessor swapTargetId: string | null = null;
 
@@ -207,6 +208,7 @@ export class PlayingTime extends LitElement {
     this.teamName = team.teamName;
     this.halfLength = team.halfLength;
     this.showBenchTime = team.showBenchTime ?? true;
+    this.showOnFieldTime = team.showOnFieldTime ?? true;
     this.gameFormat = team.gameFormat;
     this.formation = team.formation;
     this.roster = team.players.map(p => ({
@@ -216,6 +218,7 @@ export class PlayingTime extends LitElement {
       half1Time: p.half1Time ?? 0,
       half2Time: p.half2Time ?? 0,
       benchTime: p.benchTime ?? 0,
+      onFieldTime: p.onFieldTime ?? 0,
     }));
 
     this.#rebuildFieldPlayers();
@@ -273,9 +276,11 @@ export class PlayingTime extends LitElement {
         half1Time: p.half1Time,
         half2Time: p.half2Time,
         benchTime: p.benchTime,
+        onFieldTime: p.onFieldTime,
       })),
       halfLength: this.halfLength,
       showBenchTime: this.showBenchTime,
+      showOnFieldTime: this.showOnFieldTime,
       gameFormat: this.gameFormat,
       formation: this.formation,
       fieldPositions: this.fieldPlayers.map(fp => ({
@@ -329,6 +334,7 @@ export class PlayingTime extends LitElement {
       half1Time: p.half1Time ?? 0,
       half2Time: p.half2Time ?? 0,
       benchTime: p.benchTime ?? 0,
+      onFieldTime: p.onFieldTime ?? 0,
     }));
     this.#saveState();
     this.#rebuildFieldPlayers();
@@ -345,12 +351,17 @@ export class PlayingTime extends LitElement {
     this.#saveState();
   }
 
+  #onOnFieldTimeToggle(e: OnFieldTimeToggleEvent) {
+    this.showOnFieldTime = e.showOnFieldTime;
+    this.#saveState();
+  }
+
   #onTimerTick(e: TimerTickEvent) {
     const field = e.half === 1 ? 'half1Time' : 'half2Time';
     const fieldPlayerIds = new Set(this.fieldPlayers.map(fp => fp.id));
     this.roster = this.roster.map(p =>
       fieldPlayerIds.has(p.id)
-        ? { ...p, [field]: p[field] + 1 }
+        ? { ...p, [field]: p[field] + 1, onFieldTime: p.onFieldTime + 1 }
         : { ...p, benchTime: p.benchTime + 1 },
     );
     this.#rebuildSubPlayers();
@@ -359,13 +370,13 @@ export class PlayingTime extends LitElement {
 
   #onResetHalf(e: ResetHalfEvent) {
     const field = e.half === 1 ? 'half1Time' : 'half2Time';
-    this.roster = this.roster.map(p => ({ ...p, [field]: 0, benchTime: 0 }));
+    this.roster = this.roster.map(p => ({ ...p, [field]: 0, benchTime: 0, onFieldTime: 0 }));
     this.#rebuildSubPlayers();
     this.#saveState();
   }
 
   #onResetGame(_e: ResetGameEvent) {
-    this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0, benchTime: 0 }));
+    this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0, benchTime: 0, onFieldTime: 0 }));
     this.#rebuildSubPlayers();
     this.#saveState();
   }
@@ -425,8 +436,8 @@ export class PlayingTime extends LitElement {
     const subIdx = rosterCopy.findIndex(p => p.id === subId);
     if (fieldIdx === -1 || subIdx === -1) return;
 
-    const tmp = rosterCopy[fieldIdx];
-    rosterCopy[fieldIdx] = { ...rosterCopy[subIdx], benchTime: 0 };
+    const tmp = { ...rosterCopy[fieldIdx], onFieldTime: 0 };
+    rosterCopy[fieldIdx] = { ...rosterCopy[subIdx], benchTime: 0, onFieldTime: 0 };
     rosterCopy[subIdx] = tmp;
 
     const newFieldEntry = rosterCopy[fieldIdx];
@@ -656,8 +667,20 @@ export class PlayingTime extends LitElement {
     const fillColor = isSwapTarget ? '#e94560' : '#ffffff';
     const textColor = isSwapTarget ? '#ffffff' : '#151515';
 
+    const onFieldTime = kind === 'player' ? this.#getOnFieldTime(p.id) : 0;
+
     return svg`
       <g data-id="${p.id}" data-kind="${kind}" style="cursor: grab">
+        ${kind === 'player' && this.showOnFieldTime && onFieldTime > 0 ? svg`
+          <text x="${p.x}" y="${p.y - PLAYER_RADIUS - 2}"
+                text-anchor="middle" dominant-baseline="central"
+                fill="white" font-size="${NAME_FONT_SIZE * 0.75}"
+                font-family="system-ui, sans-serif"
+                filter="url(#text-shadow)"
+                style="pointer-events: none">
+            ${formatTime(onFieldTime)}
+          </text>
+        ` : nothing}
         ${selected ? svg`
           <circle cx="${p.x}" cy="${p.y}" r="${selR}"
                   fill="none" stroke="white" stroke-width="0.2"
@@ -707,6 +730,10 @@ export class PlayingTime extends LitElement {
     return this.roster.find(r => r.id === playerId)?.benchTime ?? 0;
   }
 
+  #getOnFieldTime(playerId: string): number {
+    return this.roster.find(r => r.id === playerId)?.onFieldTime ?? 0;
+  }
+
   render() {
     const vbX = -PADDING;
     const vbY = -PADDING;
@@ -732,8 +759,10 @@ export class PlayingTime extends LitElement {
           .activeTeamId="${this.activeTeamId}"
           .showRosterHint="${this.roster.length === 0}"
           .showBenchTime="${this.showBenchTime}"
+          .showOnFieldTime="${this.showOnFieldTime}"
           @roster-updated="${this.#onRosterUpdated}"
           @bench-time-toggle="${this.#onBenchTimeToggle}"
+          @on-field-time-toggle="${this.#onOnFieldTimeToggle}"
           @game-format-changed="${this.#onGameFormatChanged}"
           @formation-changed="${this.#onFormationChanged}"
           @settings-changed="${this.#onSettingsChanged}"
@@ -791,14 +820,6 @@ export class PlayingTime extends LitElement {
                   .filter(p => p.id === this.selectedId && p.id !== dragId)
                   .map(p => this.#renderPlayerCircle(p, 'sub'))}
               </g>
-            ` : this.roster.length === 0 ? svg`
-              <text x="${FIELD.WIDTH / 2}" y="${BENCH_TOP + 3}"
-                    text-anchor="middle"
-                    fill="#666" font-size="${BENCH_LABEL_SIZE}"
-                    font-family="system-ui, sans-serif"
-                    style="pointer-events: none">
-                Open the Roster to add players
-              </text>
             ` : nothing}
 
             ${dragId ? svg`

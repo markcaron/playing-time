@@ -1,7 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam } from '../lib/types.js';
-import { FORMATIONS_BY_FORMAT, GAME_FORMATS, formatTime } from '../lib/types.js';
+import { FORMATIONS_BY_FORMAT, GAME_FORMATS, formatTime, getPlayerCount } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
 
 export class RosterUpdatedEvent extends Event {
@@ -80,6 +80,42 @@ export class PtSettingsBar extends LitElement {
 
     .roster-btn {
       border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .team-name-label {
+      display: inline-block;
+      margin-left: 8px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #e0e0e0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 120px;
+      vertical-align: middle;
+    }
+
+    .roster-badge {
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      border-radius: 10px;
+      background: #4ea8de;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .row-idx {
+      font-size: 0.65rem;
+      color: #555;
+      width: 14px;
+      text-align: right;
+      flex-shrink: 0;
     }
 
     .roster-btn.hint {
@@ -580,7 +616,7 @@ export class PtSettingsBar extends LitElement {
     }
 
     .number-input { width: 48px; flex-shrink: 0; }
-    .name-input { flex: 1; min-width: 0; }
+    .name-input { flex: 1; min-width: 0; margin-right: 8px; }
 
     .roster-list {
       display: flex;
@@ -632,8 +668,8 @@ export class PtSettingsBar extends LitElement {
     button.danger {
       background: transparent;
       color: #e94560;
-      border-color: #e94560;
-      padding: 0 6px;
+      border-color: transparent;
+      padding: 6px 10px;
       align-self: stretch;
       display: inline-flex;
       align-items: center;
@@ -641,7 +677,12 @@ export class PtSettingsBar extends LitElement {
     }
 
     button.danger svg { width: 9px; height: 9px; }
-    button.danger:hover { background: #e9456020; }
+
+    button.danger:hover,
+    button.danger:focus-visible {
+      border-color: #e94560;
+      background: #e9456020;
+    }
 
     .caret {
       display: inline-block;
@@ -782,6 +823,10 @@ export class PtSettingsBar extends LitElement {
                 aria-label="Roster${this.roster.length ? ` (${this.roster.length})` : ''}">
           <svg viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg" style="width:28px;height:28px"><path d="M1250.75 484.752L1150 585.501V790.128L1350 650.128L1250.75 484.752Z" fill="currentColor"/><path d="M450 585.499L349.251 484.75L250 650.123L450 790.123V585.499Z" fill="currentColor"/><path d="M500 575.125V1275.13H1100V575.125C1100 568.5 1102.63 562.125 1107.31 557.437L1224.25 440.5L1210 416.688C1203.62 406.001 1193.44 398.063 1181.5 394.5L950.059 325.063L947.497 330.125C925.059 375 884.871 410.188 835.871 421.063C761.371 437.625 687.991 400.937 655.311 335.563L650.061 325L418.621 394.437C406.684 398 396.496 405.937 390.121 416.625L375.871 440.437L492.808 557.375C497.495 562.062 500.121 568.437 500.121 575.063L500 575.125ZM950 575.125C977.625 575.125 1000 597.5 1000 625.125C1000 652.751 977.625 675.125 950 675.125C922.375 675.125 900 652.751 900 625.125C900 597.5 922.375 575.125 950 575.125ZM600 1125.13H700V1175.13H600V1125.13Z" fill="currentColor"/></svg>
         </button>
+        ${this.teamName ? html`
+          <span class="team-name-label">${this.teamName}</span>
+        ` : nothing}
+        ${this.roster.length > 0 ? html`<span class="roster-badge">${this.roster.length}</span>` : nothing}
         <span class="spacer"></span>
         <span class="select-wrap">
           <select @change="${this._onFormationChange}">
@@ -871,6 +916,7 @@ export class PtSettingsBar extends LitElement {
                            @dragstart="${() => this._onDragStart(i)}"
                            @dragover="${(e: DragEvent) => this._onDragOver(e, i)}"
                            @dragend="${this._onDragEnd}">
+                        <span class="row-idx">${i + 1}</span>
                         <span class="drag-handle"><svg viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="2" r="1" fill="currentColor"/><circle cx="7" cy="2" r="1" fill="currentColor"/><circle cx="3" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/></svg></span>
                         <input
                           class="player-input number-input"

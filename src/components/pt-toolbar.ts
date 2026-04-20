@@ -1,5 +1,5 @@
-import { LitElement, html, svg, css, nothing } from 'lit';
-import { customElement, property, state, query } from 'lit/decorators.js';
+import { LitElement, html, css, nothing } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam } from '../lib/types.js';
 import { FORMATIONS_BY_FORMAT, GAME_FORMATS, formatTime } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
@@ -35,27 +35,6 @@ export class SettingsChangedEvent extends Event {
   }
 }
 
-export class TimerTickEvent extends Event {
-  static readonly eventName = 'timer-tick' as const;
-  constructor(public half: 1 | 2) {
-    super(TimerTickEvent.eventName, { bubbles: true, composed: true });
-  }
-}
-
-export class ResetHalfEvent extends Event {
-  static readonly eventName = 'reset-half' as const;
-  constructor(public half: 1 | 2) {
-    super(ResetHalfEvent.eventName, { bubbles: true, composed: true });
-  }
-}
-
-export class ResetGameEvent extends Event {
-  static readonly eventName = 'reset-game' as const;
-  constructor() {
-    super(ResetGameEvent.eventName, { bubbles: true, composed: true });
-  }
-}
-
 export class TeamSwitchedEvent extends Event {
   static readonly eventName = 'team-switched' as const;
   constructor(public teamId: string) {
@@ -77,8 +56,8 @@ export class TeamDeletedEvent extends Event {
   }
 }
 
-@customElement('pt-toolbar')
-export class PtToolbar extends LitElement {
+@customElement('pt-settings-bar')
+export class PtSettingsBar extends LitElement {
   static styles = css`
     *, *::before, *::after {
       box-sizing: border-box;
@@ -90,7 +69,7 @@ export class PtToolbar extends LitElement {
       font-family: system-ui, -apple-system, sans-serif;
     }
 
-    .bar {
+    .settings-bar {
       display: flex;
       gap: 8px;
       align-items: center;
@@ -264,176 +243,6 @@ export class PtToolbar extends LitElement {
 
     .spacer { flex: 1; }
 
-    .timer-bar {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      gap: 12px;
-      align-items: center;
-      padding: 10px 12px;
-      background: #ffffff;
-      user-select: none;
-    }
-
-    .timer-left {
-      justify-self: start;
-    }
-
-    .timer-center {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      justify-self: center;
-    }
-
-    .timer-right {
-      justify-self: end;
-    }
-
-    .timer-bar .timer-display {
-      font-size: 1.1rem;
-      font-weight: bold;
-      font-variant-numeric: tabular-nums;
-      color: #16213e;
-      min-width: 48px;
-      text-align: center;
-      letter-spacing: 0.5px;
-    }
-
-    .timer-bar .timer-display.stoppage { color: #e94560; }
-
-    .timer-bar .play-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 1px solid rgba(0, 0, 0, 0.15);
-      background: #16213e;
-      color: #fff;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      transition: background 0.15s;
-    }
-
-    .timer-bar .play-btn:hover { background: #1a4a7a; }
-
-    .timer-bar .play-btn:focus-visible {
-      outline: 2px solid #4ea8de;
-      outline-offset: 2px;
-    }
-
-    .timer-bar .play-btn.running {
-      background: #e94560;
-      border-color: #e94560;
-      color: #fff;
-    }
-
-    .timer-bar .play-btn svg {
-      width: 14px;
-      height: 14px;
-    }
-
-    .timer-bar .half-toggle {
-      display: flex;
-      border: 1px solid rgba(0, 0, 0, 0.2);
-      border-radius: 6px;
-    }
-
-    .timer-bar .half-toggle button {
-      padding: 6px 12px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 0;
-      background: transparent;
-      color: #666;
-      transition: background 0.15s, color 0.15s;
-      min-width: 0;
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-    }
-
-    .timer-bar .half-toggle button:first-child {
-      border-radius: 5px 0 0 5px;
-    }
-
-    .timer-bar .half-toggle button:last-child {
-      border-radius: 0 5px 5px 0;
-    }
-
-    .timer-bar .half-toggle button.active {
-      background: #16213e;
-      color: #fff;
-    }
-
-    .timer-bar .half-toggle button.active:disabled {
-      opacity: 1;
-    }
-
-    .timer-bar .half-toggle button:disabled:not(.active) {
-      opacity: 0.35;
-    }
-
-    .half-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #4ade80;
-      flex-shrink: 0;
-    }
-
-    .timer-bar .reset-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: 1px solid rgba(0, 0, 0, 0.15);
-      background: transparent;
-      color: #666;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .timer-bar .reset-btn:hover {
-      background: rgba(0, 0, 0, 0.08);
-      color: #16213e;
-    }
-
-    .timer-bar .reset-btn:focus-visible {
-      outline: 2px solid #4ea8de;
-      outline-offset: 2px;
-    }
-
-    .timer-bar .reset-btn svg {
-      width: 12px;
-      height: 12px;
-    }
-
-    .timer-bar .reset-game-btn {
-      padding: 6px 14px;
-      font-size: 0.85rem;
-      border: 1px solid #e94560;
-      border-radius: 6px;
-      background: transparent;
-      color: #e94560;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    .timer-bar .reset-game-btn:hover {
-      background: rgba(233, 69, 96, 0.1);
-    }
-
-    .timer-bar .reset-game-btn:focus-visible {
-      outline: 2px solid #4ea8de;
-      outline-offset: 2px;
-    }
-
     .confirm-overlay {
       position: fixed;
       inset: 0;
@@ -556,17 +365,20 @@ export class PtToolbar extends LitElement {
       gap: 3px;
     }
 
-    .mode-toggle button:first-child {
-      border-radius: 5px 0 0 5px;
-    }
-
-    .mode-toggle button:last-child {
-      border-radius: 0 5px 5px 0;
-    }
+    .mode-toggle button:first-child { border-radius: 5px 0 0 5px; }
+    .mode-toggle button:last-child { border-radius: 0 5px 5px 0; }
 
     .mode-toggle button.active {
       background: #fff;
       color: #16213e;
+    }
+
+    .half-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4ade80;
+      flex-shrink: 0;
     }
 
     .roster-table {
@@ -653,9 +465,7 @@ export class PtToolbar extends LitElement {
       text-align: center;
     }
 
-    .edit-team-action {
-      text-align: center;
-    }
+    .edit-team-action { text-align: center; }
 
     button.edit-team-btn {
       border: 1px solid #16a34a;
@@ -664,18 +474,28 @@ export class PtToolbar extends LitElement {
       font-weight: bold;
     }
 
-    button.edit-team-btn:hover {
-      background: #15803d;
-    }
+    button.edit-team-btn:hover { background: #15803d; }
 
     .roster-table th.total-col {
       font-weight: bold;
       color: #e0e0e0;
     }
 
-    .settings-dialog {
-      max-width: 360px;
+    .settings-dialog { max-width: 360px; }
+
+    .settings-branding {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding-top: 16px;
+      margin-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      font-size: 0.75rem;
+      color: rgba(78, 168, 222, 0.6);
     }
+
+    .branding-icon { width: 12px; height: 12px; }
 
     .team-row {
       display: flex;
@@ -714,9 +534,7 @@ export class PtToolbar extends LitElement {
       cursor: pointer;
     }
 
-    button.add-team-btn-lg:hover {
-      background: #1a4a7a;
-    }
+    button.add-team-btn-lg:hover { background: #1a4a7a; }
 
     button.add-team-btn {
       padding: 6px 14px;
@@ -761,15 +579,8 @@ export class PtToolbar extends LitElement {
       border-color: #4ea8de;
     }
 
-    .number-input {
-      width: 48px;
-      flex-shrink: 0;
-    }
-
-    .name-input {
-      flex: 1;
-      min-width: 0;
-    }
+    .number-input { width: 48px; flex-shrink: 0; }
+    .name-input { flex: 1; min-width: 0; }
 
     .roster-list {
       display: flex;
@@ -800,11 +611,7 @@ export class PtToolbar extends LitElement {
     }
 
     .drag-handle:active { cursor: grabbing; }
-
-    .drag-handle svg {
-      width: 10px;
-      height: 14px;
-    }
+    .drag-handle svg { width: 10px; height: 14px; }
 
     .add-row {
       display: flex;
@@ -833,11 +640,7 @@ export class PtToolbar extends LitElement {
       justify-content: center;
     }
 
-    button.danger svg {
-      width: 9px;
-      height: 9px;
-    }
-
+    button.danger svg { width: 9px; height: 9px; }
     button.danger:hover { background: #e9456020; }
 
     .caret {
@@ -851,10 +654,6 @@ export class PtToolbar extends LitElement {
       vertical-align: middle;
       transition: transform 0.2s;
     }
-
-    details[open] > summary .caret {
-      transform: rotate(180deg);
-    }
   `;
 
   @property({ type: String }) formation: FormationKey = '4-3-3';
@@ -865,6 +664,7 @@ export class PtToolbar extends LitElement {
   @property({ type: Boolean }) showRosterHint = false;
   @property({ type: Array }) teams: StoredTeam[] = [];
   @property({ type: String }) activeTeamId: string | null = null;
+  @property({ type: Boolean }) timerRunning = false;
 
   @state() private _rosterOpen = false;
   @state() private _settingsOpen = false;
@@ -873,122 +673,15 @@ export class PtToolbar extends LitElement {
   @state() private _addName = '';
   @state() private _dragIdx: number | null = null;
   @state() private _dragOverIdx: number | null = null;
-  @state() private _elapsed = 0;
-  @state() private _running = false;
-  @state() private _half: 1 | 2 = 1;
-  @state() private _confirmAction: 'reset' | 'switch-half' | 'reset-game' | 'delete-team' | null = null;
+  @state() private _confirmAction: 'delete-team' | null = null;
 
-  private _timerInterval: ReturnType<typeof setInterval> | null = null;
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    this._stopTimer();
-  }
-
-  // --- Roster dialog ---
-
-  private _openRoster() {
-    this._rosterOpen = true;
-  }
-
-  private _closeRoster() {
-    this._rosterOpen = false;
-  }
-
-  // --- Settings dialog ---
-
-  private _openSettings() {
-    this._settingsOpen = true;
-  }
-
-  private _closeSettings() {
-    this._settingsOpen = false;
-  }
-
-  // --- Timer ---
-
-  private _toggleTimer() {
-    if (this._running) {
-      this._stopTimer();
-    } else {
-      this._startTimer();
-    }
-  }
-
-  private _startTimer() {
-    if (this._timerInterval) return;
-    this._running = true;
-    this._timerInterval = setInterval(() => {
-      this._elapsed++;
-      this.dispatchEvent(new TimerTickEvent(this._half));
-    }, 1000);
-  }
-
-  private _stopTimer() {
-    this._running = false;
-    if (this._timerInterval) {
-      clearInterval(this._timerInterval);
-      this._timerInterval = null;
-    }
-  }
-
-  private get _timeDisplay(): string {
-    return formatTime(this._elapsed);
-  }
-
-  private get _inStoppage(): boolean {
-    return this._elapsed >= this.halfLength * 60;
-  }
-
-  // --- Half toggle ---
-
-  private _requestSwitchTo2H() {
-    this._stopTimer();
-    this._confirmAction = 'switch-half';
-  }
-
-  private _requestSwitchTo1H() {
-    this._stopTimer();
-    this._confirmAction = 'reset-game';
-  }
-
-  private _confirmSwitchHalf() {
-    this._half = 2;
-    this._elapsed = 0;
-    this._confirmAction = null;
-  }
-
-  private _confirmResetGame() {
-    this._half = 1;
-    this._elapsed = 0;
-    this.dispatchEvent(new ResetGameEvent());
-    this._confirmAction = null;
-  }
-
-  // --- Reset ---
-
-  private _requestReset() {
-    this._stopTimer();
-    this._confirmAction = 'reset';
-  }
-
-  private _confirmReset() {
-    this._elapsed = 0;
-    this.dispatchEvent(new ResetHalfEvent(this._half));
-    this._confirmAction = null;
-  }
-
-  private _cancelConfirm() {
-    this._confirmAction = null;
-  }
-
-  // --- Disclosure ---
-
-  // --- Team management ---
+  private _openRoster() { this._rosterOpen = true; }
+  private _closeRoster() { this._rosterOpen = false; }
+  private _openSettings() { this._settingsOpen = true; }
+  private _closeSettings() { this._settingsOpen = false; }
 
   private _onTeamSwitch(e: Event) {
     const val = (e.target as HTMLSelectElement).value;
-    this._stopTimer();
     this.dispatchEvent(new TeamSwitchedEvent(val));
   }
 
@@ -998,9 +691,7 @@ export class PtToolbar extends LitElement {
     this.dispatchEvent(new TeamAddedEvent());
   }
 
-  private _requestDeleteTeam() {
-    this._confirmAction = 'delete-team';
-  }
+  private _requestDeleteTeam() { this._confirmAction = 'delete-team'; }
 
   private _confirmDeleteTeam() {
     if (this.activeTeamId) {
@@ -1009,7 +700,7 @@ export class PtToolbar extends LitElement {
     this._confirmAction = null;
   }
 
-  // --- Roster management ---
+  private _cancelConfirm() { this._confirmAction = null; }
 
   private _onTeamNameInput(e: InputEvent) {
     const val = (e.target as HTMLInputElement).value;
@@ -1033,13 +724,8 @@ export class PtToolbar extends LitElement {
     }
   }
 
-  private _onAddNumberInput(e: InputEvent) {
-    this._addNumber = (e.target as HTMLInputElement).value;
-  }
-
-  private _onAddNameInput(e: InputEvent) {
-    this._addName = (e.target as HTMLInputElement).value;
-  }
+  private _onAddNumberInput(e: InputEvent) { this._addNumber = (e.target as HTMLInputElement).value; }
+  private _onAddNameInput(e: InputEvent) { this._addName = (e.target as HTMLInputElement).value; }
 
   private _addPlayer() {
     if (!this._addNumber.trim() && !this._addName.trim()) return;
@@ -1056,9 +742,7 @@ export class PtToolbar extends LitElement {
     this.dispatchEvent(new RosterUpdatedEvent(this.teamName, updated));
   }
 
-  private _addPlayerKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') this._addPlayer();
-  }
+  private _addPlayerKeydown(e: KeyboardEvent) { if (e.key === 'Enter') this._addPlayer(); }
 
   private _removePlayer(id: string) {
     const updated = this.roster.filter(p => p.id !== id);
@@ -1090,11 +774,9 @@ export class PtToolbar extends LitElement {
     this.dispatchEvent(new RosterUpdatedEvent(this.teamName, updated));
   }
 
-  // --- Render ---
-
   render() {
     return html`
-      <div class="bar">
+      <div class="settings-bar">
         <button class="roster-btn ${this._rosterOpen ? 'open' : ''} ${this.showRosterHint && !this._rosterOpen ? 'hint' : ''}"
                 @click="${this._openRoster}"
                 aria-label="Roster${this.roster.length ? ` (${this.roster.length})` : ''}">
@@ -1114,44 +796,6 @@ export class PtToolbar extends LitElement {
                 aria-label="Settings">
           <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px"><path d="m1170 681.6v-163.2l-186-51.598c-4.8008-14.398-10.801-30-18-44.398l94.801-166.8-116.4-116.4-168 94.801c-13.199-7.1992-28.801-13.199-43.199-18l-50.402-186h-165.6l-50.398 186c-14.398 6-30 12-43.199 18l-168-94.801-116.4 116.4 94.801 166.8c-7.1992 14.398-13.199 28.801-18 44.398l-186 51.602v164.4l186 50.402c4.8008 14.398 10.801 28.801 18 43.199l-94.801 166.8 116.4 116.4 168-94.801c13.199 7.1992 28.801 13.199 43.199 18l51.602 186h164.4l50.402-184.8c14.398-6 30-12 43.199-18l168 94.801 116.4-116.4-94.801-166.8c7.1992-14.398 13.199-28.801 18-43.199zm-570 112.8c-108 0-194.4-86.398-194.4-194.4s86.398-194.4 194.4-194.4 194.4 87.598 194.4 194.4-86.398 194.4-194.4 194.4z" fill="currentColor"/></svg>
         </button>
-      </div>
-
-      <div class="timer-bar">
-        <div class="timer-left">
-          <div class="half-toggle">
-            <button class="${this._half === 1 ? 'active' : ''}"
-                    ?disabled="${this._half === 1 || this._running}"
-                    @click="${this._requestSwitchTo1H}">${this._half === 1 ? html`<span class="half-dot"></span>` : nothing}1H</button>
-            <button class="${this._half === 2 ? 'active' : ''}"
-                    ?disabled="${this._half === 2 || this._running}"
-                    @click="${this._requestSwitchTo2H}">2H${this._half === 2 ? html`<span class="half-dot"></span>` : nothing}</button>
-          </div>
-        </div>
-        <div class="timer-center">
-          <button class="play-btn ${this._running ? 'running' : ''}"
-                  @click="${this._toggleTimer}"
-                  aria-label="${this._running ? 'Stop' : 'Play'}">
-            ${this._running ? svg`
-              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="1" width="10" height="12" rx="1" fill="currentColor"/>
-              </svg>
-            ` : svg`
-              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 1.5v11l9-5.5z" fill="currentColor"/>
-              </svg>
-            `}
-          </button>
-          <span class="timer-display ${this._inStoppage ? 'stoppage' : ''}">${this._timeDisplay}</span>
-          <button class="reset-btn"
-                  @click="${this._requestReset}"
-                  aria-label="Reset timer">
-            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m1011.6 216c-206.4-206.4-537.6-211.2-750-18l-49.199-49.199c-19.199-19.199-48-26.398-74.398-19.199-26.398 8.3984-46.801 30-51.602 56.398l-55.203 256.8c-4.8008 25.199 2.3984 50.398 20.398 68.398s43.199 25.199 68.398 20.398l256.8-54c14.398-3.6016 27.602-10.801 37.199-20.398 8.3984-8.3984 15.602-19.199 19.199-31.199 7.1992-26.398 0-55.199-19.199-74.398l-46.801-46.801c154.8-136.8 390-130.8 537.61 16.801 153.6 153.6 153.6 403.2 0 556.8-153.6 153.6-403.2 153.6-556.8-0.003906-49.199-49.199-84-110.4-102-177.6-10.801-39.602-51.602-63.602-91.199-52.801-39.602 10.801-63.602 51.602-52.801 91.199 24 92.398 73.199 177.6 141.6 244.8 212.4 212.4 556.8 212.4 769.2 0 210-211.2 210-556.8-1.1992-768z" fill="currentColor"/></svg>
-          </button>
-        </div>
-        <div class="timer-right">
-          <button class="reset-game-btn"
-                  @click="${this._requestSwitchTo1H}">Reset Game</button>
-        </div>
       </div>
 
       ${this._rosterOpen ? html`
@@ -1330,8 +974,12 @@ export class PtToolbar extends LitElement {
                   inputmode="numeric"
                   maxlength="2"
                   .value="${String(this.halfLength)}"
-                  ?disabled="${this._running}"
+                  ?disabled="${this.timerRunning}"
                   @input="${this._onHalfLengthInput}" />
+              </div>
+              <div class="settings-branding">
+                <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" class="branding-icon"><path d="m660 243.6v-63.602h60v-120h-240v120h60v63.602c-219.6 30-390 218.4-390 446.4 0 248.4 201.6 450 450 450s450-201.6 450-450c0-228-170.4-416.4-390-446.4zm-60 776.4c-182.4 0-330-147.6-330-330s147.6-330 330-330 330 147.6 330 330-147.6 330-330 330z" fill="currentColor"/><path d="m151.2 247.2 85.199 84c48-49.199 104.4-86.398 168-112.8l-45.598-110.4c-78 32.398-148.8 79.199-207.6 139.2z" fill="currentColor"/><path d="m1042.8 241.2c-58.801-57.598-126-102-201.6-133.2l-45.602 110.4c61.199 25.199 116.4 61.199 163.2 108z" fill="currentColor"/><path d="m642.48 732.32-84.863-84.852 179.89-179.91 84.863 84.852z" fill="currentColor"/></svg>
+                Playing Time by Mark Caron
               </div>
             </div>
             <div class="roster-dialog-footer">
@@ -1344,27 +992,10 @@ export class PtToolbar extends LitElement {
       ${this._confirmAction ? html`
         <div class="confirm-overlay" @click="${this._cancelConfirm}">
           <div class="confirm-dialog" @click="${(e: Event) => e.stopPropagation()}">
-            ${this._confirmAction === 'reset' ? html`
-              <p>Reset ${this._half === 1 ? '1H' : '2H'} clock?<br>All player time for this half will be cleared.</p>
-            ` : this._confirmAction === 'switch-half' ? html`
-              <p>Start 2nd half?<br>The clock will reset to 00:00.</p>
-            ` : this._confirmAction === 'delete-team' ? html`
-              <p>Delete "${this.teamName || 'Untitled'}"?<br>This cannot be undone.</p>
-            ` : html`
-              <p>Reset entire game?<br>The clock and all player times for both halves will be cleared.</p>
-            `}
+            <p>Delete "${this.teamName || 'Untitled'}"?<br>This cannot be undone.</p>
             <div class="confirm-actions">
               <button @click="${this._cancelConfirm}">Cancel</button>
-              <button class="confirm-yes" @click="${
-                this._confirmAction === 'reset' ? this._confirmReset
-                : this._confirmAction === 'switch-half' ? this._confirmSwitchHalf
-                : this._confirmAction === 'delete-team' ? this._confirmDeleteTeam
-                : this._confirmResetGame}">
-                ${this._confirmAction === 'reset' ? 'Reset'
-                  : this._confirmAction === 'switch-half' ? 'Start 2H'
-                  : this._confirmAction === 'delete-team' ? 'Delete'
-                  : 'Reset Game'}
-              </button>
+              <button class="confirm-yes" @click="${this._confirmDeleteTeam}">Delete</button>
             </div>
           </div>
         </div>
@@ -1375,6 +1006,6 @@ export class PtToolbar extends LitElement {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'pt-toolbar': PtToolbar;
+    'pt-settings-bar': PtSettingsBar;
   }
 }

@@ -2,7 +2,8 @@ import { LitElement, html, svg, css, nothing } from 'lit';
 import { customElement, state, query } from 'lit/decorators.js';
 
 import './pt-toolbar.js';
-import { renderHalfField, FIELD, PADDING } from '../lib/field.js';
+import './pt-timer-bar.js';
+import { renderField, FIELD, PADDING } from '../lib/field.js';
 import { getFormationPositions } from '../lib/formations.js';
 import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadAppState, saveAppState, createNewTeam } from '../lib/storage.js';
@@ -10,15 +11,15 @@ import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, St
 import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, getPlayerCount, getDefaultFormation } from '../lib/types.js';
 import type {
   RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent,
-  TimerTickEvent, ResetHalfEvent, ResetGameEvent, GameFormatChangedEvent,
-  TeamSwitchedEvent, TeamAddedEvent, TeamDeletedEvent,
+  GameFormatChangedEvent, TeamSwitchedEvent, TeamAddedEvent, TeamDeletedEvent,
 } from './pt-toolbar.js';
+import type { TimerTickEvent, ResetHalfEvent, ResetGameEvent } from './pt-timer-bar.js';
 
 const GOAL_DEPTH = 2;
 const SEL_RING_OFFSET = 0.6;
 const SWAP_THRESHOLD = PLAYER_RADIUS * 2;
-const BENCH_TOP = FIELD.HALF_LENGTH + GOAL_DEPTH + PADDING + 2;
-const BENCH_LABEL_SIZE = 1.6;
+const BENCH_TOP = FIELD.LENGTH + GOAL_DEPTH + PADDING + 2;
+const BENCH_LABEL_SIZE = NAME_FONT_SIZE;
 const BENCH_ROW_SPACING = PLAYER_RADIUS * 2 + NAME_FONT_SIZE + 3;
 const BENCH_COL_SPACING = PLAYER_RADIUS * 2 + 3;
 
@@ -52,9 +53,10 @@ function getBenchHeight(subCount: number): number {
 export class PlayingTime extends LitElement {
   static styles = css`
     :host {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
+      display: block;
+      position: relative;
+      height: 100vh;
+      overflow: hidden;
       --field-stripe-light: #2d6a4f;
       --field-stripe-dark: #276749;
     }
@@ -62,20 +64,30 @@ export class PlayingTime extends LitElement {
     .app-container {
       display: flex;
       flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .board {
       flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      min-height: 0;
     }
 
     .svg-wrap {
       position: relative;
       width: 100%;
       max-width: 768px;
-      margin: 0 auto;
+      height: 100%;
     }
 
     svg {
       display: block;
       width: 100%;
-      height: auto;
+      height: 100%;
       cursor: default;
       user-select: none;
     }
@@ -88,34 +100,11 @@ export class PlayingTime extends LitElement {
       font-family: system-ui, -apple-system, sans-serif;
     }
 
-    .app-footer {
-      text-align: center;
-      padding: 32px 12px;
-      margin-top: auto;
-      font-size: 0.75rem;
-      color: rgba(78, 168, 222, 0.6);
-      font-family: system-ui, -apple-system, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-
-    .footer-icon {
-      width: 12px;
-      height: 12px;
-    }
-
     .rotate-overlay {
       display: none;
     }
 
     @media (max-width: 768px) and (orientation: landscape) {
-      :host {
-        overflow: hidden;
-        height: 100vh;
-      }
-
       .rotate-overlay {
         display: flex;
         position: fixed;
@@ -149,6 +138,7 @@ export class PlayingTime extends LitElement {
   @state() accessor swapTargetId: string | null = null;
 
   @query('svg.field') accessor svgEl!: SVGSVGElement;
+  @query('pt-timer-bar') accessor timerBar!: import('./pt-timer-bar.js').PtTimerBar;
 
   #dragState: {
     id: string;
@@ -211,7 +201,7 @@ export class PlayingTime extends LitElement {
       id: entry.id,
       rosterId: entry.id,
       x: positions[i]?.x ?? FIELD.WIDTH / 2,
-      y: positions[i]?.y ?? FIELD.HALF_LENGTH / 2,
+      y: positions[i]?.y ?? FIELD.LENGTH / 2,
       number: entry.number,
       name: entry.name,
     }));
@@ -261,6 +251,7 @@ export class PlayingTime extends LitElement {
   // --- Team management ---
 
   #onTeamSwitched(e: TeamSwitchedEvent) {
+    this.timerBar?.stopTimer();
     this.#saveState();
     this.#loadTeam(e.teamId);
     this.#saveState();
@@ -627,7 +618,7 @@ export class PlayingTime extends LitElement {
     const vbW = FIELD.WIDTH + PADDING * 2;
     const subCount = this.subPlayers.length;
     const benchH = subCount > 0 ? getBenchHeight(subCount) + 2 : 0;
-    const vbH = FIELD.HALF_LENGTH + PADDING + GOAL_DEPTH + PADDING + benchH;
+    const vbH = FIELD.LENGTH + PADDING + GOAL_DEPTH + PADDING + benchH;
 
     const dragId = this.#dragState?.id;
 
@@ -636,7 +627,7 @@ export class PlayingTime extends LitElement {
         <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="M880.71 163.3V163.32L740.23 163.16L738.09 127.98L882.89 128L880.71 163.3ZM106.9 438.69H106.88L105.81 458.31L105.78 459.55L105.99 479.2C106.11 489.65 114.67 498.03 125.12 497.92C135.5 497.81 143.84 489.35 143.84 479L143.63 459.77L144.64 441.37L146.85 423.11L150.26 405.01L154.85 387.19L160.6 369.72L167.5 352.63L175.49 336.07L184.57 320.03L194.67 304.65L205.76 289.97L217.8 276.04L230.73 262.93L244.27 250.89L258.55 239.75L273.53 229.55L289.13 220.35L305.29 212.18L321.96 205.07L339.06 199.05L356.5 194.15L374.21 190.39L392.15 187.78L409.75 186.38L388.69 203.43C384.01 207.22 381.58 212.76 381.58 218.35C381.58 222.59 382.98 226.86 385.86 230.41C392.52 238.64 404.61 239.91 412.84 233.25L475.4 182.59C479.9 178.95 482.51 173.47 482.53 167.68V167.59C482.53 161.81 479.9 156.42 475.4 152.77L413.16 102.35C404.93 95.68 392.85 96.95 386.18 105.18C383.3 108.73 381.9 113 381.9 117.25C381.9 122.84 384.33 128.38 389.01 132.17L409.17 148.5H409.04L407.82 148.56L388.53 150.1L387.31 150.24L368.17 153.02L366.96 153.24L348.04 157.26L346.85 157.55L328.23 162.78L327.06 163.15L308.81 169.58L307.67 170.03L289.88 177.62L288.77 178.14L271.51 186.87L270.44 187.46L253.78 197.29L252.74 197.95L236.75 208.83L235.76 209.55L220.51 221.45L219.57 222.23L205.11 235.09L204.22 235.94L190.42 249.93L189.58 250.84L176.73 265.71L175.95 266.68L164.1 282.36L163.39 283.38L152.6 299.81L151.95 300.87L142.27 317.97L141.69 319.07L133.15 336.77L132.64 337.91L125.28 356.13L124.85 357.3L118.71 375.97L118.36 377.17L113.45 396.2L113.18 397.41L109.54 416.72L109.35 417.95L106.98 437.46L106.93 438.7H106.88H106.9V438.69ZM1034.12 127.99H1035.01C1048.17 128.42 1058.72 139.24 1058.72 152.52V850.85L562.25 850.87V152.52C562.25 139.24 572.79 128.42 585.96 127.99L699.84 128.01L703.25 183.42C703.87 193.49 712.21 201.33 722.3 201.33L898.64 201.38C908.72 201.36 917.06 193.52 917.69 183.46L921.13 127.99H1034.12ZM165.32 878.25V878.27L130.31 880.29L130.22 735.5L165.38 737.71V737.73L165.32 878.26V878.25ZM810.51 955.19H810.54C821.5 955.19 830.33 964.07 830.33 975.02C830.33 985.97 821.45 994.85 810.5 994.85C799.55 994.85 790.67 985.97 790.67 975.02C790.67 964.07 799.52 955.19 810.47 955.19H810.52H810.51ZM810.5 916.95H810.46C778.39 916.95 752.43 942.95 752.43 975.02C752.43 1007.09 778.42 1033.08 810.49 1033.08C842.56 1033.08 868.56 1007.08 868.56 975.02C868.56 942.96 842.59 916.95 810.52 916.95H810.5ZM1058.75 1031.75V1031.8C1058.75 1045.02 1048.2 1056.26 1035.04 1056.28L585.98 1056.3C572.82 1055.87 562.26 1045.04 562.26 1031.76V889.07L1058.74 889.11V1031.75H1058.75ZM153.36 521.44V521.46C153.47 521.44 153.36 521.44 153.36 521.44C121.46 522.14 95.39 546.56 92.24 577.77V577.84C92.01 580 91.87 1031.59 91.87 1031.59C91.87 1055.47 105.03 1076.19 124.65 1086.81L124.74 1086.86C133.33 1091.56 143.14 1094.56 153.58 1094.56L481.57 1094.36C492.12 1094.36 500.68 1085.81 500.68 1075.26C500.68 1064.71 492.23 1056.26 481.77 1056.16C481.51 1056.16 154.65 1056.16 154.65 1056.16C150.38 1056.16 146.37 1055.07 142.87 1053.15L142.82 1053.12C135.64 1049 130.71 1041.43 130.42 1032.66L130.35 918.55L185.58 915.17C195.64 914.55 203.48 906.22 203.5 896.15C203.5 896.06 203.57 719.78 203.57 719.78C203.57 709.7 195.73 701.35 185.67 700.73L130.22 697.28L130.29 581.75C131.64 569.45 142.04 559.9 154.67 559.89L481.58 559.71C492.13 559.69 500.69 551.14 500.69 540.59C500.69 530.04 492.14 521.48 481.58 521.48H153.36V521.5V521.47V521.44ZM586.84 89.74H586.79C552.59 89.74 524.79 117.08 524.04 151.11V1033.18C524.81 1067.22 552.62 1094.56 586.81 1094.56H1034.2C1068.39 1094.54 1096.21 1067.2 1096.96 1033.17V151.11C1096.19 117.07 1068.38 89.73 1034.19 89.73H586.84V89.74Z" fill="white"/></svg>
       </div>
       <div class="app-container">
-        <pt-toolbar
+        <pt-settings-bar
           .teamName="${this.teamName}"
           .roster="${this.roster}"
           .gameFormat="${this.gameFormat}"
@@ -649,14 +640,12 @@ export class PlayingTime extends LitElement {
           @game-format-changed="${this.#onGameFormatChanged}"
           @formation-changed="${this.#onFormationChanged}"
           @settings-changed="${this.#onSettingsChanged}"
-          @timer-tick="${this.#onTimerTick}"
-          @reset-half="${this.#onResetHalf}"
-          @reset-game="${this.#onResetGame}"
           @team-switched="${this.#onTeamSwitched}"
           @team-added="${this.#onTeamAdded}"
           @team-deleted="${this.#onTeamDeleted}">
-        </pt-toolbar>
+        </pt-settings-bar>
 
+        <div class="board">
         <div class="svg-wrap">
           <svg
             class="field"
@@ -676,24 +665,24 @@ export class PlayingTime extends LitElement {
                   fill="#1a1a2e" />
 
             <rect x="0" y="0"
-                  width="${FIELD.WIDTH}" height="${FIELD.HALF_LENGTH}"
+                  width="${FIELD.WIDTH}" height="${FIELD.LENGTH}"
                   fill="url(#grass-stripes)" rx="0.5" />
 
-            ${renderHalfField()}
+            ${renderField()}
 
             ${this.roster.length === 0 && this.activeTeamId != null ? svg`
               <g style="pointer-events: none">
-                <rect x="${FIELD.WIDTH / 2 - 18}" y="${FIELD.HALF_LENGTH / 2 - 4.5}"
+                <rect x="${FIELD.WIDTH / 2 - 18}" y="${FIELD.LENGTH / 2 - 4.5}"
                       width="36" height="9" rx="1.5"
                       fill="#16213e" fill-opacity="0.9"
                       filter="url(#player-shadow)" />
-                <text x="${FIELD.WIDTH / 2 - 1.5}" y="${FIELD.HALF_LENGTH / 2}"
+                <text x="${FIELD.WIDTH / 2 - 1.5}" y="${FIELD.LENGTH / 2}"
                       text-anchor="middle" dominant-baseline="central"
                       fill="#e0e0e0" font-size="${NAME_FONT_SIZE}"
                       font-family="system-ui, sans-serif">
                   Add players to your team.
                 </text>
-                <svg x="${FIELD.WIDTH / 2 + 11.5}" y="${FIELD.HALF_LENGTH / 2 - 2.4}"
+                <svg x="${FIELD.WIDTH / 2 + 11.5}" y="${FIELD.LENGTH / 2 - 2.4}"
                      width="4.8" height="4.8"
                      viewBox="0 0 1600 1600">
                   <path d="M1250.75 484.752L1150 585.501V790.128L1350 650.128L1250.75 484.752Z" fill="#e0e0e0"/>
@@ -746,8 +735,14 @@ export class PlayingTime extends LitElement {
             ` : nothing}
           </svg>
         </div>
+        </div>
 
-        <footer class="app-footer"><svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" class="footer-icon"><path d="m660 243.6v-63.602h60v-120h-240v120h60v63.602c-219.6 30-390 218.4-390 446.4 0 248.4 201.6 450 450 450s450-201.6 450-450c0-228-170.4-416.4-390-446.4zm-60 776.4c-182.4 0-330-147.6-330-330s147.6-330 330-330 330 147.6 330 330-147.6 330-330 330z" fill="currentColor"/><path d="m151.2 247.2 85.199 84c48-49.199 104.4-86.398 168-112.8l-45.598-110.4c-78 32.398-148.8 79.199-207.6 139.2z" fill="currentColor"/><path d="m1042.8 241.2c-58.801-57.598-126-102-201.6-133.2l-45.602 110.4c61.199 25.199 116.4 61.199 163.2 108z" fill="currentColor"/><path d="m642.48 732.32-84.863-84.852 179.89-179.91 84.863 84.852z" fill="currentColor"/></svg> Playing Time by Mark Caron</footer>
+        <pt-timer-bar
+          .halfLength="${this.halfLength}"
+          @timer-tick="${this.#onTimerTick}"
+          @reset-half="${this.#onResetHalf}"
+          @reset-game="${this.#onResetGame}">
+        </pt-timer-bar>
       </div>
     `;
   }

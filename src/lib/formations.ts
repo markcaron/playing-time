@@ -2,7 +2,21 @@ import { FIELD } from './field.js';
 import type { FormationKey } from './types.js';
 
 const W = FIELD.WIDTH;
-const H = FIELD.HALF_LENGTH;
+const H = FIELD.LENGTH;
+
+const GK_Y = 62;
+const DEF_Y = H - 20;
+const ATK_Y = 6;
+
+function distribute(lineCount: number): number[] {
+  if (lineCount === 1) return [DEF_Y];
+  if (lineCount === 2) return [DEF_Y, ATK_Y];
+  const positions: number[] = [];
+  for (let i = 0; i < lineCount; i++) {
+    positions.push(DEF_Y - (DEF_Y - ATK_Y) * (i / (lineCount - 1)));
+  }
+  return positions;
+}
 
 function row(y: number, count: number): { x: number; y: number }[] {
   const positions: { x: number; y: number }[] = [];
@@ -13,117 +27,49 @@ function row(y: number, count: number): { x: number; y: number }[] {
   return positions;
 }
 
+function formation(lines: number[]): { x: number; y: number }[] {
+  const yPositions = distribute(lines.length);
+  const result: { x: number; y: number }[] = [{ x: W / 2, y: GK_Y }];
+  for (let i = 0; i < lines.length; i++) {
+    result.push(...row(yPositions[i], lines[i]));
+  }
+  return result;
+}
+
+function formationNoGK(lines: number[]): { x: number; y: number }[] {
+  const yPositions = distribute(lines.length);
+  const result: { x: number; y: number }[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    result.push(...row(yPositions[i], lines[i]));
+  }
+  return result;
+}
+
 const FORMATIONS: Record<FormationKey, { x: number; y: number }[]> = {
   // 11v11
-  '4-3-3': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 14, 4),
-    ...row(H - 28, 3),
-    ...row(H - 42, 3),
-  ],
-  '4-2-3-1': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 13, 4),
-    ...row(H - 23, 2),
-    ...row(H - 34, 3),
-    { x: W / 2, y: H - 46 },
-  ],
-  '4-4-2': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 14, 4),
-    ...row(H - 28, 4),
-    ...row(H - 42, 2),
-  ],
-  '3-5-2': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 14, 3),
-    ...row(H - 28, 5),
-    ...row(H - 42, 2),
-  ],
-  '3-4-3': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 14, 3),
-    ...row(H - 28, 4),
-    ...row(H - 42, 3),
-  ],
+  '4-3-3':   formation([4, 3, 3]),
+  '4-2-3-1': formation([4, 2, 3, 1]),
+  '4-4-2':   formation([4, 4, 2]),
+  '3-5-2':   formation([3, 5, 2]),
+  '3-4-3':   formation([3, 4, 3]),
 
-  // 9v9 (8 outfield + GK)
-  '3-3-2': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 15, 3),
-    ...row(H - 28, 3),
-    ...row(H - 41, 2),
-  ],
-  '4-3-1': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 15, 4),
-    ...row(H - 28, 3),
-    { x: W / 2, y: H - 42 },
-  ],
-  '2-4-2': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 15, 2),
-    ...row(H - 28, 4),
-    ...row(H - 41, 2),
-  ],
-  '3-2-3': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 15, 3),
-    ...row(H - 28, 2),
-    ...row(H - 41, 3),
-  ],
-  '1-3-3-1': [
-    { x: W / 2, y: H - 4 },
-    { x: W / 2, y: H - 14 },
-    ...row(H - 24, 3),
-    ...row(H - 34, 3),
-    { x: W / 2, y: H - 44 },
-  ],
+  // 9v9
+  '3-3-2':   formation([3, 3, 2]),
+  '4-3-1':   formation([4, 3, 1]),
+  '2-4-2':   formation([2, 4, 2]),
+  '3-2-3':   formation([3, 2, 3]),
+  '1-3-3-1': formation([1, 3, 3, 1]),
 
-  // 7v7 (6 outfield + GK)
-  '2-3-1': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 16, 2),
-    ...row(H - 30, 3),
-    { x: W / 2, y: H - 43 },
-  ],
-  '3-2-1': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 16, 3),
-    ...row(H - 30, 2),
-    { x: W / 2, y: H - 43 },
-  ],
-  '2-1-2-1': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 14, 2),
-    { x: W / 2, y: H - 24 },
-    ...row(H - 34, 2),
-    { x: W / 2, y: H - 44 },
-  ],
-  '3-1-2': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 16, 3),
-    { x: W / 2, y: H - 30 },
-    ...row(H - 43, 2),
-  ],
-
-  '2-2-2': [
-    { x: W / 2, y: H - 4 },
-    ...row(H - 16, 2),
-    ...row(H - 30, 2),
-    ...row(H - 43, 2),
-  ],
+  // 7v7
+  '2-3-1':   formation([2, 3, 1]),
+  '3-2-1':   formation([3, 2, 1]),
+  '2-1-2-1': formation([2, 1, 2, 1]),
+  '3-1-2':   formation([3, 1, 2]),
+  '2-2-2':   formation([2, 2, 2]),
 
   // 4v4 (no GK)
-  '2-2': [
-    ...row(H - 14, 2),
-    ...row(H - 36, 2),
-  ],
-  '1-2-1': [
-    { x: W / 2, y: H - 10 },
-    ...row(H - 26, 2),
-    { x: W / 2, y: H - 42 },
-  ],
+  '2-2':   formationNoGK([2, 2]),
+  '1-2-1': formationNoGK([1, 2, 1]),
 };
 
 export function getFormationPositions(key: FormationKey): { x: number; y: number }[] {

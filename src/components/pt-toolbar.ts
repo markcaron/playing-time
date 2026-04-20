@@ -836,6 +836,8 @@ export class PtSettingsBar extends LitElement {
       touch-action: none;
       flex-shrink: 0;
       padding: 4px 2px;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .drag-area:active { cursor: grabbing; }

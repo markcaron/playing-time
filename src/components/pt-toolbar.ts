@@ -826,18 +826,26 @@ export class PtSettingsBar extends LitElement {
     .roster-row.dragging { opacity: 0.4; }
     .roster-row.drag-over { border-top: 2px solid var(--pt-accent); }
 
-    .drag-handle {
-      cursor: grab;
-      color: var(--pt-text-muted);
-      font-size: 0.85rem;
-      flex-shrink: 0;
-      touch-action: none;
+    .drag-area {
       display: flex;
       align-items: center;
+      gap: 4px;
+      min-width: 36px;
+      min-height: 36px;
+      cursor: grab;
+      touch-action: none;
+      flex-shrink: 0;
       padding: 4px 2px;
     }
 
-    .drag-handle:active { cursor: grabbing; }
+    .drag-area:active { cursor: grabbing; }
+
+    .drag-handle {
+      color: var(--pt-text-muted);
+      display: flex;
+      align-items: center;
+    }
+
     .drag-handle svg { width: 10px; height: 14px; }
 
     .add-row {
@@ -1244,10 +1252,12 @@ export class PtSettingsBar extends LitElement {
                       <div class="roster-row ${this._dragIdx === i ? 'dragging' : ''} ${this._dragOverIdx === i ? 'drag-over' : ''}"
                            @dragover="${(e: DragEvent) => this._onDragOver(e, i)}"
                            @dragend="${this._onDragEnd}">
-                        <span class="row-idx">${i + 1}</span>
-                        <span class="drag-handle"
+                        <span class="drag-area"
                               draggable="true"
-                              @dragstart="${() => this._onDragStart(i)}"><svg viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="2" r="1" fill="currentColor"/><circle cx="7" cy="2" r="1" fill="currentColor"/><circle cx="3" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/></svg></span>
+                              @dragstart="${() => this._onDragStart(i)}">
+                          <span class="row-idx">${i + 1}</span>
+                          <span class="drag-handle"><svg viewBox="0 0 10 14" xmlns="http://www.w3.org/2000/svg"><circle cx="3" cy="2" r="1" fill="currentColor"/><circle cx="7" cy="2" r="1" fill="currentColor"/><circle cx="3" cy="7" r="1" fill="currentColor"/><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/></svg></span>
+                        </span>
                         <input
                           class="player-input number-input"
                           type="text"

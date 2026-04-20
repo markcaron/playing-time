@@ -186,23 +186,30 @@ export class PtTimerBar extends LitElement {
       border: 1px solid #1a4a7a;
       border-radius: 10px;
       padding: 24px;
-      max-width: 320px;
+      max-width: 480px;
       width: 100%;
       text-align: center;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     }
 
-    .confirm-dialog p {
-      margin: 0 0 16px;
-      font-size: 0.9rem;
+    .confirm-dialog h3 {
+      margin: 0 0 20px;
+      font-size: 1rem;
+      font-weight: bold;
       color: #e0e0e0;
+    }
+
+    .confirm-dialog p {
+      margin: 0 0 20px;
+      font-size: 0.9rem;
+      color: #aaa;
       line-height: 1.4;
     }
 
     .confirm-actions {
       display: flex;
       gap: 8px;
-      justify-content: center;
+      justify-content: space-between;
     }
 
     .confirm-actions button {
@@ -218,6 +225,11 @@ export class PtTimerBar extends LitElement {
       color: #e0e0e0;
       cursor: pointer;
       font: inherit;
+    }
+
+    .confirm-actions-right {
+      display: flex;
+      gap: 8px;
     }
 
     .confirm-actions button:hover { background: #1a4a7a; }
@@ -369,23 +381,31 @@ export class PtTimerBar extends LitElement {
         <div class="confirm-overlay" @click="${this._cancelConfirm}">
           <div class="confirm-dialog" @click="${(e: Event) => e.stopPropagation()}">
             ${this._confirmAction === 'switch-half' ? html`
-              <p>Start 2nd half?<br>The clock will reset to 00:00.</p>
+              <h3>Start 2nd half?</h3>
+              <p>The clock will reset to 00:00.</p>
               <div class="confirm-actions">
                 <button @click="${this._cancelConfirm}">Cancel</button>
-                <button class="confirm-yes" @click="${this._confirmSwitchHalf}">Start 2H</button>
+                <div class="confirm-actions-right">
+                  <button class="confirm-yes" @click="${this._confirmSwitchHalf}">Start 2H</button>
+                </div>
               </div>
             ` : this._confirmAction === 'reset-game' ? html`
-              <p>Reset entire game?<br>The clock and all player times for both halves will be cleared.</p>
+              <h3>Reset entire game?</h3>
+              <p>The clock and all player times for both halves will be cleared.</p>
               <div class="confirm-actions">
                 <button @click="${this._cancelConfirm}">Cancel</button>
-                <button class="confirm-yes" @click="${this._confirmResetGame}">Reset Game</button>
+                <div class="confirm-actions-right">
+                  <button class="confirm-yes" @click="${this._confirmResetGame}">Reset Game</button>
+                </div>
               </div>
             ` : html`
-              <p>Reset clock or entire game?</p>
+              <h3>Reset current half or entire game?</h3>
               <div class="confirm-actions">
                 <button @click="${this._cancelConfirm}">Cancel</button>
-                <button class="confirm-warn" @click="${this._confirmResetHalf}">Reset Half</button>
-                <button class="confirm-yes" @click="${this._confirmResetGame}">Reset Game</button>
+                <div class="confirm-actions-right">
+                  <button class="confirm-warn" @click="${this._confirmResetHalf}">Reset Half</button>
+                  <button class="confirm-yes" @click="${this._confirmResetGame}">Reset Game</button>
+                </div>
               </div>
             `}
           </div>

@@ -320,6 +320,7 @@ export class PtSettingsBar extends LitElement {
 
     dialog.confirm-dialog {
       max-width: 400px;
+      height: auto;
     }
 
     dialog.confirm-dialog .roster-dialog-body p {

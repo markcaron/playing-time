@@ -655,10 +655,11 @@ export class PlayingTime extends LitElement {
   #renderDefs() {
     return svg`
       <defs>
-        <pattern id="grass-stripes" width="68" height="10"
-                 patternUnits="userSpaceOnUse">
-          <rect width="68" height="5" fill="var(--field-stripe-light)" />
-          <rect y="5" width="68" height="5" fill="var(--field-stripe-dark)" />
+        <pattern id="grass-stripes" width="68" height="13.125"
+                 patternUnits="userSpaceOnUse"
+                 patternTransform="translate(0, 17.5)">
+          <rect width="68" height="6.5625" fill="var(--field-stripe-dark)" />
+          <rect y="6.5625" width="68" height="6.5625" fill="var(--field-stripe-light)" />
         </pattern>
 
         <filter id="player-shadow" x="-50%" y="-50%" width="200%" height="200%">

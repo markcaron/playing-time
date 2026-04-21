@@ -135,7 +135,7 @@ export class PlayingTime extends LitElement {
       display: none;
     }
 
-    @media (max-width: 768px) and (orientation: landscape) {
+    @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
       .rotate-overlay {
         display: flex;
         position: fixed;

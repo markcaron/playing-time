@@ -74,8 +74,8 @@ export class PtTimerBar extends LitElement {
     .timer-display.stoppage { color: var(--pt-danger); }
 
     .play-btn {
-      width: 44px;
-      height: 44px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
       border: 1px solid rgba(0, 0, 0, 0.15);
       background: var(--pt-bg-primary);
@@ -103,8 +103,8 @@ export class PtTimerBar extends LitElement {
     }
 
     .play-btn svg {
-      width: 14px;
-      height: 14px;
+      width: 20px;
+      height: 20px;
     }
 
     .half-toggle {
@@ -121,7 +121,7 @@ export class PtTimerBar extends LitElement {
       position: relative;
       display: inline-flex;
       align-items: center;
-      width: 72px;
+      width: 66px;
       height: 36px;
       flex-shrink: 0;
     }
@@ -166,7 +166,7 @@ export class PtTimerBar extends LitElement {
     }
 
     .half-slide.on .slide-thumb {
-      transform: translateX(36px);
+      transform: translateX(30px);
     }
 
     .half-slide input:focus-visible ~ .slide-track {
@@ -599,7 +599,7 @@ export class PtTimerBar extends LitElement {
                   title="${this._running ? 'Stop' : 'Play'}">
             ${this._running ? svg`
               <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="1" width="10" height="12" rx="1" fill="currentColor"/>
+                <rect x="2" y="2" width="10" height="10" rx="1" fill="currentColor"/>
               </svg>
             ` : svg`
               <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">

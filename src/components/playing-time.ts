@@ -12,7 +12,7 @@ import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, get
 import type {
   RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent,
   GameFormatChangedEvent, TeamSwitchedEvent, TeamAddedEvent, TeamDeletedEvent,
-  BenchTimeToggleEvent, OnFieldTimeToggleEvent,
+  BenchTimeToggleEvent, OnFieldTimeToggleEvent, LargeTimeDisplayEvent,
 } from './pt-toolbar.js';
 import type { TimerTickEvent, ResetHalfEvent, ResetGameEvent } from './pt-timer-bar.js';
 
@@ -180,6 +180,7 @@ export class PlayingTime extends LitElement {
   @state() accessor halfLength = 45;
   @state() accessor showBenchTime = true;
   @state() accessor showOnFieldTime = true;
+  @state() accessor largeTimeDisplay = false;
   @state() accessor selectedId: string | null = null;
   @state() accessor swapTargetId: string | null = null;
   @state() accessor gameEvents: GameEvent[] = [];
@@ -223,6 +224,7 @@ export class PlayingTime extends LitElement {
     this.halfLength = team.halfLength;
     this.showBenchTime = team.showBenchTime ?? true;
     this.showOnFieldTime = team.showOnFieldTime ?? true;
+    this.largeTimeDisplay = team.largeTimeDisplay ?? false;
     this.gameFormat = team.gameFormat;
     this.formation = team.formation;
     this.roster = team.players.map(p => ({
@@ -295,6 +297,7 @@ export class PlayingTime extends LitElement {
       halfLength: this.halfLength,
       showBenchTime: this.showBenchTime,
       showOnFieldTime: this.showOnFieldTime,
+      largeTimeDisplay: this.largeTimeDisplay,
       gameFormat: this.gameFormat,
       formation: this.formation,
       fieldPositions: this.fieldPlayers.map(fp => ({
@@ -368,6 +371,11 @@ export class PlayingTime extends LitElement {
 
   #onOnFieldTimeToggle(e: OnFieldTimeToggleEvent) {
     this.showOnFieldTime = e.showOnFieldTime;
+    this.#saveState();
+  }
+
+  #onLargeTimeDisplay(e: LargeTimeDisplayEvent) {
+    this.largeTimeDisplay = e.largeTimeDisplay;
     this.#saveState();
   }
 
@@ -705,13 +713,14 @@ export class PlayingTime extends LitElement {
     const textColor = isSwapTarget ? 'var(--pt-text-white)' : 'var(--pt-bg-dark)';
 
     const onFieldTime = kind === 'player' ? this.#getOnFieldTime(p.id) : 0;
+    const timeFontSize = this.largeTimeDisplay ? NAME_FONT_SIZE : NAME_FONT_SIZE * 0.75;
 
     return svg`
       <g data-id="${p.id}" data-kind="${kind}" style="cursor: grab">
         ${kind === 'player' && this.showOnFieldTime && onFieldTime > 0 ? svg`
           <text x="${p.x}" y="${p.y - PLAYER_RADIUS - 2}"
                 text-anchor="middle" dominant-baseline="central"
-                fill="white" font-size="${NAME_FONT_SIZE * 0.75}"
+                fill="white" font-size="${timeFontSize}"
                 font-family="system-ui, sans-serif"
                 filter="url(#text-shadow)"
                 style="pointer-events: none">
@@ -752,7 +761,7 @@ export class PlayingTime extends LitElement {
         ${kind === 'sub' && this.showBenchTime && this.#getBenchTime(p.id) > 0 ? svg`
           <text x="${p.x}" y="${p.y + PLAYER_RADIUS + 2 + NAME_FONT_SIZE + 1}"
                 text-anchor="middle" dominant-baseline="central"
-                fill="var(--pt-danger)" font-size="${NAME_FONT_SIZE * 0.75}"
+                fill="var(--pt-danger-light)" font-size="${timeFontSize}"
                 font-family="system-ui, sans-serif"
                 filter="url(#text-shadow)"
                 style="pointer-events: none">
@@ -797,9 +806,11 @@ export class PlayingTime extends LitElement {
           .showRosterHint="${this.roster.length === 0}"
           .showBenchTime="${this.showBenchTime}"
           .showOnFieldTime="${this.showOnFieldTime}"
+          .largeTimeDisplay="${this.largeTimeDisplay}"
           @roster-updated="${this.#onRosterUpdated}"
           @bench-time-toggle="${this.#onBenchTimeToggle}"
           @on-field-time-toggle="${this.#onOnFieldTimeToggle}"
+          @large-time-display="${this.#onLargeTimeDisplay}"
           @game-format-changed="${this.#onGameFormatChanged}"
           @formation-changed="${this.#onFormationChanged}"
           @settings-changed="${this.#onSettingsChanged}"

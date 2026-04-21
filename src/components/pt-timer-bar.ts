@@ -71,7 +71,7 @@ export class PtTimerBar extends LitElement {
       letter-spacing: 0.5px;
     }
 
-    .timer-display.stoppage { color: var(--pt-danger); }
+    .timer-display.stoppage { color: var(--pt-danger-on-light); }
 
     .play-btn {
       width: 50px;
@@ -179,10 +179,10 @@ export class PtTimerBar extends LitElement {
       width: 44px;
       height: 44px;
       min-height: 44px;
-      border: 1px solid var(--pt-danger);
+      border: 1px solid var(--pt-danger-on-light);
       border-radius: 6px;
       background: transparent;
-      color: var(--pt-danger);
+      color: var(--pt-danger-on-light);
       cursor: pointer;
       transition: background 0.15s;
       display: flex;
@@ -280,6 +280,11 @@ export class PtTimerBar extends LitElement {
 
     .dialog-close:hover { color: var(--pt-text-white); }
 
+    .dialog-close:focus-visible {
+      outline: 2px solid var(--pt-accent);
+      outline-offset: 2px;
+    }
+
     .dialog-close svg {
       width: 14px;
       height: 14px;
@@ -337,6 +342,11 @@ export class PtTimerBar extends LitElement {
     }
 
     .confirm-actions button:hover { background: var(--pt-border); }
+
+    .confirm-actions button:focus-visible {
+      outline: 2px solid var(--pt-accent);
+      outline-offset: 2px;
+    }
 
     .confirm-actions .confirm-yes {
       background: var(--pt-danger);
@@ -396,6 +406,11 @@ export class PtTimerBar extends LitElement {
       color: var(--pt-text-white);
       cursor: pointer;
       font: inherit;
+    }
+
+    .times-dialog-footer button:focus-visible {
+      outline: 2px solid var(--pt-accent);
+      outline-offset: 2px;
     }
 
     .times-table {

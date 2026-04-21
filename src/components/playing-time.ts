@@ -855,7 +855,7 @@ export class PlayingTime extends LitElement {
 
             ${subCount > 0 ? svg`
               <text x="${PADDING}" y="${BENCH_TOP}"
-                    fill="var(--pt-text-muted)" font-size="${NAME_FONT_SIZE}" font-weight="bold"
+                    fill="var(--pt-text)" font-size="${NAME_FONT_SIZE}" font-weight="bold"
                     font-family="system-ui, sans-serif"
                     style="pointer-events: none">
                 Substitutes

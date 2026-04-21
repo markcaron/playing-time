@@ -1365,6 +1365,7 @@ export class PtSettingsBar extends LitElement {
                          @drop="${this._onDropZoneDrop}"
                          @paste="${this._onDropZonePaste}">
                       <input type="file" id="roster-file-input" accept=".md,.csv,.txt" hidden
+                             aria-label="Upload roster file"
                              @change="${this._onFileSelected}" />
                       <p>Drag & drop a roster file, or paste</p>
                       <button class="browse-btn" @click="${this._onDropZoneClick}">Browse files</button>

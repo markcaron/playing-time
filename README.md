@@ -30,10 +30,10 @@ A mobile-first soccer coaching app built with [Lit](https://lit.dev/) Web Compon
 - **Bench time** — displayed below substitutes (toggleable)
 - **Larger time display** — optional setting to increase time text size
 - **Times & Stats dialog** — full stats table with player times and substitution/swap history
-- **Chartreuse hint** — pulsing outline on the Times button after 2nd half ends
+- **Times/Stats ready!** — pulsing outline on the Times button after 2nd half ends
 
 ### Onboarding
-- **How-to-use guide** — 6-step onboarding list on the field (when no players) and in Settings
+- **How-to-use guide** — 6-step onboarding list on the field (when no players) and under Settings
 - **Roster hint** — pulsing outline on the Roster button when team is empty
 - **Empty state warnings** — inline prompts to edit roster when no players added
 

@@ -41,7 +41,7 @@ export class PtTimerBar extends LitElement {
       grid-template-columns: 1fr auto 1fr;
       gap: 12px;
       align-items: center;
-      padding: 10px 12px;
+      padding: 10px calc(12px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
       background: var(--pt-text-white);
       user-select: none;
       box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);

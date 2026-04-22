@@ -108,7 +108,7 @@ export class PtSettingsBar extends LitElement {
       display: flex;
       gap: 8px;
       align-items: center;
-      padding: 8px 12px;
+      padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left));
       background: var(--pt-bg-primary);
       user-select: none;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);

@@ -61,7 +61,7 @@ export class PlayingTime extends LitElement {
     :host {
       display: block;
       position: relative;
-      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
       --field-stripe-light: var(--pt-field-stripe-light);
       --field-stripe-dark: var(--pt-field-stripe-dark);

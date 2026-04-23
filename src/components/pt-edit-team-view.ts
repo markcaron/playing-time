@@ -1,7 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam, Position } from '../lib/types.js';
-import { GAME_FORMATS, FORMATIONS_BY_FORMAT, POSITIONS, getStandardHalfLength, getDefaultFormation } from '../lib/types.js';
+import { GAME_FORMATS, FORMATIONS_BY_FORMAT, POSITIONS, FORMATION_KEY_MIGRATION, getStandardHalfLength, getDefaultFormation } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
 import { parseRosterWithMeta, serializeRosterYaml } from '../lib/roster-parser.js';
 
@@ -44,6 +44,8 @@ export class EditTeamDeletedEvent extends Event {
     this.teamId = teamId;
   }
 }
+
+const ALL_FORMATION_KEYS = new Set(Object.values(FORMATIONS_BY_FORMAT).flat().map(f => f.key));
 
 @customElement('pt-edit-team-view')
 export class PtEditTeamView extends LitElement {
@@ -1131,9 +1133,18 @@ export class PtEditTeamView extends LitElement {
 
   private _applyParsedRoster(parsed: ReturnType<typeof parseRosterWithMeta>) {
     if (parsed.meta.name && !this._draftName) this._draftName = parsed.meta.name;
-    if (parsed.meta.format) this._draftFormat = parsed.meta.format as GameFormat;
-    if (parsed.meta.halfLength) this._draftHalfLength = parsed.meta.halfLength;
-    if (parsed.meta.formation) this._draftFormation = parsed.meta.formation as FormationKey;
+    if (parsed.meta.format && GAME_FORMATS.some(f => f.key === parsed.meta.format)) {
+      this._draftFormat = parsed.meta.format as GameFormat;
+    }
+    if (parsed.meta.halfLength != null && parsed.meta.halfLength > 0 && parsed.meta.halfLength <= 90) {
+      this._draftHalfLength = parsed.meta.halfLength;
+    }
+    if (parsed.meta.formation) {
+      const migrated = FORMATION_KEY_MIGRATION[parsed.meta.formation] ?? parsed.meta.formation;
+      if (ALL_FORMATION_KEYS.has(migrated as FormationKey)) {
+        this._draftFormation = migrated as FormationKey;
+      }
+    }
     this._draftRoster = parsed.players.map(p => ({
       id: uid('p'),
       number: p.number,

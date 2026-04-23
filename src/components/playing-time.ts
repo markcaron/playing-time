@@ -164,6 +164,7 @@ export class PlayingTime extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 6px;
       min-height: 44px;
       min-width: 44px;
       padding: 0 10px;

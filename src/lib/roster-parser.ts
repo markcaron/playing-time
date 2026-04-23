@@ -37,7 +37,29 @@ function yamlUnquote(val: string): string {
   return val;
 }
 
-/* ── YAML export ───────────────────────────────────────────── */
+/* ── YAML export ───────────────────────────────────────────── *
+ *
+ * Produces a YAML-like format that is NOT standard YAML. Player
+ * entries use `  - NUMBER. Name` (the markdown numbered-list style)
+ * followed by indented key-value pairs for optional fields:
+ *
+ *   name: USWNT
+ *   format: 11v11
+ *   players:
+ *     - 10. Rose Lavelle
+ *       nickname: Rosie
+ *       primaryPos: CM
+ *
+ * A standard YAML parser would treat `10. Rose Lavelle` as a plain
+ * scalar string. Do not use a YAML library to parse this output —
+ * use parseRosterWithMeta() which handles both this format and the
+ * standard YAML key-value style (- number: "10" / name: ...).
+ *
+ * Detection: parseRosterWithMeta auto-detects this format when the
+ * input has a standalone `players:` line and does NOT start with
+ * `---` (frontmatter). Frontmatter-fenced files are parsed as the
+ * legacy markdown format for backward compatibility.
+ * ─────────────────────────────────────────────────────────── */
 
 export function serializeRosterYaml(
   meta: RosterMeta,

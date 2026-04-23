@@ -1,6 +1,10 @@
 /**
  * Custom a11y snapshot WTR plugin using CDP, replacing the deprecated
- * `page.accessibility.snapshot()` Playwright API.
+ * `page.accessibility.snapshot()` Playwright API (removed in Playwright 1.49+).
+ *
+ * A new CDP session is created per snapshot request. This is acceptable for
+ * typical test suite sizes; for very large suites with many snapshot assertions,
+ * session caching per page could be added as an optimization.
  */
 export function a11ySnapshotPlugin() {
   return {
@@ -82,6 +86,9 @@ function buildTree(nodes) {
     const result = {};
 
     const role = axNode.role?.value;
+    // Nodes with role="none" / role="presentation" are intentionally excluded
+    // from the snapshot since they carry no semantic meaning. Their children
+    // are still included via the normal tree walk.
     if (role && role !== 'none') result.role = role;
 
     const name = axNode.name?.value;

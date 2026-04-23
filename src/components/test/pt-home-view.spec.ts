@@ -1,8 +1,8 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { a11ySnapshot, querySnapshotAll } from '../../test/helpers/a11y-snapshot.js';
-import { allUpdates } from '../../test/helpers/utils.js';
-import { PtHomeView, TeamSelectedEvent, NavigateEditTeamEvent } from '../pt-home-view.js';
+import { allUpdates, clickElementAtCenter } from '../../test/helpers/utils.js';
+import { PtHomeView, TeamSelectedEvent, NavigateEditTeamEvent, NavigateSettingsFromHomeEvent } from '../pt-home-view.js';
 import type { StoredTeam } from '../../lib/types.js';
 
 function makeTeam(overrides: Partial<StoredTeam> = {}): StoredTeam {
@@ -118,7 +118,7 @@ describe('<pt-home-view>', function () {
       }) as EventListener);
 
       const tile = element.shadowRoot!.querySelector('.team-tile') as HTMLElement;
-      tile.click();
+      await clickElementAtCenter(tile);
       expect(selectedId).to.equal('a');
     });
 
@@ -128,6 +128,49 @@ describe('<pt-home-view>', function () {
         const buttons = querySnapshotAll(snapshot, { role: 'button' });
         expect(buttons.length).to.be.greaterThanOrEqual(2);
       });
+    });
+  });
+
+  describe('keyboard navigation', function () {
+    beforeEach(async function () {
+      element = await fixture<PtHomeView>(html`
+        <pt-home-view .teams=${[makeTeam({ id: 'k1', teamName: 'Keyboard FC' })]}></pt-home-view>
+      `);
+      await allUpdates(element);
+    });
+
+    it('can focus the Settings button', async function () {
+      const settingsBtn = element.shadowRoot!.querySelector('.settings-btn') as HTMLElement;
+      settingsBtn.focus();
+      await nextFrame();
+
+      expect(element.shadowRoot!.activeElement).to.equal(settingsBtn);
+    });
+
+    it('fires navigate-settings on Enter when Settings is focused', async function () {
+      const settingsBtn = element.shadowRoot!.querySelector('.settings-btn') as HTMLElement;
+      settingsBtn.focus();
+      await nextFrame();
+
+      let fired = false;
+      element.addEventListener(NavigateSettingsFromHomeEvent.eventName, () => { fired = true; });
+
+      await sendKeys({ press: 'Enter' });
+      expect(fired).to.be.true;
+    });
+
+    it('fires team-selected on Enter when a tile is focused', async function () {
+      const tile = element.shadowRoot!.querySelector('.team-tile') as HTMLElement;
+      tile.focus();
+      await nextFrame();
+
+      let selectedId = '';
+      element.addEventListener(TeamSelectedEvent.eventName, ((e: TeamSelectedEvent) => {
+        selectedId = e.teamId;
+      }) as EventListener);
+
+      await sendKeys({ press: 'Enter' });
+      expect(selectedId).to.equal('k1');
     });
   });
 

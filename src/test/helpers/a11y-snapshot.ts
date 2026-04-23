@@ -17,11 +17,11 @@ export async function a11ySnapshot(
   payload?: { selector?: string },
   maxRetries = 10,
 ): Promise<A11yTreeNode> {
-  let snapshot = await snap(payload) as A11yTreeNode | null;
+  let snapshot = await (snap as Function)(payload) as A11yTreeNode | null;
   let retries = 0;
   while (!snapshot && retries < maxRetries) {
     await new Promise(r => requestAnimationFrame(r));
-    snapshot = await snap(payload) as A11yTreeNode | null;
+    snapshot = await (snap as Function)(payload) as A11yTreeNode | null;
     retries++;
   }
   if (!snapshot) {
@@ -83,11 +83,28 @@ function findFocused(node: A11yTreeNode): A11yTreeNode | null {
   return null;
 }
 
+/**
+ * Compute the accessible name of an element for comparison against
+ * the a11y tree's `name` property. Resolves `aria-labelledby` ID
+ * references to the referenced element's text content.
+ */
 function getAccessibleName(el: Element): string {
-  return el.getAttribute('aria-label')
-    ?? el.getAttribute('aria-labelledby')
-    ?? el.textContent?.trim()
-    ?? '';
+  const label = el.getAttribute('aria-label');
+  if (label) return label;
+
+  const labelledBy = el.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    const names = labelledBy.split(/\s+/).map(id => {
+      const ref = el.getRootNode() instanceof ShadowRoot
+        ? (el.getRootNode() as ShadowRoot).getElementById(id)
+        : document.getElementById(id);
+      return ref?.textContent?.trim() ?? '';
+    });
+    const resolved = names.filter(Boolean).join(' ');
+    if (resolved) return resolved;
+  }
+
+  return el.textContent?.trim() ?? '';
 }
 
 /**

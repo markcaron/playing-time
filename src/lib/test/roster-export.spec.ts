@@ -97,10 +97,12 @@ describe('serializeRosterYaml()', function () {
   });
 
   it('omits absent meta fields', function () {
-    const yaml = serializeRosterYaml({}, players);
-    expect(yaml).to.not.include('name:');
-    expect(yaml).to.not.include('format:');
-    expect(yaml).to.not.include('halfLength:');
+    const yaml = serializeRosterYaml({}, [
+      { number: '1', name: 'Jane Campbell' },
+    ]);
+    expect(yaml).to.not.match(/^name:/m);
+    expect(yaml).to.not.match(/^format:/m);
+    expect(yaml).to.not.match(/^halfLength:/m);
   });
 
   it('handles an empty player list', function () {

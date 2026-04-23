@@ -5,6 +5,21 @@ import { GAME_FORMATS, FORMATIONS_BY_FORMAT, POSITIONS, getStandardHalfLength, g
 import { uid } from '../lib/svg-utils.js';
 import { parseRosterWithMeta } from '../lib/roster-parser.js';
 
+function sortRoster<T extends { number: string; name: string }>(roster: T[], order: 'alpha' | 'number'): T[] {
+  return [...roster].sort((a, b) => {
+    if (order === 'number') {
+      const numA = parseInt(a.number, 10);
+      const numB = parseInt(b.number, 10);
+      const aHas = !isNaN(numA);
+      const bHas = !isNaN(numB);
+      if (aHas && bHas) return numA - numB;
+      if (aHas) return -1;
+      if (bHas) return 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export class TeamSavedEvent extends Event {
   static readonly eventName = 'team-saved' as const;
   teamData: StoredTeam;
@@ -213,10 +228,7 @@ export class PtEditTeamView extends LitElement {
       flex-shrink: 0;
     }
 
-    .team-hero .team-field label {
-      color: var(--pt-hero-text);
-    }
-
+    .team-hero .team-field label,
     .team-hero .half-length-unit {
       color: var(--pt-hero-text);
     }
@@ -224,7 +236,19 @@ export class PtEditTeamView extends LitElement {
     .team-hero .team-name-input,
     .team-hero select,
     .team-hero .player-input {
-      background: var(--pt-bg-primary);
+      background: light-dark(var(--pt-navy-800), var(--pt-white));
+      color: light-dark(var(--pt-neutral-200), var(--pt-navy-700));
+      border-color: light-dark(var(--pt-navy-600), rgba(0,0,0,0.15));
+    }
+
+    .team-hero .team-name-input:focus,
+    .team-hero select:focus,
+    .team-hero .player-input:focus {
+      border-color: var(--pt-accent);
+    }
+
+    .team-hero .caret {
+      border-top-color: light-dark(var(--pt-neutral-200), var(--pt-navy-700));
     }
 
     .team-fields-row {
@@ -847,6 +871,7 @@ export class PtEditTeamView extends LitElement {
 
   @property({ type: Array }) teams: StoredTeam[] = [];
   @property({ type: String }) teamId: string | null = null;
+  @property({ type: String }) rosterSort: 'alpha' | 'number' = 'alpha';
 
   @state() private _draftName = '';
   @state() private _draftFormat: GameFormat = '11v11';
@@ -1379,17 +1404,17 @@ export class PtEditTeamView extends LitElement {
               </tr>
             </thead>
             <tbody>
-              ${this._draftRoster.map((p, i) => html`
+              ${sortRoster(this._draftRoster.map((p, i) => ({ ...p, _idx: i })), this.rosterSort).map(p => html`
                 <tr>
                   <td class="jersey-col">${p.number}</td>
                   <td>${p.nickname ? html`${p.name} <span class="pos-col">(${p.nickname})</span>` : p.name}</td>
                   <td class="pos-col">${p.primaryPos ?? ''}${p.secondaryPos ? html` / ${p.secondaryPos}` : nothing}</td>
                   <td class="action-cell">
                     <div class="action-group">
-                      <button class="edit-row-btn" aria-label="Edit ${p.name}" title="Edit" @click="${() => this._openEditPlayer(i)}">
+                      <button class="edit-row-btn" aria-label="Edit ${p.name}" title="Edit" @click="${() => this._openEditPlayer(p._idx)}">
                         <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m751.21 316.68c-14.977 0-29.969 5.6602-41.281 16.973l-17.441 17.441c-6.3828 6.3867-9.9727 15.047-9.9766 24.074 0 9.0312 3.582 17.695 9.9648 24.082l108.3 108.42h-0.003907c6.3828 6.3906 15.039 9.9805 24.066 9.9883 9.0273 0.003906 17.691-3.5781 24.078-9.957l17.566-17.547c22.625-22.625 22.625-60.078 0-82.703l-73.984-73.801c-11.312-11.312-26.305-16.973-41.281-16.973zm-131.75 107.39-244.17 244.04c-26.129 26.129-43.371 59.723-49.445 96.172l-8.3477 50.738c-6.5156 39.094 28.527 74.137 67.621 67.617l50.508-8.3945c36.449-6.0781 70.043-23.5 96.172-49.629l244.26-244.13h-0.003906c4.0977-4.1016 6.4023-9.6602 6.4023-15.461 0-5.7969-2.3086-11.359-6.4102-15.457l-125.64-125.5c-4.1055-4.1016-9.6719-6.4023-15.473-6.4023-5.8047 0-11.367 2.3047-15.473 6.4062z" fill="currentColor"/></svg>
                       </button>
-                      <button class="delete-row-btn" aria-label="Delete ${p.name}" title="Delete" @click="${() => this._requestDeletePlayerDirect(i)}">
+                      <button class="delete-row-btn" aria-label="Delete ${p.name}" title="Delete" @click="${() => this._requestDeletePlayerDirect(p._idx)}">
                         <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m300 393.61 55.172 618.74h489.74l55.078-618.74zm123.14 117.33h75.094v374.76h-75.094zm139.22 0h75.094v374.76h-75.094zm139.55 0h75.094v374.76h-75.094z" fill="currentColor"/><path d="m410.44 149.95v112.41h-147.89v75h674.9v-75h-147.89v-112.41zm75 75h229.18v37.406h-229.18z" fill="currentColor"/></svg>
                       </button>
                     </div>

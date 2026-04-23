@@ -155,6 +155,7 @@ export interface StoredTeam {
   showOnFieldTime?: boolean;
   largeTimeDisplay?: boolean;
   timeDisplayFormat?: TimeDisplayFormat;
+  rosterSort?: RosterSortOrder;
   gamePlans?: StoredGamePlan[];
   /** @deprecated Use lineup instead */
   fieldPositions?: StoredPosition[];
@@ -182,10 +183,12 @@ export interface GameEvent {
   playerB: string;
 }
 
-export type TimeDisplayFormat = 'mm:ss' | 'mm';
+export type TimeDisplayFormat = 'mm:ss' | 'mm' | 'm';
+export type RosterSortOrder = 'alpha' | 'number';
 
 export function formatTime(seconds: number, format: TimeDisplayFormat = 'mm:ss'): string {
   const m = Math.floor(seconds / 60);
+  if (format === 'm') return String(m);
   if (format === 'mm') return String(m).padStart(2, '0');
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;

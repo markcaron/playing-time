@@ -5,6 +5,7 @@ import {
   OnFieldTimeToggleEvent,
   LargeTimeDisplayEvent,
   TimeFormatChangedEvent,
+  RosterSortChangedEvent,
 } from './pt-toolbar.js';
 
 export class NavigateSettingsBackEvent extends Event {
@@ -288,7 +289,8 @@ export class PtSettingsView extends LitElement {
   @property({ type: Boolean }) showOnFieldTime = true;
   @property({ type: Boolean }) showBenchTime = true;
   @property({ type: Boolean }) largeTimeDisplay = false;
-  @property({ type: String }) timeDisplayFormat: 'mm:ss' | 'mm' = 'mm:ss';
+  @property({ type: String }) timeDisplayFormat: 'mm:ss' | 'mm' | 'm' = 'mm:ss';
+  @property({ type: String }) rosterSort: 'alpha' | 'number' = 'alpha';
 
   @state() private _colorScheme: 'system' | 'light' | 'dark' = 'system';
 
@@ -315,8 +317,13 @@ export class PtSettingsView extends LitElement {
   }
 
   private _onTimeFormatChange(e: Event) {
-    const val = (e.target as HTMLSelectElement).value as 'mm:ss' | 'mm';
+    const val = (e.target as HTMLSelectElement).value as 'mm:ss' | 'mm' | 'm';
     this.dispatchEvent(new TimeFormatChangedEvent(val));
+  }
+
+  private _onRosterSortChange(e: Event) {
+    const val = (e.target as HTMLSelectElement).value as 'alpha' | 'number';
+    this.dispatchEvent(new RosterSortChangedEvent(val));
   }
 
   private _onColorSchemeChange(e: Event) {
@@ -380,13 +387,26 @@ export class PtSettingsView extends LitElement {
           </span>
         </label>
         <div class="settings-row">
-          <label for="time-format-select">Time format</label>
+          <label for="time-format-select">Player timer format</label>
           <span class="select-wrap">
             <select id="time-format-select"
                     .value="${this.timeDisplayFormat}"
                     @change="${this._onTimeFormatChange}">
-              <option value="mm:ss" ?selected="${this.timeDisplayFormat === 'mm:ss'}">mm:ss</option>
-              <option value="mm" ?selected="${this.timeDisplayFormat === 'mm'}">mm</option>
+              <option value="mm:ss" ?selected="${this.timeDisplayFormat === 'mm:ss'}">Minutes & seconds (mm:ss)</option>
+              <option value="mm" ?selected="${this.timeDisplayFormat === 'mm'}">Minutes only (mm)</option>
+              <option value="m" ?selected="${this.timeDisplayFormat === 'm'}">Minutes short (m)</option>
+            </select>
+            <span class="caret"></span>
+          </span>
+        </div>
+        <div class="settings-row">
+          <label for="roster-sort-select">Roster sort</label>
+          <span class="select-wrap">
+            <select id="roster-sort-select"
+                    .value="${this.rosterSort}"
+                    @change="${this._onRosterSortChange}">
+              <option value="alpha" ?selected="${this.rosterSort === 'alpha'}">Alphabetically</option>
+              <option value="number" ?selected="${this.rosterSort === 'number'}">Jersey number</option>
             </select>
             <span class="caret"></span>
           </span>

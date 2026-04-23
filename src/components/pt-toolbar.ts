@@ -57,8 +57,15 @@ export class LargeTimeDisplayEvent extends Event {
 
 export class TimeFormatChangedEvent extends Event {
   static readonly eventName = 'time-format-changed' as const;
-  constructor(public timeDisplayFormat: 'mm:ss' | 'mm') {
+  constructor(public timeDisplayFormat: 'mm:ss' | 'mm' | 'm') {
     super(TimeFormatChangedEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class RosterSortChangedEvent extends Event {
+  static readonly eventName = 'roster-sort-changed' as const;
+  constructor(public rosterSort: 'alpha' | 'number') {
+    super(RosterSortChangedEvent.eventName, { bubbles: true, composed: true });
   }
 }
 

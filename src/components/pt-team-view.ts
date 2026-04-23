@@ -8,6 +8,21 @@ function formationLabel(key: FormationKey, format: GameFormat): string {
   return entry?.label ?? key;
 }
 
+function sortRoster(roster: RosterEntry[], order: 'alpha' | 'number'): RosterEntry[] {
+  return [...roster].sort((a, b) => {
+    if (order === 'number') {
+      const numA = parseInt(a.number, 10);
+      const numB = parseInt(b.number, 10);
+      const aHas = !isNaN(numA);
+      const bHas = !isNaN(numB);
+      if (aHas && bHas) return numA - numB;
+      if (aHas) return -1;
+      if (bHas) return 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export class NavigateBackEvent extends Event {
   static readonly eventName = 'navigate-back' as const;
   constructor() {
@@ -489,6 +504,7 @@ export class PtTeamView extends LitElement {
 
   @property({ type: String }) teamName = '';
   @property({ type: Array }) roster: RosterEntry[] = [];
+  @property({ type: String }) rosterSort: 'alpha' | 'number' = 'alpha';
   @property({ type: String }) gameFormat: GameFormat = '11v11';
   @property({ type: String }) formation: FormationKey = '1-4-3-3';
   @property({ type: Number }) halfLength = 45;
@@ -620,7 +636,7 @@ export class PtTeamView extends LitElement {
               </tr>
             </thead>
             <tbody>
-              ${this.roster.map(p => html`
+              ${sortRoster(this.roster, this.rosterSort).map(p => html`
                 <tr>
                   <td class="jersey-col">${p.number}</td>
                   <td>${p.nickname ? html`${p.name} <span class="pos-col">(${p.nickname})</span>` : p.name}</td>

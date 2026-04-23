@@ -7,43 +7,9 @@
     <meta name="theme-color" content="#16213e" /> <!-- matches --pt-bg-primary -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/src/tokens.css" />
     <title>PlayingTime</title>
     <style>
-      :root {
-        --pt-bg-body: #1a1a2e;
-        --pt-bg-primary: #16213e;
-        --pt-bg-surface: #0f3460;
-        --pt-bg-dark: #151515;
-        --pt-bg-warning: #fef3c7;
-
-        --pt-border: #1a4a7a;
-
-        --pt-text: #e0e0e0;
-        --pt-text-muted: #aaa;
-        --pt-text-on-light: #555;
-        --pt-text-white: #fff;
-
-        --pt-accent: #4ea8de;
-        --pt-accent-hover: #3a8fc4;
-
-        --pt-danger: #e94560;
-        --pt-danger-hover: #d13350;
-        --pt-danger-light: #f87171;
-        --pt-danger-on-light: #c1303e;
-
-        --pt-success: #16a34a;
-        --pt-success-hover: #15803d;
-        --pt-success-light: #86efac;
-
-        --pt-warning: #f0c040;
-        --pt-warning-hover: #d4a830;
-
-        --pt-hint: #7fff00;
-
-        --pt-field-stripe-light: #2d6a4f;
-        --pt-field-stripe-dark: #276749;
-      }
-
       *,
       *::before,
       *::after {
@@ -71,7 +37,63 @@
         display: flex;
         flex-direction: column;
       }
+
+      /* View Transitions — slide animations */
+      @keyframes slide-to-right {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(30%); opacity: 0; }
+      }
+      @keyframes slide-from-left {
+        from { transform: translateX(-30%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slide-to-left {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(-30%); opacity: 0; }
+      }
+      @keyframes slide-from-right {
+        from { transform: translateX(30%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+
+      @keyframes slide-to-up {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(-30%); opacity: 0; }
+      }
+      @keyframes slide-from-bottom {
+        from { transform: translateY(30%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      @keyframes slide-to-bottom {
+        from { transform: translateY(0); opacity: 1; }
+        to { transform: translateY(30%); opacity: 0; }
+      }
+      @keyframes slide-from-top {
+        from { transform: translateY(-30%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation-duration: 0.25s;
+        animation-timing-function: ease-in-out;
+      }
+
+      ::view-transition-old(root) {
+        animation-name: var(--pt-vt-old, slide-to-left);
+      }
+      ::view-transition-new(root) {
+        animation-name: var(--pt-vt-new, slide-from-right);
+      }
     </style>
+    <script>
+      (function() {
+        var s = localStorage.getItem('pt-color-scheme');
+        if (s === 'light' || s === 'dark') document.documentElement.style.colorScheme = s;
+        var light = s === 'light' || (!s && window.matchMedia('(prefers-color-scheme: light)').matches);
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', light ? '#ffffff' : '#16213e');
+      })();
+    </script>
     <script type="module" src="/src/index.ts"></script>
   </head>
   <body>

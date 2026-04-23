@@ -24,6 +24,48 @@ export class ResetGameEvent extends Event {
   }
 }
 
+export class SavePlanEvent extends Event {
+  static readonly eventName = 'save-plan' as const;
+  constructor() {
+    super(SavePlanEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class PlanHalfSwitchEvent extends Event {
+  static readonly eventName = 'plan-half-switch' as const;
+  constructor(public half: 1 | 2) {
+    super(PlanHalfSwitchEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class EditLineupEvent extends Event {
+  static readonly eventName = 'edit-lineup' as const;
+  constructor() {
+    super(EditLineupEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class GameHalfSwitchedEvent extends Event {
+  static readonly eventName = 'game-half-switched' as const;
+  constructor(public half: 1 | 2) {
+    super(GameHalfSwitchedEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class CancelPlanEvent extends Event {
+  static readonly eventName = 'cancel-plan' as const;
+  constructor() {
+    super(CancelPlanEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
+export class DeletePlanEvent extends Event {
+  static readonly eventName = 'delete-plan' as const;
+  constructor() {
+    super(DeletePlanEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
 @customElement('pt-timer-bar')
 export class PtTimerBar extends LitElement {
   static styles = css`
@@ -42,12 +84,15 @@ export class PtTimerBar extends LitElement {
       gap: 12px;
       align-items: center;
       padding: 10px calc(12px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
-      background: var(--pt-text-white);
+      background: var(--pt-white);
+      color-scheme: light;
       user-select: none;
-      box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 -2px 6px var(--pt-shadow);
+      position: relative;
+      z-index: 1;
     }
 
-    .timer-left { justify-self: start; }
+    .timer-left { justify-self: start; display: flex; align-items: center; gap: 8px; }
     .timer-center {
       display: flex;
       gap: 8px;
@@ -61,11 +106,46 @@ export class PtTimerBar extends LitElement {
       align-items: center;
     }
 
+    .timer-display-btn {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      min-height: 44px;
+      font: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: border-color 0.15s;
+    }
+
+    .timer-display-btn:hover {
+      border-color: var(--pt-border);
+    }
+
+    .timer-display-btn:focus-visible {
+      outline: 2px solid var(--pt-accent);
+      outline-offset: 2px;
+    }
+
+    .clock-reset-icon {
+      width: 18px;
+      height: 18px;
+      opacity: 0.35;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+
+    .timer-display-btn:hover .clock-reset-icon {
+      opacity: 0.7;
+    }
+
     .timer-display {
       font-size: 1.1rem;
       font-weight: bold;
       font-variant-numeric: tabular-nums;
-      color: var(--pt-bg-primary);
+      color: var(--pt-text);
       min-width: 48px;
       text-align: center;
       letter-spacing: 0.5px;
@@ -78,8 +158,8 @@ export class PtTimerBar extends LitElement {
       height: 50px;
       border-radius: 50%;
       border: 1px solid rgba(0, 0, 0, 0.15);
-      background: var(--pt-bg-primary);
-      color: var(--pt-text-white);
+      background: var(--pt-navy-800);
+      color: var(--pt-white);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -89,7 +169,7 @@ export class PtTimerBar extends LitElement {
       font: inherit;
     }
 
-    .play-btn:hover { background: var(--pt-border); }
+    .play-btn:hover { background: var(--pt-navy-600); }
 
     .play-btn:focus-visible {
       outline: 2px solid var(--pt-accent);
@@ -113,7 +193,7 @@ export class PtTimerBar extends LitElement {
       gap: 6px;
       font-size: 0.75rem;
       font-weight: bold;
-      color: var(--pt-bg-primary);
+      color: var(--pt-text);
       cursor: pointer;
     }
 
@@ -141,7 +221,7 @@ export class PtTimerBar extends LitElement {
     .half-slide .slide-track {
       position: absolute;
       inset: 0;
-      background: var(--pt-bg-primary);
+      background: var(--pt-navy-800);
       border: 1px solid rgba(0, 0, 0, 0.15);
       border-radius: 18px;
     }
@@ -161,7 +241,7 @@ export class PtTimerBar extends LitElement {
       justify-content: center;
       font-size: 0.65rem;
       font-weight: bold;
-      color: var(--pt-bg-primary);
+      color: var(--pt-text-on-light);
       user-select: none;
     }
 
@@ -174,15 +254,14 @@ export class PtTimerBar extends LitElement {
       outline-offset: 2px;
     }
 
-    .reset-btn,
     .times-btn {
       width: 44px;
       height: 44px;
       min-height: 44px;
-      border: 1px solid var(--pt-danger-on-light);
+      border: 1px solid var(--pt-text-muted);
       border-radius: 6px;
       background: transparent;
-      color: var(--pt-danger-on-light);
+      color: var(--pt-text);
       cursor: pointer;
       transition: background 0.15s;
       display: flex;
@@ -191,19 +270,13 @@ export class PtTimerBar extends LitElement {
       padding: 8px;
     }
 
-    .reset-btn svg,
     .times-btn svg {
       width: 24px;
       height: 24px;
     }
 
-    .times-btn {
-      border-color: var(--pt-bg-primary);
-      color: var(--pt-bg-primary);
-    }
-
     .times-btn:hover {
-      background: rgba(0,0,0,0.05);
+      background: var(--pt-btn-hover);
     }
 
     .times-btn.hint {
@@ -217,11 +290,6 @@ export class PtTimerBar extends LitElement {
       50% { outline-color: rgba(127, 255, 0, 0.4); }
     }
 
-    .reset-btn:hover {
-      background: rgba(233, 69, 96, 0.1);
-    }
-
-    .reset-btn:focus-visible,
     .times-btn:focus-visible {
       outline: 2px solid var(--pt-accent);
       outline-offset: 2px;
@@ -232,20 +300,21 @@ export class PtTimerBar extends LitElement {
     }
 
     dialog {
+      color-scheme: inherit;
       background: var(--pt-bg-surface);
       border: 1px solid var(--pt-border);
       border-radius: 10px;
       padding: 0;
       max-width: 480px;
       width: calc(100% - 32px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 8px 32px var(--pt-shadow-lg);
       color: var(--pt-text);
       display: flex;
       flex-direction: column;
     }
 
     dialog::backdrop {
-      background: rgba(0, 0, 0, 0.6);
+      background: var(--pt-backdrop);
     }
 
     .dialog-header {
@@ -253,7 +322,7 @@ export class PtTimerBar extends LitElement {
       align-items: center;
       justify-content: space-between;
       padding: 12px 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid var(--pt-border-subtle);
       flex-shrink: 0;
     }
 
@@ -278,7 +347,7 @@ export class PtTimerBar extends LitElement {
       font: inherit;
     }
 
-    .dialog-close:hover { color: var(--pt-text-white); }
+    .dialog-close:hover { color: var(--pt-text); }
 
     .dialog-close:focus-visible {
       outline: 2px solid var(--pt-accent);
@@ -355,13 +424,13 @@ export class PtTimerBar extends LitElement {
     }
 
     .confirm-actions .cancel-btn {
-      border: 1px solid var(--pt-accent);
-      color: var(--pt-text-white);
+      border: 1px solid var(--pt-text-muted);
+      color: var(--pt-text);
       background: transparent;
     }
 
     .confirm-actions .cancel-btn:hover {
-      background: rgba(78, 168, 222, 0.15);
+      background: var(--pt-hover-overlay);
     }
 
     .confirm-actions .confirm-yes:hover {
@@ -378,8 +447,63 @@ export class PtTimerBar extends LitElement {
       background: var(--pt-warning-hover);
     }
 
+    .clock-dialog {
+      max-width: 320px;
+      height: fit-content;
+    }
+
+    .clock-dialog-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .clock-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--pt-border-subtle);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--pt-text);
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      min-height: 44px;
+      transition: background 0.15s;
+    }
+
+    .clock-option:hover {
+      background: var(--pt-hover-overlay);
+    }
+
+    .clock-option:focus-visible {
+      outline: 2px solid var(--pt-accent);
+      outline-offset: 2px;
+    }
+
+    .clock-option-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .clock-option-danger {
+      color: var(--pt-danger);
+      border-color: var(--pt-danger);
+    }
+
+    .clock-option-danger:hover {
+      background: var(--pt-danger);
+      color: var(--pt-text-white);
+    }
+
     #times-dialog {
-      height: calc(100dvh - 32px);
+      height: fit-content;
+      max-height: calc(100dvh - 32px);
     }
 
     .times-dialog-body {
@@ -390,7 +514,7 @@ export class PtTimerBar extends LitElement {
 
     .times-dialog-footer {
       padding: 12px 16px;
-      border-top: 1px solid rgba(255,255,255,0.1);
+      border-top: 1px solid var(--pt-border-subtle);
       display: flex;
       justify-content: flex-end;
       flex-shrink: 0;
@@ -400,10 +524,10 @@ export class PtTimerBar extends LitElement {
       padding: 8px 24px;
       min-height: 44px;
       font-size: 0.85rem;
-      border: 1px solid var(--pt-accent);
+      border: none;
       border-radius: 6px;
-      background: var(--pt-accent);
-      color: var(--pt-text-white);
+      background: var(--pt-accent-solid);
+      color: var(--pt-accent-solid-text);
       cursor: pointer;
       font: inherit;
     }
@@ -422,7 +546,7 @@ export class PtTimerBar extends LitElement {
     .times-table th {
       text-align: left;
       padding: 6px 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.15);
+      border-bottom: 1px solid var(--pt-border-subtle);
       color: var(--pt-text-muted);
       font-weight: bold;
       white-space: nowrap;
@@ -435,7 +559,7 @@ export class PtTimerBar extends LitElement {
 
     .times-table td {
       padding: 6px 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid var(--pt-border-subtle);
       color: var(--pt-text);
     }
 
@@ -457,6 +581,69 @@ export class PtTimerBar extends LitElement {
 
     .times-table th.total-col {
       color: var(--pt-text);
+    }
+
+    .save-plan-btn {
+      padding: 8px 24px;
+      background: var(--pt-accent-solid);
+      border: none;
+      color: var(--pt-accent-solid-text);
+      font-weight: bold;
+      border-radius: 6px;
+      min-height: 44px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.85rem;
+      transition: background 0.15s;
+    }
+
+    .save-plan-btn:hover { background: var(--pt-accent-solid-hover); }
+
+    .cancel-plan-btn {
+      padding: 6px 14px;
+      border: 1px solid var(--pt-text-muted);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--pt-text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.85rem;
+      min-height: 44px;
+      transition: background 0.15s;
+    }
+
+    .cancel-plan-btn:hover { background: var(--pt-btn-hover); }
+
+    .delete-plan-btn {
+      padding: 10px;
+      border: 1px solid var(--pt-danger-light);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--pt-danger-light);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      min-width: 44px;
+      transition: background 0.15s;
+    }
+
+    .delete-plan-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .delete-plan-btn:hover { background: var(--pt-hover-overlay); }
+
+    .plan-half-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: var(--pt-text);
+      cursor: pointer;
     }
 
     .section-heading {
@@ -494,6 +681,11 @@ export class PtTimerBar extends LitElement {
   @property({ type: Number }) halfLength = 45;
   @property({ type: String }) teamName = '';
   @property({ type: Array }) roster: RosterEntry[] = [];
+  @property({ type: String }) matchPhase: 'plan' | 'game' = 'plan';
+  @property({ type: Number }) planHalf: 1 | 2 = 1;
+  @property({ type: Boolean }) half1Started = false;
+  @property({ type: Boolean }) half2Started = false;
+  @property({ type: String }) timeDisplayFormat: 'mm:ss' | 'mm' = 'mm:ss';
   @property({ type: Array }) gameEvents: GameEvent[] = [];
   @state() private _showTimesHint = false;
 
@@ -506,6 +698,9 @@ export class PtTimerBar extends LitElement {
 
   @query('#confirm-dialog') private _confirmDialog!: HTMLDialogElement;
   @query('#times-dialog') private _timesDialog!: HTMLDialogElement;
+  @query('#clock-dialog') private _clockDialog!: HTMLDialogElement;
+  @query('#delete-match-dialog') private _deleteMatchDialog!: HTMLDialogElement;
+  @query('#cancel-plan-dialog') private _cancelPlanDialog!: HTMLDialogElement;
 
   disconnectedCallback() {
     super.disconnectedCallback();
@@ -566,6 +761,7 @@ export class PtTimerBar extends LitElement {
     this._half = 2;
     this._elapsed = 0;
     this._confirmDialog?.close();
+    this.dispatchEvent(new GameHalfSwitchedEvent(2));
   }
 
   private _confirmResetGame() {
@@ -591,59 +787,109 @@ export class PtTimerBar extends LitElement {
   }
   private _closeTimes() { this._timesDialog?.close(); }
 
+  private _openClock() { this._clockDialog?.showModal(); }
+  private _closeClock() { this._clockDialog?.close(); }
+
+  private _openDeleteMatch() { this._deleteMatchDialog?.showModal(); }
+  private _closeDeleteMatch() { this._deleteMatchDialog?.close(); }
+  private _confirmDeleteMatch() {
+    this._deleteMatchDialog?.close();
+    this.dispatchEvent(new DeletePlanEvent());
+  }
+
+  private _openCancelPlan() { this._cancelPlanDialog?.showModal(); }
+  private _closeCancelPlan() { this._cancelPlanDialog?.close(); }
+  private _confirmCancelPlan() {
+    this._cancelPlanDialog?.close();
+    this.dispatchEvent(new CancelPlanEvent());
+  }
+  private _saveThenCancel() {
+    this._cancelPlanDialog?.close();
+    this.dispatchEvent(new SavePlanEvent());
+    this.dispatchEvent(new CancelPlanEvent());
+  }
+
+  private _clockReset() {
+    this._closeClock();
+    this._requestReset();
+  }
+
   render() {
     return html`
       <div class="timer-bar">
         <div class="timer-left">
-          <label class="half-toggle">
-            Half
-            <span class="half-slide ${this._half === 2 ? 'on' : ''} ${this._running ? 'disabled' : ''}">
-              <input type="checkbox"
-                     .checked="${this._half === 2}"
-                     ?disabled="${this._running}"
-                     @change="${(e: Event) => { e.preventDefault(); (e.target as HTMLInputElement).checked = this._half === 2; this._half === 1 ? this._requestSwitchTo2H() : this._requestSwitchTo1H(); }}" />
-              <span class="slide-track"></span>
-              <span class="slide-thumb">${this._half === 1 ? '1st' : '2nd'}</span>
-            </span>
-          </label>
+          ${this.matchPhase === 'plan' ? html`
+            <button class="cancel-plan-btn" @click="${this._openCancelPlan}">Cancel</button>
+            <button class="delete-plan-btn" @click="${this._openDeleteMatch}" aria-label="Delete Match" title="Delete Match">
+              <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m300 393.61 55.172 618.74h489.74l55.078-618.74zm123.14 117.33h75.094v374.76h-75.094zm139.22 0h75.094v374.76h-75.094zm139.55 0h75.094v374.76h-75.094z" fill="currentColor"/><path d="m410.44 149.95v112.41h-147.89v75h674.9v-75h-147.89v-112.41zm75 75h229.18v37.406h-229.18z" fill="currentColor"/></svg>
+            </button>
+          ` : html`
+            <label class="half-toggle">
+              Half
+              <span class="half-slide ${this._half === 2 ? 'on' : ''} ${this._running ? 'disabled' : ''}">
+                <input type="checkbox"
+                       .checked="${this._half === 2}"
+                       ?disabled="${this._running}"
+                       @change="${(e: Event) => { e.preventDefault(); (e.target as HTMLInputElement).checked = this._half === 2; this._half === 1 ? this._requestSwitchTo2H() : this._requestSwitchTo1H(); }}" />
+                <span class="slide-track"></span>
+                <span class="slide-thumb">${this._half === 1 ? '1st' : '2nd'}</span>
+              </span>
+            </label>
+          `}
         </div>
-        <div class="timer-center">
-          <button class="play-btn ${this._running ? 'running' : ''}"
-                  @click="${this._toggleTimer}"
-                  aria-label="${this._running ? 'Stop' : 'Play'}"
-                  title="${this._running ? 'Stop' : 'Play'}">
-            ${this._running ? svg`
-              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="2" width="10" height="10" rx="1" fill="currentColor"/>
-              </svg>
-            ` : svg`
-              <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 1.5v11l9-5.5z" fill="currentColor"/>
-              </svg>
-            `}
-          </button>
-          <span class="timer-display ${this._inStoppage ? 'stoppage' : ''}">${this._timeDisplay}</span>
-        </div>
+        ${this.matchPhase === 'game' ? html`
+          <div class="timer-center">
+            <button class="play-btn ${this._running ? 'running' : ''}"
+                    @click="${this._toggleTimer}"
+                    aria-label="${this._running ? 'Stop' : 'Play'}"
+                    title="${this._running ? 'Stop' : 'Play'}">
+              ${this._running ? svg`
+                <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="2" y="2" width="10" height="10" rx="1" fill="currentColor"/>
+                </svg>
+              ` : svg`
+                <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 1.5v11l9-5.5z" fill="currentColor"/>
+                </svg>
+              `}
+            </button>
+            <button class="timer-display-btn" @click="${this._openClock}" aria-label="Clock options" title="Clock options">
+              <span class="timer-display ${this._inStoppage ? 'stoppage' : ''}">${this._timeDisplay}</span>
+              <svg class="clock-reset-icon" viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M515.399 422.213C594.372 362.859 692.519 327.687 798.799 327.687C1059.49 327.687 1271.12 539.313 1271.12 800.007C1271.12 1060.7 1059.49 1272.33 798.799 1272.33C550.319 1272.33 346.439 1080.03 327.866 836.273C325.22 801.607 351.199 771.347 385.866 768.7C420.532 766.053 450.792 792.033 453.439 826.7C467.075 1005.43 616.612 1146.37 798.799 1146.37C989.959 1146.37 1145.16 991.167 1145.16 799.993C1145.16 608.833 989.959 453.633 798.799 453.633C724.736 453.633 656.066 476.931 599.732 516.607H641.358C676.118 516.607 704.331 544.82 704.331 579.58C704.331 614.345 676.118 642.559 641.358 642.559H452.424C417.627 642.559 389.446 614.376 389.446 579.58V390.647C389.446 355.887 417.659 327.673 452.424 327.673C487.184 327.673 515.398 355.887 515.398 390.647L515.399 422.213Z" fill="currentColor"/></svg>
+            </button>
+          </div>
+        ` : html`
+          <div class="timer-center">
+            <label class="half-toggle">
+              Half
+              <span class="half-slide ${this.planHalf === 2 ? 'on' : ''} ${(this.planHalf === 1 && this.half2Started) || (this.planHalf === 2 && this.half1Started) || (this.half1Started && this.half2Started) ? 'disabled' : ''}">
+                <input type="checkbox"
+                       .checked="${this.planHalf === 2}"
+                       ?disabled="${(this.planHalf === 1 && this.half2Started) || (this.planHalf === 2 && this.half1Started) || (this.half1Started && this.half2Started)}"
+                       @change="${(e: Event) => { e.preventDefault(); (e.target as HTMLInputElement).checked = this.planHalf === 2; const target = this.planHalf === 1 ? 2 : 1; this.dispatchEvent(new PlanHalfSwitchEvent(target)); }}" />
+                <span class="slide-track"></span>
+                <span class="slide-thumb">${this.planHalf === 1 ? '1st' : '2nd'}</span>
+              </span>
+            </label>
+          </div>
+        `}
         <div class="timer-right">
-          <button class="times-btn ${this._showTimesHint ? 'hint' : ''}"
-                  aria-label="Times/Stats"
-                  title="Times/Stats"
-                  @click="${this._openTimes}">
-            <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
-              <path d="m660 243.6v-63.602h60v-120h-240v120h60v63.602c-219.6 30-390 218.4-390 446.4 0 248.4 201.6 450 450 450s450-201.6 450-450c0-228-170.4-416.4-390-446.4zm-60 776.4c-182.4 0-330-147.6-330-330s147.6-330 330-330 330 147.6 330 330-147.6 330-330 330z" fill="currentColor"/>
-              <path d="m151.2 247.2 85.199 84c48-49.199 104.4-86.398 168-112.8l-45.598-110.4c-78 32.398-148.8 79.199-207.6 139.2z" fill="currentColor"/>
-              <path d="m1042.8 241.2c-58.801-57.598-126-102-201.6-133.2l-45.602 110.4c61.199 25.199 116.4 61.199 163.2 108z" fill="currentColor"/>
-              <path d="m642.48 732.32-84.863-84.852 179.89-179.91 84.863 84.852z" fill="currentColor"/>
-            </svg>
-          </button>
-          <button class="reset-btn"
-                  aria-label="Reset"
-                  title="Reset"
-                  @click="${this._requestReset}">
-            <svg viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M515.399 422.213C594.372 362.859 692.519 327.687 798.799 327.687C1059.49 327.687 1271.12 539.313 1271.12 800.007C1271.12 1060.7 1059.49 1272.33 798.799 1272.33C550.319 1272.33 346.439 1080.03 327.866 836.273C325.22 801.607 351.199 771.347 385.866 768.7C420.532 766.053 450.792 792.033 453.439 826.7C467.075 1005.43 616.612 1146.37 798.799 1146.37C989.959 1146.37 1145.16 991.167 1145.16 799.993C1145.16 608.833 989.959 453.633 798.799 453.633C724.736 453.633 656.066 476.931 599.732 516.607H641.358C676.118 516.607 704.331 544.82 704.331 579.58C704.331 614.345 676.118 642.559 641.358 642.559H452.424C417.627 642.559 389.446 614.376 389.446 579.58V390.647C389.446 355.887 417.659 327.673 452.424 327.673C487.184 327.673 515.398 355.887 515.398 390.647L515.399 422.213Z" fill="currentColor"/>
-            </svg>
-          </button>
+          ${this.matchPhase === 'game' ? html`
+            <button class="times-btn ${this._showTimesHint ? 'hint' : ''}"
+                    aria-label="Times/Stats"
+                    title="Times/Stats"
+                    @click="${this._openTimes}">
+              <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
+                <path d="m827.9 140.05-5.9492-17.699c-11.898-35.75-45.352-59.852-83-59.852h-277.9c-37.648 0-71.102 24.102-83 59.852l-5.9492 17.699c-6.3516 19.102-9.6016 39.148-9.6016 59.301v0.64844c0 23.199 9.1992 45.449 25.648 61.852 16.398 16.449 38.648 25.648 61.852 25.648h300c23.199 0 45.449-9.1992 61.852-25.648 16.449-16.398 25.648-38.648 25.648-61.852v-0.64844c0-20.148-3.25-40.199-9.6016-59.301zm-77.102 6 5.9492 17.699c3.8008 11.5 5.75 23.5 5.75 35.602v0.64844c0 3.3008-1.3008 6.5-3.6484 8.8516-2.3516 2.3516-5.5508 3.6484-8.8516 3.6484h-300c-3.3008 0-6.5-1.3008-8.8516-3.6484-2.3516-2.3516-3.6484-5.5508-3.6484-8.8516v-0.64844c0-12.102 1.9492-24.102 5.75-35.602l5.9492-17.699c1.6992-5.1016 6.4492-8.5508 11.852-8.5508h277.9c5.3984 0 10.148 3.4492 11.852 8.5508z" fill-rule="evenodd" fill="currentColor"/>
+                <path d="m400 137.5h-100c-75.949 0-137.5 61.551-137.5 137.5v725c0 75.949 61.551 137.5 137.5 137.5h600c75.949 0 137.5-61.551 137.5-137.5v-725c0-75.949-61.551-137.5-137.5-137.5h-100c-20.699 0-37.5 16.801-37.5 37.5s16.801 37.5 37.5 37.5h100c34.5 0 62.5 28 62.5 62.5v725c0 34.5-28 62.5-62.5 62.5h-600c-34.5 0-62.5-28-62.5-62.5v-725c0-34.5 28-62.5 62.5-62.5h100c20.699 0 37.5-16.801 37.5-37.5s-16.801-37.5-37.5-37.5z" fill-rule="evenodd" fill="currentColor"/>
+                <path d="m450 525h300c20.699 0 37.5-16.801 37.5-37.5s-16.801-37.5-37.5-37.5h-300c-20.699 0-37.5 16.801-37.5 37.5s16.801 37.5 37.5 37.5z" fill-rule="evenodd" fill="currentColor"/>
+                <path d="m375 712.5h450c20.699 0 37.5-16.801 37.5-37.5s-16.801-37.5-37.5-37.5h-450c-20.699 0-37.5 16.801-37.5 37.5s16.801 37.5 37.5 37.5z" fill-rule="evenodd" fill="currentColor"/>
+                <path d="m375 900h450c20.699 0 37.5-16.801 37.5-37.5s-16.801-37.5-37.5-37.5h-450c-20.699 0-37.5 16.801-37.5 37.5s16.801 37.5 37.5 37.5z" fill-rule="evenodd" fill="currentColor"/>
+              </svg>
+            </button>
+          ` : html`
+            <button class="save-plan-btn" @click="${() => this.dispatchEvent(new SavePlanEvent())}">${this.half1Started ? 'Go to Game' : 'Start Match'}</button>
+          `}
         </div>
       </div>
 
@@ -687,6 +933,59 @@ export class PtTimerBar extends LitElement {
         </div>
       </dialog>
 
+      <dialog id="clock-dialog" class="clock-dialog" @close="${this._closeClock}">
+        <div class="dialog-header">
+          <h2>Clock Options</h2>
+          <button class="dialog-close" @click="${this._closeClock}" aria-label="Close" title="Close">
+            <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="clock-dialog-body">
+          <button class="clock-option clock-option-danger" @click="${this._clockReset}">
+            <svg viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg" class="clock-option-icon">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M515.399 422.213C594.372 362.859 692.519 327.687 798.799 327.687C1059.49 327.687 1271.12 539.313 1271.12 800.007C1271.12 1060.7 1059.49 1272.33 798.799 1272.33C550.319 1272.33 346.439 1080.03 327.866 836.273C325.22 801.607 351.199 771.347 385.866 768.7C420.532 766.053 450.792 792.033 453.439 826.7C467.075 1005.43 616.612 1146.37 798.799 1146.37C989.959 1146.37 1145.16 991.167 1145.16 799.993C1145.16 608.833 989.959 453.633 798.799 453.633C724.736 453.633 656.066 476.931 599.732 516.607H641.358C676.118 516.607 704.331 544.82 704.331 579.58C704.331 614.345 676.118 642.559 641.358 642.559H452.424C417.627 642.559 389.446 614.376 389.446 579.58V390.647C389.446 355.887 417.659 327.673 452.424 327.673C487.184 327.673 515.398 355.887 515.398 390.647L515.399 422.213Z" fill="currentColor"/>
+            </svg>
+            Reset Clock
+          </button>
+        </div>
+      </dialog>
+
+      <dialog id="delete-match-dialog">
+        <div class="dialog-header">
+          <h2>Delete Match</h2>
+          <button class="dialog-close" @click="${this._closeDeleteMatch}" aria-label="Close" title="Close">
+            <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <p>This will permanently delete this match and all its data. This action cannot be undone.</p>
+          <div class="confirm-actions">
+            <button class="cancel-btn" @click="${this._closeDeleteMatch}">Cancel</button>
+            <div class="confirm-actions-right">
+              <button class="confirm-yes" @click="${this._confirmDeleteMatch}">Delete Match</button>
+            </div>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="cancel-plan-dialog">
+        <div class="dialog-header">
+          <h2>Unsaved Changes</h2>
+          <button class="dialog-close" @click="${this._closeCancelPlan}" aria-label="Close" title="Close">
+            <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <p>You have unsaved changes. Would you like to save before leaving?</p>
+          <div class="confirm-actions">
+            <button class="cancel-btn" @click="${this._confirmCancelPlan}">Discard</button>
+            <div class="confirm-actions-right">
+              <button class="confirm-yes" @click="${this._saveThenCancel}">Save</button>
+            </div>
+          </div>
+        </div>
+      </dialog>
+
       <dialog id="times-dialog" @close="${this._closeTimes}">
         <div class="dialog-header">
           <h2>${this.teamName ? `${this.teamName} Times & Stats` : 'Times & Stats'}</h2>
@@ -711,9 +1010,9 @@ export class PtTimerBar extends LitElement {
                 <tr>
                   <td class="jersey-col">${p.number}</td>
                   <td>${p.name}</td>
-                  <td class="time-col">${formatTime(p.half1Time)}</td>
-                  <td class="time-col">${formatTime(p.half2Time)}</td>
-                  <td class="time-col total">${formatTime(p.half1Time + p.half2Time)}</td>
+                  <td class="time-col">${formatTime(p.half1Time, this.timeDisplayFormat)}</td>
+                  <td class="time-col">${formatTime(p.half2Time, this.timeDisplayFormat)}</td>
+                  <td class="time-col total">${formatTime(p.half1Time + p.half2Time, this.timeDisplayFormat)}</td>
                 </tr>
               `)}
             </tbody>

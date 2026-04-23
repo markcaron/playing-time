@@ -1,0 +1,136 @@
+/* ============================================================
+   PlayingTime Design Tokens
+   Primitive → Semantic → Component
+   ============================================================ */
+
+/* ── Primitive Palette ─────────────────────────────────────────
+   Static color values organized by hue.
+   These never use light-dark() — they are raw building blocks.
+   ──────────────────────────────────────────────────────────── */
+:root {
+  /* Neutral */
+  --pt-white: #ffffff;
+  --pt-neutral-50: #f8f9fa;
+  --pt-neutral-100: #f0f2f5;
+  --pt-neutral-200: #e0e0e0;
+  --pt-neutral-300: #d0d5dd;
+  --pt-neutral-400: #aaaaaa;
+  --pt-neutral-500: #667085;
+  --pt-neutral-600: #555555;
+  --pt-neutral-900: #151515;
+
+  /* Navy */
+  --pt-navy-900: #0f3460;
+  --pt-navy-800: #16213e;
+  --pt-navy-700: #1a1a2e;
+  --pt-navy-600: #1a4a7a;
+
+  /* Blue */
+  --pt-blue-700: #1d4ed8;
+  --pt-blue-600: #2563eb;
+  --pt-blue-400: #4ea8de;
+  --pt-blue-300: #3a8fc4;
+
+  /* Red */
+  --pt-red-800: #b91c1c;
+  --pt-red-700: #dc2626;
+  --pt-red-600: #c1303e;
+  --pt-red-500: #d13350;
+  --pt-red-400: #e94560;
+  --pt-red-300: #f87171;
+
+  /* Green */
+  --pt-green-800: #15803d;
+  --pt-green-700: #16a34a;
+  --pt-green-600: #276749;
+  --pt-green-500: #2d6a4f;
+  --pt-green-400: #22c55e;
+  --pt-green-300: #4ade80;
+  --pt-green-200: #6ee7a0;
+  --pt-green-100: #86efac;
+
+  /* Amber */
+  --pt-amber-700: #b45309;
+  --pt-amber-600: #d97706;
+  --pt-amber-500: #d4a830;
+  --pt-amber-400: #f0c040;
+  --pt-amber-200: #fef3c7;
+
+  /* Chartreuse */
+  --pt-chartreuse-400: #7fff00;
+}
+
+
+/* ── Semantic Tokens ───────────────────────────────────────────
+   Purpose-driven tokens that reference primitives.
+   Use light-dark() to switch between light and dark values.
+   ──────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light dark;
+
+  /* Backgrounds */
+  --pt-bg-body: light-dark(var(--pt-neutral-100), var(--pt-navy-700));
+  --pt-bg-primary: light-dark(var(--pt-white), var(--pt-navy-800));
+  --pt-bg-surface: light-dark(var(--pt-neutral-50), var(--pt-navy-900));
+  --pt-bg-dark: light-dark(var(--pt-navy-700), var(--pt-neutral-900));
+  --pt-bg-warning: var(--pt-amber-200);
+
+  /* Borders */
+  --pt-border: light-dark(var(--pt-neutral-300), var(--pt-navy-600));
+  --pt-border-subtle: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.15));
+  --pt-border-on-white: light-dark(rgba(0,0,0,0.15), transparent);
+
+  /* Text */
+  --pt-text: light-dark(var(--pt-navy-700), var(--pt-neutral-200));
+  --pt-text-muted: light-dark(var(--pt-neutral-500), var(--pt-neutral-400));
+  --pt-text-on-light: var(--pt-neutral-600);
+  --pt-text-white: var(--pt-white);
+
+  /* Accent */
+  --pt-accent: light-dark(var(--pt-blue-600), var(--pt-blue-400));
+  --pt-accent-hover: light-dark(var(--pt-blue-700), var(--pt-blue-300));
+  --pt-accent-solid: light-dark(var(--pt-blue-600), var(--pt-white));
+  --pt-accent-solid-hover: light-dark(var(--pt-blue-700), #dbeafe);
+  --pt-accent-solid-text: light-dark(var(--pt-white), var(--pt-navy-800));
+
+  /* Danger */
+  --pt-danger: light-dark(var(--pt-red-700), var(--pt-red-400));
+  --pt-danger-hover: light-dark(var(--pt-red-800), var(--pt-red-500));
+  --pt-danger-light: light-dark(var(--pt-red-700), var(--pt-red-300));
+  --pt-danger-on-light: light-dark(var(--pt-red-700), var(--pt-red-600));
+
+  /* Success */
+  --pt-success: var(--pt-green-700);
+  --pt-success-hover: var(--pt-green-800);
+  --pt-success-light: light-dark(var(--pt-green-700), var(--pt-green-100));
+
+  /* Warning */
+  --pt-warning: light-dark(var(--pt-amber-600), var(--pt-amber-400));
+  --pt-warning-hover: light-dark(var(--pt-amber-700), var(--pt-amber-500));
+
+  /* Special */
+  --pt-hint: light-dark(var(--pt-green-700), var(--pt-chartreuse-400));
+
+  /* Field UI */
+  --pt-player-fill: light-dark(var(--pt-navy-900), var(--pt-white));
+  --pt-player-text: light-dark(var(--pt-white), var(--pt-navy-800));
+  --pt-player-stroke: light-dark(var(--pt-white), var(--pt-navy-600));
+  --pt-gk-fill: light-dark(#f5c542, #7c3aed);
+  --pt-gk-text: light-dark(var(--pt-navy-900), var(--pt-white));
+  --pt-gk-stroke: light-dark(var(--pt-white), var(--pt-white));
+  --pt-field-text: light-dark(var(--pt-neutral-900), var(--pt-white));
+  --pt-field-shadow: light-dark(rgba(0,0,0,0.3), rgba(0,0,0,0.5));
+
+  /* Field stripes */
+  --pt-field-stripe-light: light-dark(var(--pt-green-200), var(--pt-green-500));
+  --pt-field-stripe-dark: light-dark(#52dB88, var(--pt-green-600));
+
+  /* Overlays and shadows */
+  --pt-shadow: light-dark(rgba(0,0,0,0.08), rgba(0,0,0,0.3));
+  --pt-shadow-lg: light-dark(rgba(0,0,0,0.12), rgba(0,0,0,0.5));
+  --pt-backdrop: light-dark(rgba(0,0,0,0.3), rgba(0,0,0,0.6));
+  --pt-hover-overlay: light-dark(rgba(0,0,0,0.04), rgba(255,255,255,0.08));
+  --pt-btn-hover: light-dark(#dbeafe, var(--pt-navy-600));
+  --pt-hero-bg: light-dark(var(--pt-navy-700), var(--pt-white));
+  --pt-hero-text: light-dark(var(--pt-white), var(--pt-navy-800));
+}

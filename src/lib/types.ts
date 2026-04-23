@@ -88,8 +88,37 @@ export interface StoredPlayer {
 
 export interface StoredPosition {
   rosterIndex: number;
+  playerId?: string;
   x: number;
   y: number;
+}
+
+export type MatchType = 'vs' | '@';
+export type MatchPhase = 'plan' | 'game';
+
+export interface StoredHalfPlan {
+  formation: FormationKey;
+  fieldPositions: StoredPosition[];
+}
+
+export interface StoredGamePlan {
+  id: string;
+  name: string;
+  formation: FormationKey;
+  opponentName?: string;
+  matchType?: MatchType;
+  phase: MatchPhase;
+  fieldPositions?: StoredPosition[];
+  fieldPositions1H?: StoredPosition[];
+  fieldPositions2H?: StoredPosition[];
+  halfPlan1H?: StoredHalfPlan;
+  halfPlan2H?: StoredHalfPlan;
+  half1Started?: boolean;
+  half2Started?: boolean;
+  playerTimes?: Record<string, { half1Time: number; half2Time: number; benchTime: number; onFieldTime: number }>;
+  gameEvents?: GameEvent[];
+  timerElapsed?: number;
+  timerHalf?: 1 | 2;
 }
 
 export interface StoredTeam {
@@ -103,6 +132,8 @@ export interface StoredTeam {
   showBenchTime?: boolean;
   showOnFieldTime?: boolean;
   largeTimeDisplay?: boolean;
+  timeDisplayFormat?: TimeDisplayFormat;
+  gamePlans?: StoredGamePlan[];
 }
 
 export interface StoredAppState {
@@ -127,8 +158,11 @@ export interface GameEvent {
   playerB: string;
 }
 
-export function formatTime(seconds: number): string {
+export type TimeDisplayFormat = 'mm:ss' | 'mm';
+
+export function formatTime(seconds: number, format: TimeDisplayFormat = 'mm:ss'): string {
   const m = Math.floor(seconds / 60);
+  if (format === 'mm') return String(m).padStart(2, '0');
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }

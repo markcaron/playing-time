@@ -1,4 +1,4 @@
-import type { StoredAppState, StoredRoster, StoredTeam } from './types.js';
+import type { StoredAppState, StoredRoster, StoredTeam, StoredGamePlan, FormationKey, MatchPhase } from './types.js';
 
 const APP_KEY = 'playing-time-app';
 const OLD_KEY = 'playing-time-roster';
@@ -52,6 +52,15 @@ export function loadAppState(): StoredAppState {
 
 export function saveAppState(state: StoredAppState): void {
   localStorage.setItem(APP_KEY, JSON.stringify(state));
+}
+
+export function createGamePlan(name: string, formation: FormationKey): StoredGamePlan {
+  return {
+    id: `plan-${Date.now().toString(36)}-${(++_idCounter).toString(36)}`,
+    name,
+    formation,
+    phase: 'plan',
+  };
 }
 
 export function createNewTeam(): StoredTeam {

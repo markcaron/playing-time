@@ -100,10 +100,9 @@ describe('serializeRosterYaml()', function () {
     const yaml = serializeRosterYaml({}, [
       { number: '1', name: 'Jane Campbell' },
     ]);
-    const topLevelLines = yaml.split('\n').filter(l => l.length > 0 && !l.startsWith(' '));
-    expect(topLevelLines.some(l => l.startsWith('name:'))).to.be.false;
-    expect(topLevelLines.some(l => l.startsWith('format:'))).to.be.false;
-    expect(topLevelLines.some(l => l.startsWith('halfLength:'))).to.be.false;
+    expect(yaml).to.not.match(/^name:/m);
+    expect(yaml).to.not.match(/^format:/m);
+    expect(yaml).to.not.match(/^halfLength:/m);
   });
 
   it('handles an empty player list', function () {

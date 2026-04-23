@@ -1126,6 +1126,10 @@ export class PtEditTeamView extends LitElement {
       return;
     }
     this._dropError = '';
+    this._applyParsedRoster(parsed);
+  }
+
+  private _applyParsedRoster(parsed: ReturnType<typeof parseRosterWithMeta>) {
     if (parsed.meta.name && !this._draftName) this._draftName = parsed.meta.name;
     if (parsed.meta.format) this._draftFormat = parsed.meta.format as GameFormat;
     if (parsed.meta.halfLength) this._draftHalfLength = parsed.meta.halfLength;
@@ -1135,8 +1139,8 @@ export class PtEditTeamView extends LitElement {
       number: p.number,
       name: p.name,
       nickname: p.nickname,
-      primaryPos: p.primaryPos as Position | undefined,
-      secondaryPos: p.secondaryPos as Position | undefined,
+      primaryPos: POSITIONS.includes(p.primaryPos as Position) ? p.primaryPos as Position : undefined,
+      secondaryPos: POSITIONS.includes(p.secondaryPos as Position) ? p.secondaryPos as Position : undefined,
       half1Time: 0,
       half2Time: 0,
       benchTime: 0,
@@ -1178,23 +1182,7 @@ export class PtEditTeamView extends LitElement {
     try {
       const res = await fetch('/examples/uswnt.md');
       const text = await res.text();
-      const parsed = parseRosterWithMeta(text);
-      if (parsed.meta.name && !this._draftName) this._draftName = parsed.meta.name;
-      if (parsed.meta.format) this._draftFormat = parsed.meta.format as GameFormat;
-      if (parsed.meta.halfLength) this._draftHalfLength = parsed.meta.halfLength;
-      if (parsed.meta.formation) this._draftFormation = parsed.meta.formation as FormationKey;
-      this._draftRoster = parsed.players.map(p => ({
-        id: uid('p'),
-        number: p.number,
-        name: p.name,
-        nickname: p.nickname,
-        primaryPos: p.primaryPos as Position | undefined,
-        secondaryPos: p.secondaryPos as Position | undefined,
-        half1Time: 0,
-        half2Time: 0,
-        benchTime: 0,
-        onFieldTime: 0,
-      }));
+      this._applyParsedRoster(parseRosterWithMeta(text));
     } catch { /* silently fail */ }
   }
 

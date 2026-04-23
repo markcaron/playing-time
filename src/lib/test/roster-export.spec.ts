@@ -2,6 +2,8 @@ import { expect } from '@open-wc/testing';
 import { parseRosterWithMeta, serializeRosterYaml } from '../roster-parser.js';
 import type { RosterMeta } from '../roster-parser.js';
 
+/* RosterMeta will need a `formation?: string` field added by the implementer */
+
 /*
  * Specification for issue #1 — YAML export and round-trip:
  * https://github.com/markcaron/playing-time/issues/1
@@ -107,6 +109,46 @@ describe('serializeRosterYaml()', function () {
     const parsed = parseRosterWithMeta(yaml);
     expect(parsed.players).to.have.length(0);
   });
+
+  it('safely quotes player names containing colons', function () {
+    const yaml = serializeRosterYaml({}, [
+      { number: '8', name: "O'Brien: Captain" },
+    ]);
+    const parsed = parseRosterWithMeta(yaml);
+    expect(parsed.players[0].name).to.equal("O'Brien: Captain");
+  });
+
+  it('safely quotes nicknames containing special YAML characters', function () {
+    const yaml = serializeRosterYaml({}, [
+      { number: '8', name: 'Test Player', nickname: 'The "Boss"' },
+    ]);
+    const parsed = parseRosterWithMeta(yaml);
+    expect(parsed.players[0]).to.have.property('nickname', 'The "Boss"');
+  });
+
+  it('safely quotes team name containing colons', function () {
+    const yaml = serializeRosterYaml({ name: 'FC: United' }, [
+      { number: '1', name: 'Alice' },
+    ]);
+    const parsed = parseRosterWithMeta(yaml);
+    expect(parsed.meta.name).to.equal('FC: United');
+  });
+
+  it('includes formation when present in meta', function () {
+    const yaml = serializeRosterYaml(
+      { name: 'Test', format: '7v7', formation: '1-2-3-1' },
+      [{ number: '1', name: 'Alice' }],
+    );
+    expect(yaml).to.include('formation: 1-2-3-1');
+  });
+
+  it('omits formation when absent from meta', function () {
+    const yaml = serializeRosterYaml(
+      { name: 'Test', format: '7v7' },
+      [{ number: '1', name: 'Alice' }],
+    );
+    expect(yaml).to.not.include('formation');
+  });
 });
 
 /* ─── YAML round-trip ─────────────────────────────────────── */
@@ -185,6 +227,13 @@ describe('YAML round-trip (export → import)', function () {
     expect(parsed.players[0]).to.not.have.property('nickname');
     expect(parsed.players[0]).to.not.have.property('secondaryPos');
     expect(parsed.players[0]).to.have.property('primaryPos', 'LW');
+  });
+
+  it('preserves formation in metadata', function () {
+    const meta: RosterMeta = { name: 'Test', format: '7v7', formation: '1-2-3-1' };
+    const yaml = serializeRosterYaml(meta, [{ number: '1', name: 'Alice' }]);
+    const parsed = parseRosterWithMeta(yaml);
+    expect(parsed.meta).to.have.property('formation', '1-2-3-1');
   });
 
   it('round-trips a large mixed roster', function () {

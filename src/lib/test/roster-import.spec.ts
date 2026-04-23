@@ -106,6 +106,20 @@ describe('parseRosterWithMeta() — YAML import', function () {
     expect(players).to.have.length(0);
   });
 
+  it('parses formation from YAML metadata', function () {
+    const yaml = [
+      'name: Test FC',
+      'format: 7v7',
+      'formation: 1-2-3-1',
+      'halfLength: 25',
+      'players:',
+      '  - number: "1"',
+      '    name: Alice',
+    ].join('\n');
+    const { meta } = parseRosterWithMeta(yaml);
+    expect(meta).to.have.property('formation', '1-2-3-1');
+  });
+
   it('parses a full roster of varied players', function () {
     const yaml = [
       'name: Test FC',
@@ -140,6 +154,30 @@ describe('parseRosterWithMeta() — YAML import', function () {
     expect(players[1]).to.deep.include({ number: '4', name: 'Defender Dee', nickname: 'DD', primaryPos: 'CB', secondaryPos: 'LB' });
     expect(players[2]).to.deep.include({ number: '10', name: 'Midfielder Mo', primaryPos: 'CM' });
     expect(players[3]).to.deep.include({ number: '9', name: 'Striker Sam', nickname: 'Sammy', primaryPos: 'ST', secondaryPos: 'CF' });
+  });
+});
+
+/* ─── YAML detection boundary ─────────────────────────────── */
+
+describe('parseRosterWithMeta() — YAML detection boundary', function () {
+  it('does NOT treat markdown with "players:" in frontmatter as YAML', function () {
+    const md = [
+      '---',
+      'name: My Team',
+      'format: 7v7',
+      '---',
+      '1. Alice',
+      '2. Bob',
+    ].join('\n');
+    const { players } = parseRosterWithMeta(md);
+    expect(players).to.have.length(2);
+    expect(players[0]).to.deep.include({ number: '1', name: 'Alice' });
+  });
+
+  it('does NOT treat a plain-text roster that happens to contain "players:" as YAML', function () {
+    const text = 'players: none yet\nAlice\nBob';
+    const { players } = parseRosterWithMeta(text);
+    expect(players).to.have.length(2);
   });
 });
 

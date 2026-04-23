@@ -2,21 +2,221 @@ export interface RosterMeta {
   name?: string;
   format?: string;
   halfLength?: number;
+  formation?: string;
+}
+
+export interface ParsedPlayer {
+  number: string;
+  name: string;
+  nickname?: string;
+  primaryPos?: string;
+  secondaryPos?: string;
 }
 
 export interface ParsedRoster {
   meta: RosterMeta;
-  players: { number: string; name: string }[];
+  players: ParsedPlayer[];
 }
 
-export function parseRoster(text: string): { number: string; name: string }[] {
+/* ── YAML value helpers ────────────────────────────────────── */
+
+function yamlQuote(val: string): string {
+  if (/[:#"'\[\]{}|>&*!?@`]/.test(val) || val !== val.trim()) {
+    return `"${val.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  }
+  return val;
+}
+
+function yamlUnquote(val: string): string {
+  if (val.length >= 2 && val.startsWith('"') && val.endsWith('"')) {
+    return val.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  }
+  if (val.length >= 2 && val.startsWith("'") && val.endsWith("'")) {
+    return val.slice(1, -1);
+  }
+  return val;
+}
+
+/* ── YAML export ───────────────────────────────────────────── */
+
+export function serializeRosterYaml(
+  meta: RosterMeta,
+  players: Array<{
+    number?: string;
+    name: string;
+    nickname?: string;
+    primaryPos?: string;
+    secondaryPos?: string;
+  }>,
+): string {
+  const lines: string[] = [];
+
+  if (meta.name) lines.push(`name: ${yamlQuote(meta.name)}`);
+  if (meta.format) lines.push(`format: ${yamlQuote(meta.format)}`);
+  if (meta.halfLength != null) lines.push(`halfLength: ${meta.halfLength}`);
+  if (meta.formation) lines.push(`formation: ${yamlQuote(meta.formation)}`);
+
+  lines.push('players:');
+
+  for (const p of players) {
+    const num = p.number ?? '';
+    const nameStr = yamlQuote(p.name);
+    lines.push(num ? `  - ${num}. ${nameStr}` : `  - ${nameStr}`);
+    if (p.nickname) lines.push(`    nickname: ${yamlQuote(p.nickname)}`);
+    if (p.primaryPos) lines.push(`    primaryPos: ${p.primaryPos}`);
+    if (p.secondaryPos) lines.push(`    secondaryPos: ${p.secondaryPos}`);
+  }
+
+  return lines.join('\n');
+}
+
+/* ── Public API ─────────────────────────────────────────────── */
+
+export function parseRoster(text: string): ParsedPlayer[] {
   return parseRosterWithMeta(text).players;
 }
 
 export function parseRosterWithMeta(text: string): ParsedRoster {
-  const lines = text.trim().split('\n');
+  const trimmed = text.trim();
+  if (isYamlFormat(trimmed)) return parseYaml(trimmed);
+  if (isCsvWithHeader(trimmed)) return parseCsvWithHeader(trimmed);
+  return parseMarkdownOrLegacy(trimmed);
+}
+
+/* ── Format detection ──────────────────────────────────────── */
+
+/** Standalone `players:` key (no value), and NOT inside frontmatter fences. */
+function isYamlFormat(text: string): boolean {
+  if (text.startsWith('---')) return false;
+  return /^players:\s*$/m.test(text);
+}
+
+/** First non-empty line has comma-separated columns including `number` and `name`. */
+function isCsvWithHeader(text: string): boolean {
+  const firstLine = text.split('\n')[0].trim().toLowerCase();
+  const cols = firstLine.split(',').map(c => c.trim());
+  return cols.includes('number') && cols.includes('name');
+}
+
+/* ── YAML parser ───────────────────────────────────────────── */
+
+function parseYaml(text: string): ParsedRoster {
+  const lines = text.split('\n');
   const meta: RosterMeta = {};
-  const players: { number: string; name: string }[] = [];
+  const players: ParsedPlayer[] = [];
+  let inPlayers = false;
+  let current: ParsedPlayer | null = null;
+
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
+
+    if (trimmed === 'players:') {
+      inPlayers = true;
+      continue;
+    }
+
+    if (!inPlayers) {
+      applyMetaKv(meta, trimmed);
+      continue;
+    }
+
+    const listMatch = trimmed.match(/^-\s+(.+)/);
+    if (listMatch) {
+      if (current) players.push(current);
+      current = { number: '', name: '' };
+      const content = listMatch[1];
+
+      const mdMatch = content.match(/^(\d+)\.\s+(.+)/);
+      if (mdMatch) {
+        current.number = mdMatch[1];
+        current.name = yamlUnquote(mdMatch[2].trim());
+        continue;
+      }
+
+      const kvMatch = content.match(/^(\w+)\s*:\s*(.*)/);
+      if (kvMatch) {
+        applyPlayerKv(current, content);
+        continue;
+      }
+
+      current.name = yamlUnquote(content.trim());
+      continue;
+    }
+
+    if (current) {
+      applyPlayerKv(current, trimmed);
+    }
+  }
+
+  if (current) players.push(current);
+  return { meta, players };
+}
+
+function applyMetaKv(meta: RosterMeta, line: string): void {
+  const kv = line.match(/^(\w+)\s*:\s*(.+)/);
+  if (!kv) return;
+  const key = kv[1].toLowerCase();
+  const val = yamlUnquote(kv[2].trim());
+  if (key === 'name') meta.name = val;
+  else if (key === 'format') meta.format = val;
+  else if (key === 'halflength') meta.halfLength = parseInt(val, 10);
+  else if (key === 'formation') meta.formation = val;
+}
+
+function applyPlayerKv(player: ParsedPlayer, line: string): void {
+  const kv = line.match(/^(\w+)\s*:\s*(.*)/);
+  if (!kv) return;
+  const key = kv[1].toLowerCase();
+  const val = yamlUnquote(kv[2].trim());
+  if (key === 'number') player.number = String(val);
+  else if (key === 'name') player.name = val;
+  else if (key === 'nickname' && val) player.nickname = val;
+  else if (key === 'primarypos' && val) player.primaryPos = val;
+  else if (key === 'secondarypos' && val) player.secondaryPos = val;
+}
+
+/* ── CSV-with-header parser ────────────────────────────────── */
+
+function parseCsvWithHeader(text: string): ParsedRoster {
+  const lines = text.split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const colIdx = new Map<string, number>();
+  headers.forEach((h, i) => colIdx.set(h, i));
+
+  const players: ParsedPlayer[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i].trim();
+    if (!row) continue;
+
+    const values = row.split(',').map(v => v.trim());
+    const player: ParsedPlayer = {
+      number: values[colIdx.get('number') ?? -1] ?? '',
+      name: values[colIdx.get('name') ?? -1] ?? '',
+    };
+
+    const nickname = colIdx.has('nickname') ? (values[colIdx.get('nickname')!] ?? '').trim() : '';
+    if (nickname) player.nickname = nickname;
+
+    const primaryPos = colIdx.has('primarypos') ? (values[colIdx.get('primarypos')!] ?? '').trim() : '';
+    if (primaryPos) player.primaryPos = primaryPos;
+
+    const secondaryPos = colIdx.has('secondarypos') ? (values[colIdx.get('secondarypos')!] ?? '').trim() : '';
+    if (secondaryPos) player.secondaryPos = secondaryPos;
+
+    players.push(player);
+  }
+
+  return { meta: {}, players };
+}
+
+/* ── Markdown / legacy parser ──────────────────────────────── */
+
+function parseMarkdownOrLegacy(text: string): ParsedRoster {
+  const lines = text.split('\n');
+  const meta: RosterMeta = {};
+  const players: ParsedPlayer[] = [];
 
   let inFrontmatter = false;
   let frontmatterDone = false;
@@ -44,6 +244,7 @@ export function parseRosterWithMeta(text: string): ParsedRoster {
         if (key === 'name') meta.name = val;
         else if (key === 'format') meta.format = val;
         else if (key === 'halflength') meta.halfLength = parseInt(val, 10);
+        else if (key === 'formation') meta.formation = val;
       }
       continue;
     }
@@ -56,11 +257,12 @@ export function parseRosterWithMeta(text: string): ParsedRoster {
         if (key === 'name') meta.name = val;
         else if (key === 'format') meta.format = val;
         else if (key === 'halflength') meta.halfLength = parseInt(val, 10);
+        else if (key === 'formation') meta.formation = val;
       }
       continue;
     }
 
-    if (/^#|^number|^jersey/i.test(trimmed)) continue;
+    if (/^#|^number|^jersey|^players\s*:/i.test(trimmed)) continue;
 
     const mdMatch = trimmed.match(/^(\d+)\.\s*(.+)/);
     if (mdMatch) {

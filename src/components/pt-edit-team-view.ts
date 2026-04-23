@@ -3,7 +3,7 @@ import { customElement, property, state, query } from 'lit/decorators.js';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam, Position } from '../lib/types.js';
 import { GAME_FORMATS, FORMATIONS_BY_FORMAT, POSITIONS, getStandardHalfLength, getDefaultFormation } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
-import { parseRosterWithMeta } from '../lib/roster-parser.js';
+import { parseRosterWithMeta, serializeRosterYaml } from '../lib/roster-parser.js';
 
 function sortRoster<T extends { number: string; name: string }>(roster: T[], order: 'alpha' | 'number'): T[] {
   return [...roster].sort((a, b) => {
@@ -1129,10 +1129,14 @@ export class PtEditTeamView extends LitElement {
     if (parsed.meta.name && !this._draftName) this._draftName = parsed.meta.name;
     if (parsed.meta.format) this._draftFormat = parsed.meta.format as GameFormat;
     if (parsed.meta.halfLength) this._draftHalfLength = parsed.meta.halfLength;
+    if (parsed.meta.formation) this._draftFormation = parsed.meta.formation as FormationKey;
     this._draftRoster = parsed.players.map(p => ({
       id: uid('p'),
       number: p.number,
       name: p.name,
+      nickname: p.nickname,
+      primaryPos: p.primaryPos as Position | undefined,
+      secondaryPos: p.secondaryPos as Position | undefined,
       half1Time: 0,
       half2Time: 0,
       benchTime: 0,
@@ -1178,10 +1182,14 @@ export class PtEditTeamView extends LitElement {
       if (parsed.meta.name && !this._draftName) this._draftName = parsed.meta.name;
       if (parsed.meta.format) this._draftFormat = parsed.meta.format as GameFormat;
       if (parsed.meta.halfLength) this._draftHalfLength = parsed.meta.halfLength;
+      if (parsed.meta.formation) this._draftFormation = parsed.meta.formation as FormationKey;
       this._draftRoster = parsed.players.map(p => ({
         id: uid('p'),
         number: p.number,
         name: p.name,
+        nickname: p.nickname,
+        primaryPos: p.primaryPos as Position | undefined,
+        secondaryPos: p.secondaryPos as Position | undefined,
         half1Time: 0,
         half2Time: 0,
         benchTime: 0,
@@ -1204,20 +1212,20 @@ export class PtEditTeamView extends LitElement {
 
   private _exportRoster() {
     if (this._draftRoster.length === 0) return;
-    const lines: string[] = [
-      '---',
-      `name: ${this._draftName || 'Untitled'}`,
-      `format: ${this._draftFormat}`,
-      `halfLength: ${this._draftHalfLength}`,
-      '---',
-      ...this._draftRoster.map(p => p.number ? `${p.number}. ${p.name}` : p.name),
-    ];
-    const md = lines.join('\n');
-    const blob = new Blob([md], { type: 'text/markdown' });
+    const yaml = serializeRosterYaml(
+      {
+        name: this._draftName || 'Untitled',
+        format: this._draftFormat,
+        halfLength: this._draftHalfLength,
+        formation: this._draftFormation,
+      },
+      this._draftRoster,
+    );
+    const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${this._draftName || 'roster'}.md`;
+    a.download = `${this._draftName || 'roster'}.yaml`;
     a.click();
     URL.revokeObjectURL(url);
   }

@@ -3,7 +3,7 @@ import { customElement, property, state, query } from 'lit/decorators.js';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam } from '../lib/types.js';
 import { GAME_FORMATS, FORMATIONS_BY_FORMAT, getStandardHalfLength, getDefaultFormation } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
-import { parseRoster, parseRosterWithMeta } from '../lib/roster-parser.js';
+import { parseRosterWithMeta } from '../lib/roster-parser.js';
 
 export class TeamSavedEvent extends Event {
   static readonly eventName = 'team-saved' as const;
@@ -952,14 +952,17 @@ export class PtEditTeamView extends LitElement {
   /* ── File import / drop zone ────────────────────── */
 
   private _importRoster(text: string) {
-    const parsed = parseRoster(text);
-    if (parsed.length === 0) {
+    const parsed = parseRosterWithMeta(text);
+    if (parsed.players.length === 0) {
       this._dropError = 'Could not parse roster. Check the format.';
       setTimeout(() => this._dropError = '', 4000);
       return;
     }
     this._dropError = '';
-    const entries: RosterEntry[] = parsed.map(p => ({
+    if (parsed.meta.name && !this._draftName) this._draftName = parsed.meta.name;
+    if (parsed.meta.format) this._draftFormat = parsed.meta.format as GameFormat;
+    if (parsed.meta.halfLength) this._draftHalfLength = parsed.meta.halfLength;
+    this._draftRoster = parsed.players.map(p => ({
       id: uid('p'),
       number: p.number,
       name: p.name,
@@ -968,7 +971,6 @@ export class PtEditTeamView extends LitElement {
       benchTime: 0,
       onFieldTime: 0,
     }));
-    this._draftRoster = entries;
   }
 
   private _onDropZoneDragover(e: DragEvent) {
@@ -991,9 +993,13 @@ export class PtEditTeamView extends LitElement {
     }
   }
 
-  private _onDropZoneClick() {
+  private _onDropZoneClick(e: Event) {
+    if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
     const input = this.shadowRoot?.querySelector('#roster-file-input') as HTMLInputElement;
-    input?.click();
+    if (input) {
+      input.value = '';
+      input.click();
+    }
   }
 
   private async _onTryExample(e: Event) {
@@ -1069,7 +1075,7 @@ export class PtEditTeamView extends LitElement {
 
     return html`
       <div class="header">
-        <h1>${isNew ? 'New Team' : 'Edit Team'}</h1>
+        <h1>${isNew ? 'Create New Team' : 'Edit Team'}</h1>
         <span class="spacer"></span>
         <button class="close-btn" @click="${this._onCancel}" aria-label="Close" title="Close">
           <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1144,7 +1150,7 @@ export class PtEditTeamView extends LitElement {
                    aria-label="Upload roster file"
                    @change="${this._onFileSelected}" />
             <p>Drag & drop or click to upload a roster</p>
-            <button class="browse-btn" @click="${this._onDropZoneClick}">Browse Files</button>
+            <button class="browse-btn" @click="${(e: Event) => { e.stopPropagation(); this._onDropZoneClick(e); }}">Browse Files</button>
             <p class="drop-hint">Supports .csv and .md</p>
             ${this._dropError ? html`<p class="drop-error">${this._dropError}</p>` : nothing}
           </div>

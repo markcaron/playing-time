@@ -566,21 +566,25 @@ export class PtTeamView extends LitElement {
            ?hidden="${this._activeTab !== 'plans'}">
         <h3 class="panel-heading">Matches</h3>
         <p class="panel-desc">Creating a match allows you to plan lineups and substitutions.</p>
-        ${this.gamePlans.length === 0 ? html`
-          <p class="empty-plans">No matches yet.</p>
-        ` : this.gamePlans.map(plan => html`
-          <button class="plan-tile" @click="${() => this._selectPlan(plan.id)}">
-            <svg class="plan-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m1025 1175h-850c-13.801 0-25-11.25-25-25v-1100c0-13.75 11.199-25 25-25h850c13.75 0 25 11.25 25 25v1100c0 13.75-11.25 25-25 25zm-825-50h800v-1050h-800z" fill="currentColor"/><path d="m775 225h-350c-13.801 0-25-11.25-25-25v-150c0-13.75 11.199-25 25-25h350c13.75 0 25 11.25 25 25v150c0 13.75-11.25 25-25 25zm-325-50h300v-100h-300z" fill="currentColor"/><path d="m775 1175h-350c-13.801 0-25-11.25-25-25v-150c0-13.75 11.199-25 25-25h350c13.75 0 25 11.25 25 25v150c0 13.75-11.25 25-25 25zm-325-50h300v-100h-300z" fill="currentColor"/><path d="m200 575h800v50h-800z" fill="currentColor"/><path d="m600 795.3c-107.7 0-195.3-87.602-195.3-195.3s87.602-195.3 195.3-195.3 195.3 87.602 195.3 195.3-87.602 195.3-195.3 195.3zm0-340.6c-80.148 0-145.3 65.301-145.3 145.3s65.199 145.3 145.3 145.3 145.3-65.301 145.3-145.3-65.102-145.3-145.3-145.3z" fill="currentColor"/></svg>
-            <div class="plan-info">
-              <span class="plan-name">${plan.matchType ?? 'vs'} ${plan.opponentName || 'Opponent'}</span>
-              <span class="plan-meta">${plan.formation}</span>
-            </div>
-            <svg class="plan-chevron" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="9,4 17,12 9,20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        `)}
-        <div class="add-plan-bottom">
-          <button class="add-plan-accent" @click="${this._createPlan}"><svg class="add-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m600 99.984c275.95 0 500.02 224.06 500.02 500.02s-224.06 500.02-500.02 500.02-500.02-224.06-500.02-500.02 224.06-500.02 500.02-500.02zm0 100.03c-220.78 0-399.98 179.26-399.98 399.98 0 220.78 179.26 399.98 399.98 399.98 220.78 0 399.98-179.26 399.98-399.98 0-220.78-179.26-399.98-399.98-399.98zm-50.016 450h-150c-27.609 0-49.969-22.406-49.969-50.016s22.406-50.016 49.969-50.016h150v-150c0-27.609 22.406-49.969 50.016-49.969s50.016 22.406 50.016 49.969v150h150c27.609 0 49.969 22.406 49.969 50.016s-22.406 50.016-49.969 50.016h-150v150c0 27.609-22.406 49.969-50.016 49.969s-50.016-22.406-50.016-49.969z" fill-rule="evenodd" fill="currentColor"/></svg> Create Match</button>
-        </div>
+        ${this.roster.length === 0 ? html`
+          <div class="empty-warning" style="margin-top: 16px"><span class="warning-icon">&#9888;</span> You must add players before you can create matches. <a href="#" class="edit-link" @click="${(e: Event) => { e.preventDefault(); this._navigateEdit(); }}">Edit Roster</a></div>
+        ` : html`
+          ${this.gamePlans.length === 0 ? html`
+            <p class="empty-plans">No matches yet.</p>
+          ` : this.gamePlans.map(plan => html`
+            <button class="plan-tile" @click="${() => this._selectPlan(plan.id)}">
+              <svg class="plan-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m1025 1175h-850c-13.801 0-25-11.25-25-25v-1100c0-13.75 11.199-25 25-25h850c13.75 0 25 11.25 25 25v1100c0 13.75-11.25 25-25 25zm-825-50h800v-1050h-800z" fill="currentColor"/><path d="m775 225h-350c-13.801 0-25-11.25-25-25v-150c0-13.75 11.199-25 25-25h350c13.75 0 25 11.25 25 25v150c0 13.75-11.25 25-25 25zm-325-50h300v-100h-300z" fill="currentColor"/><path d="m775 1175h-350c-13.801 0-25-11.25-25-25v-150c0-13.75 11.199-25 25-25h350c13.75 0 25 11.25 25 25v150c0 13.75-11.25 25-25 25zm-325-50h300v-100h-300z" fill="currentColor"/><path d="m200 575h800v50h-800z" fill="currentColor"/><path d="m600 795.3c-107.7 0-195.3-87.602-195.3-195.3s87.602-195.3 195.3-195.3 195.3 87.602 195.3 195.3-87.602 195.3-195.3 195.3zm0-340.6c-80.148 0-145.3 65.301-145.3 145.3s65.199 145.3 145.3 145.3 145.3-65.301 145.3-145.3-65.102-145.3-145.3-145.3z" fill="currentColor"/></svg>
+              <div class="plan-info">
+                <span class="plan-name">${plan.matchType ?? 'vs'} ${plan.opponentName || 'Opponent'}</span>
+                <span class="plan-meta">${plan.formation}</span>
+              </div>
+              <svg class="plan-chevron" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="9,4 17,12 9,20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          `)}
+          <div class="add-plan-bottom">
+            <button class="add-plan-accent" @click="${this._createPlan}"><svg class="add-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m600 99.984c275.95 0 500.02 224.06 500.02 500.02s-224.06 500.02-500.02 500.02-500.02-224.06-500.02-500.02 224.06-500.02 500.02-500.02zm0 100.03c-220.78 0-399.98 179.26-399.98 399.98 0 220.78 179.26 399.98 399.98 399.98 220.78 0 399.98-179.26 399.98-399.98 0-220.78-179.26-399.98-399.98-399.98zm-50.016 450h-150c-27.609 0-49.969-22.406-49.969-50.016s22.406-50.016 49.969-50.016h150v-150c0-27.609 22.406-49.969 50.016-49.969s50.016 22.406 50.016 49.969v150h150c27.609 0 49.969 22.406 49.969 50.016s-22.406 50.016-49.969 50.016h-150v150c0 27.609-22.406 49.969-50.016 49.969s-50.016-22.406-50.016-49.969z" fill-rule="evenodd" fill="currentColor"/></svg> Create Match</button>
+          </div>
+        `}
       </div>
 
       <div role="tabpanel"

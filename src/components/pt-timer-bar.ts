@@ -502,8 +502,11 @@ export class PtTimerBar extends LitElement {
     }
 
     #times-dialog {
-      height: fit-content;
       max-height: calc(100dvh - 32px);
+    }
+
+    #times-dialog .times-dialog-body {
+      min-height: 200px;
     }
 
     .times-dialog-body {

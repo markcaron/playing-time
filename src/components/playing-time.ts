@@ -644,15 +644,19 @@ export class PlayingTime extends LitElement {
 
   #onTeamSaved(e: TeamSavedEvent) {
     const saved = e.teamData;
-    const existing = this.teams.find(t => t.id === saved.id);
-    if (existing) {
-      this.teams = this.teams.map(t => t.id === saved.id ? saved : t);
-    } else {
+    const isNew = !this.teams.find(t => t.id === saved.id);
+    if (isNew) {
       this.teams = [...this.teams, saved];
+    } else {
+      this.teams = this.teams.map(t => t.id === saved.id ? saved : t);
     }
     this.#loadTeam(saved.id);
     this.#saveState();
-    this.#navigateTo('team', 'slide-to-bottom', 'slide-from-top');
+    if (isNew) {
+      this.#navigateTo('home', 'slide-to-bottom', 'slide-from-top');
+    } else {
+      this.#navigateTo('team', 'slide-to-bottom', 'slide-from-top');
+    }
   }
 
   #onEditCancelled(_e: EditCancelledEvent) {

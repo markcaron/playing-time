@@ -1150,7 +1150,7 @@ export class PtEditTeamView extends LitElement {
                    aria-label="Upload roster file"
                    @change="${this._onFileSelected}" />
             <p>Drag & drop or click to upload a roster</p>
-            <button class="browse-btn" @click="${(e: Event) => { e.stopPropagation(); this._onDropZoneClick(e); }}">Browse Files</button>
+            <button class="browse-btn" @click="${(e: Event) => { e.stopPropagation(); const input = this.shadowRoot?.querySelector('#roster-file-input') as HTMLInputElement; if (input) { input.value = ''; input.click(); } }}">Browse Files</button>
             <p class="drop-hint">Supports .csv and .md</p>
             ${this._dropError ? html`<p class="drop-error">${this._dropError}</p>` : nothing}
           </div>

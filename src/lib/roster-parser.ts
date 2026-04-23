@@ -52,9 +52,9 @@ export function serializeRosterYaml(
   const lines: string[] = [];
 
   if (meta.name) lines.push(`name: ${yamlQuote(meta.name)}`);
-  if (meta.format) lines.push(`format: ${meta.format}`);
+  if (meta.format) lines.push(`format: ${yamlQuote(meta.format)}`);
   if (meta.halfLength != null) lines.push(`halfLength: ${meta.halfLength}`);
-  if (meta.formation) lines.push(`formation: ${meta.formation}`);
+  if (meta.formation) lines.push(`formation: ${yamlQuote(meta.formation)}`);
 
   lines.push('players:');
 
@@ -167,13 +167,13 @@ function applyMetaKv(meta: RosterMeta, line: string): void {
 function applyPlayerKv(player: ParsedPlayer, line: string): void {
   const kv = line.match(/^(\w+)\s*:\s*(.*)/);
   if (!kv) return;
-  const key = kv[1];
+  const key = kv[1].toLowerCase();
   const val = yamlUnquote(kv[2].trim());
   if (key === 'number') player.number = String(val);
   else if (key === 'name') player.name = val;
   else if (key === 'nickname' && val) player.nickname = val;
-  else if (key === 'primaryPos' && val) player.primaryPos = val;
-  else if (key === 'secondaryPos' && val) player.secondaryPos = val;
+  else if (key === 'primarypos' && val) player.primaryPos = val;
+  else if (key === 'secondarypos' && val) player.secondaryPos = val;
 }
 
 /* ── CSV-with-header parser ────────────────────────────────── */

@@ -1,7 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state, query } from 'lit/decorators.js';
-import type { RosterEntry, FormationKey, GameFormat, StoredTeam } from '../lib/types.js';
-import { GAME_FORMATS, FORMATIONS_BY_FORMAT, getStandardHalfLength, getDefaultFormation } from '../lib/types.js';
+import type { RosterEntry, FormationKey, GameFormat, StoredTeam, Position } from '../lib/types.js';
+import { GAME_FORMATS, FORMATIONS_BY_FORMAT, POSITIONS, getStandardHalfLength, getDefaultFormation } from '../lib/types.js';
 import { uid } from '../lib/svg-utils.js';
 import { parseRosterWithMeta } from '../lib/roster-parser.js';
 
@@ -112,10 +112,10 @@ export class PtEditTeamView extends LitElement {
     .edit-body {
       flex: 1;
       overflow-y: auto;
-      padding: 32px 16px 20px;
+      padding: 0 0 20px;
       display: flex;
       flex-direction: column;
-      gap: 32px;
+      gap: 24px;
       -webkit-overflow-scrolling: touch;
     }
 
@@ -202,7 +202,30 @@ export class PtEditTeamView extends LitElement {
       transition: transform 0.2s;
     }
 
-    /* ── Team fields row ──────────────────────────── */
+    /* ── Team hero area ─────────────────────────────── */
+
+    .team-hero {
+      background: var(--pt-hero-bg);
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .team-hero .team-field label {
+      color: var(--pt-hero-text);
+    }
+
+    .team-hero .half-length-unit {
+      color: var(--pt-hero-text);
+    }
+
+    .team-hero .team-name-input,
+    .team-hero select,
+    .team-hero .player-input {
+      background: var(--pt-bg-primary);
+    }
 
     .team-fields-row {
       display: flex;
@@ -214,7 +237,7 @@ export class PtEditTeamView extends LitElement {
     .team-field {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .team-field label {
@@ -226,12 +249,8 @@ export class PtEditTeamView extends LitElement {
 
     .team-name-field {
       flex-basis: 100%;
-      max-width: 300px;
+      max-width: 400px;
       width: 100%;
-    }
-
-    .format-field {
-      margin-left: auto;
     }
 
     .half-length-input-wrap {
@@ -275,8 +294,11 @@ export class PtEditTeamView extends LitElement {
       border-color: var(--pt-accent);
     }
 
-    .number-input { width: 48px; flex-shrink: 0; }
-    .name-input { flex: 1; min-width: 0; margin-right: 8px; max-width: 360px; width: 100%; }
+    .pos-col {
+      color: var(--pt-text-muted);
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
 
     .settings-number {
       width: 56px !important;
@@ -289,6 +311,8 @@ export class PtEditTeamView extends LitElement {
       width: 100%;
       border-collapse: collapse;
       font-size: 0.85rem;
+      margin: 0 16px;
+      width: calc(100% - 32px);
     }
 
     .roster-table th {
@@ -339,7 +363,56 @@ export class PtEditTeamView extends LitElement {
       height: 30px;
     }
 
-    .inline-input {
+    .delete-row-btn {
+      background: transparent;
+      border: none;
+      color: var(--pt-text-muted);
+      cursor: pointer;
+      padding: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      min-height: 44px;
+      min-width: 44px;
+      transition: color 0.15s;
+    }
+
+    .delete-row-btn:hover { color: var(--pt-danger-light); }
+
+    .delete-row-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .action-cell .action-group {
+      display: flex;
+      gap: 0;
+      align-items: center;
+    }
+
+    /* ── Edit player dialog fields ────────────────── */
+
+    .edit-player-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .edit-player-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .edit-player-field label {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: var(--pt-text);
+    }
+
+    .edit-player-field input,
+    .edit-player-field select {
       padding: 6px 10px;
       min-height: 44px;
       border: 1px solid var(--pt-text-muted);
@@ -348,103 +421,119 @@ export class PtEditTeamView extends LitElement {
       color: var(--pt-text);
       font: inherit;
       font-size: 0.85rem;
-      width: 100%;
     }
 
-    .inline-input:focus {
+    .edit-player-field input:focus,
+    .edit-player-field select:focus {
       outline: none;
       border-color: var(--pt-accent);
     }
 
-    .number-inline {
-      width: 56px;
+    .edit-player-field .select-wrap select {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 26px;
+      cursor: pointer;
     }
 
-    .action-cell .action-group {
+    .edit-player-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .edit-player-row .edit-player-field {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .edit-player-row .edit-player-field.number-field {
+      flex: 0 0 64px;
+    }
+
+    .edit-player-actions {
       display: flex;
       gap: 8px;
       justify-content: flex-end;
       align-items: center;
+      margin-top: 24px;
     }
 
-    .save-row-btn {
-      padding: 6px 14px;
-      border: 1px solid var(--pt-accent);
-      border-radius: 6px;
-      background: var(--pt-accent);
-      color: var(--pt-text-white);
-      cursor: pointer;
-      font: inherit;
-      font-size: 0.85rem;
-      min-height: 44px;
+    .edit-player-actions .cancel-btn {
+      margin-right: auto;
     }
 
-    .save-row-btn:hover { background: var(--pt-accent-hover); }
-
-    .delete-row-btn {
-      padding: 10px;
-      border: 1px solid var(--pt-danger-light);
-      border-radius: 6px;
-      background: transparent;
-      color: var(--pt-danger-light);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 44px;
-      min-width: 44px;
+    .edit-player-actions .save-player-btn {
+      padding: 8px 20px;
+      background: var(--pt-accent-solid);
+      border: none;
+      color: var(--pt-accent-solid-text);
+      font-weight: bold;
     }
 
-    .delete-row-btn svg {
-      width: 21px;
-      height: 21px;
+    .edit-player-actions .save-player-btn:hover {
+      background: var(--pt-accent-solid-hover);
     }
-
-    .delete-row-btn:hover { background: var(--pt-hover-overlay); }
 
     /* ── Add player ──────────────────────────────── */
 
     .add-player-card {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
       padding: 16px;
+      margin: 0 16px;
       background: var(--pt-bg-primary);
       border: 1px solid var(--pt-border-subtle);
       border-radius: 10px;
       box-shadow: 0 2px 6px var(--pt-shadow);
     }
 
-    .add-player-icon {
-      width: 28px;
-      height: 28px;
-      flex-shrink: 0;
-      color: var(--pt-text);
-      margin-top: -2px;
-    }
-
     .add-player-fieldset {
       border: none;
       margin: 0;
       padding: 0;
-      flex: 1;
-      min-width: 0;
     }
 
-    .add-player-label {
-      font-size: 0.8rem;
-      color: var(--pt-text);
+    .add-player-legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
       font-weight: bold;
+      color: var(--pt-text);
       padding: 0;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
+    }
+
+    .add-player-legend svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
     }
 
     .add-row {
       display: flex;
-      align-items: center;
-      gap: 6px;
+      align-items: flex-end;
+      gap: 10px;
       min-width: 0;
+      flex-wrap: wrap;
     }
+
+    .add-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .add-field label {
+      font-size: 0.75rem;
+      color: var(--pt-text-muted);
+      font-weight: normal;
+      white-space: nowrap;
+    }
+
+    .add-field.num-field { width: 52px; flex-shrink: 0; }
+    .add-field.name-field { flex: 1; min-width: 140px; }
+    .add-field.nickname-field { flex: 1; min-width: 120px; }
+    .add-field.pos-field { width: 90px; flex-shrink: 0; }
 
     .add-icon {
       width: 16px;
@@ -485,6 +574,7 @@ export class PtEditTeamView extends LitElement {
       border-radius: 10px;
       padding: 24px 16px;
       max-width: 400px;
+      margin: 0 16px;
       align-self: center;
       width: 100%;
       text-align: center;
@@ -566,6 +656,7 @@ export class PtEditTeamView extends LitElement {
       justify-content: space-between;
       align-items: center;
       gap: 8px;
+      padding: 0 16px;
     }
 
     button.export-btn {
@@ -611,7 +702,7 @@ export class PtEditTeamView extends LitElement {
       background: var(--pt-backdrop);
     }
 
-    .confirm-dialog-header {
+    .dialog-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -620,14 +711,14 @@ export class PtEditTeamView extends LitElement {
       flex-shrink: 0;
     }
 
-    .confirm-dialog-header h2 {
+    .dialog-header h2 {
       margin: 0;
       font-size: 0.95rem;
       font-weight: bold;
       color: var(--pt-text);
     }
 
-    .confirm-dialog-close {
+    .dialog-close {
       background: transparent;
       border: none;
       color: var(--pt-text-muted);
@@ -638,23 +729,24 @@ export class PtEditTeamView extends LitElement {
       justify-content: center;
       border-radius: 4px;
       transition: color 0.15s;
+      min-height: 0;
     }
 
-    .confirm-dialog-close:hover { color: var(--pt-text); }
+    .dialog-close:hover { color: var(--pt-text); }
 
-    .confirm-dialog-close svg {
+    .dialog-close svg {
       width: 14px;
       height: 14px;
     }
 
-    .confirm-dialog-body {
+    .dialog-body {
       padding: 20px 16px;
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
 
-    .confirm-dialog-body p {
+    .dialog-body p {
       margin: 0;
       font-size: 0.85rem;
       color: var(--pt-text);
@@ -760,18 +852,25 @@ export class PtEditTeamView extends LitElement {
   @state() private _draftFormat: GameFormat = '11v11';
   @state() private _draftHalfLength = 45;
   @state() private _draftRoster: RosterEntry[] = [];
-  @state() private _draftFormation: FormationKey = '4-3-3';
+  @state() private _draftFormation: FormationKey = '1-4-3-3';
 
   @state() private _addNumber = '';
   @state() private _addName = '';
-  @state() private _editingIdx: number | null = null;
+  @state() private _addNickname = '';
+  @state() private _addPrimaryPos: Position | '' = '';
+  @state() private _addSecondaryPos: Position | '' = '';
+  @state() private _editIdx: number | null = null;
   @state() private _editNumber = '';
   @state() private _editName = '';
+  @state() private _editNickname = '';
+  @state() private _editPrimaryPos: Position | '' = '';
+  @state() private _editSecondaryPos: Position | '' = '';
   @state() private _deleteIdx: number | null = null;
   @state() private _dropZoneDragover = false;
   @state() private _dropError = '';
 
   @query('#confirm-dialog') private _confirmDialog!: HTMLDialogElement;
+  @query('#edit-player-dialog') private _editPlayerDialog!: HTMLDialogElement;
 
   private _prevTeamId: string | null | undefined = undefined;
 
@@ -802,9 +901,12 @@ export class PtEditTeamView extends LitElement {
         this._draftHalfLength = team.halfLength;
         this._draftFormation = team.formation;
         this._draftRoster = team.players.map(p => ({
-          id: uid('p'),
+          id: p.id || uid('p'),
           number: p.number,
           name: p.name,
+          nickname: p.nickname,
+          primaryPos: p.primaryPos,
+          secondaryPos: p.secondaryPos,
           half1Time: p.half1Time ?? 0,
           half2Time: p.half2Time ?? 0,
           benchTime: p.benchTime ?? 0,
@@ -815,14 +917,17 @@ export class PtEditTeamView extends LitElement {
       this._draftName = '';
       this._draftFormat = '11v11';
       this._draftHalfLength = 45;
-      this._draftFormation = '4-3-3';
+      this._draftFormation = '1-4-3-3';
       this._draftRoster = [];
     }
     this._addNumber = '';
     this._addName = '';
+    this._addNickname = '';
+    this._addPrimaryPos = '';
+    this._addSecondaryPos = '';
     this._dropError = '';
     this._dropZoneDragover = false;
-    this._editingIdx = null;
+    this._editIdx = null;
     this._deleteIdx = null;
   }
 
@@ -833,12 +938,17 @@ export class PtEditTeamView extends LitElement {
   }
 
   private _onSave() {
+    const sorted = [...this._draftRoster].sort((a, b) => a.name.localeCompare(b.name));
     const teamData: StoredTeam = {
       id: this.teamId ?? uid('team'),
       teamName: this._draftName,
-      players: this._draftRoster.map(p => ({
+      players: sorted.map(p => ({
+        id: p.id,
         number: p.number,
         name: p.name,
+        nickname: p.nickname || undefined,
+        primaryPos: p.primaryPos || undefined,
+        secondaryPos: p.secondaryPos || undefined,
         half1Time: p.half1Time,
         half2Time: p.half2Time,
         benchTime: p.benchTime,
@@ -890,6 +1000,9 @@ export class PtEditTeamView extends LitElement {
 
   private _onAddNumberInput(e: InputEvent) { this._addNumber = (e.target as HTMLInputElement).value; }
   private _onAddNameInput(e: InputEvent) { this._addName = (e.target as HTMLInputElement).value; }
+  private _onAddNicknameInput(e: InputEvent) { this._addNickname = (e.target as HTMLInputElement).value; }
+  private _onAddPrimaryPosChange(e: Event) { this._addPrimaryPos = (e.target as HTMLSelectElement).value as Position | ''; }
+  private _onAddSecondaryPosChange(e: Event) { this._addSecondaryPos = (e.target as HTMLSelectElement).value as Position | ''; }
 
   private _addPlayer() {
     if (!this._addNumber.trim() && !this._addName.trim()) return;
@@ -897,6 +1010,9 @@ export class PtEditTeamView extends LitElement {
       id: uid('p'),
       number: this._addNumber.trim(),
       name: this._addName.trim(),
+      nickname: this._addNickname.trim() || undefined,
+      primaryPos: this._addPrimaryPos || undefined,
+      secondaryPos: this._addSecondaryPos || undefined,
       half1Time: 0,
       half2Time: 0,
       benchTime: 0,
@@ -905,32 +1021,58 @@ export class PtEditTeamView extends LitElement {
     this._draftRoster = [...this._draftRoster, entry];
     this._addNumber = '';
     this._addName = '';
+    this._addNickname = '';
+    this._addPrimaryPos = '';
+    this._addSecondaryPos = '';
   }
 
   private _addPlayerKeydown(e: KeyboardEvent) { if (e.key === 'Enter') this._addPlayer(); }
 
 
-  /* ── Drag-sort ──────────────────────────────────── */
+  /* ── Edit player dialog ─────────────────────────── */
 
-  private _startEdit(idx: number) {
+  private _openEditPlayer(idx: number) {
     const p = this._draftRoster[idx];
-    this._editingIdx = idx;
+    this._editIdx = idx;
     this._editNumber = p.number;
     this._editName = p.name;
+    this._editNickname = p.nickname ?? '';
+    this._editPrimaryPos = p.primaryPos ?? '';
+    this._editSecondaryPos = p.secondaryPos ?? '';
+    this._editPlayerDialog?.showModal();
   }
 
-  private _saveRow(idx: number) {
+  private _saveEditPlayer() {
+    if (this._editIdx == null) return;
     this._draftRoster = this._draftRoster.map((p, i) =>
-      i === idx ? { ...p, number: this._editNumber.trim(), name: this._editName.trim() } : p,
+      i === this._editIdx ? {
+        ...p,
+        number: this._editNumber.trim(),
+        name: this._editName.trim(),
+        nickname: this._editNickname.trim() || undefined,
+        primaryPos: (this._editPrimaryPos || undefined) as Position | undefined,
+        secondaryPos: (this._editSecondaryPos || undefined) as Position | undefined,
+      } : p,
     );
-    this._editingIdx = null;
+    this._editIdx = null;
+    this._editPlayerDialog?.close();
   }
 
-  private _cancelEdit() { this._editingIdx = null; }
+  private _cancelEditPlayer() {
+    this._editIdx = null;
+    this._editPlayerDialog?.close();
+  }
 
   @query('#delete-player-dialog') private _deletePlayerDialog!: HTMLDialogElement;
 
-  private _requestDeletePlayer(idx: number) {
+  private _requestDeletePlayer() {
+    if (this._editIdx == null) return;
+    this._deleteIdx = this._editIdx;
+    this._editPlayerDialog?.close();
+    this._deletePlayerDialog?.showModal();
+  }
+
+  private _requestDeletePlayerDirect(idx: number) {
     this._deleteIdx = idx;
     this._deletePlayerDialog?.showModal();
   }
@@ -940,7 +1082,7 @@ export class PtEditTeamView extends LitElement {
       this._draftRoster = this._draftRoster.filter((_, i) => i !== this._deleteIdx);
     }
     this._deleteIdx = null;
-    this._editingIdx = null;
+    this._editIdx = null;
     this._deletePlayerDialog?.close();
   }
 
@@ -1083,7 +1225,7 @@ export class PtEditTeamView extends LitElement {
       </div>
 
       <div class="edit-body">
-        <div class="team-fields-row">
+        <div class="team-hero">
           <div class="team-field team-name-field">
             <label for="team-name-input">Team name</label>
             <input
@@ -1094,46 +1236,48 @@ export class PtEditTeamView extends LitElement {
               .value="${this._draftName}"
               @input="${this._onTeamNameInput}" />
           </div>
-          <div class="team-field format-field">
-            <label for="format-select">Format</label>
-            <span class="select-wrap">
-              <select
-                id="format-select"
-                .value="${this._draftFormat}"
-                @change="${this._onGameFormatChange}">
-                ${GAME_FORMATS.map(f => html`
-                  <option value="${f.key}" ?selected="${f.key === this._draftFormat}">${f.label}</option>
-                `)}
-              </select>
-              <span class="caret"></span>
-            </span>
-          </div>
-          <div class="team-field">
-            <label for="formation-select">Default Formation</label>
-            <span class="select-wrap">
-              <select
-                id="formation-select"
-                .value="${this._draftFormation}"
-                @change="${(e: Event) => this._draftFormation = (e.target as HTMLSelectElement).value as FormationKey}">
-                ${FORMATIONS_BY_FORMAT[this._draftFormat].map(f => html`
-                  <option value="${f.key}" ?selected="${f.key === this._draftFormation}">${f.label}</option>
-                `)}
-              </select>
-              <span class="caret"></span>
-            </span>
-          </div>
-          <div class="team-field half-length-field">
-            <label for="half-length">Half length</label>
-            <div class="half-length-input-wrap">
-              <input
-                id="half-length"
-                class="player-input settings-number"
-                type="text"
-                inputmode="numeric"
-                maxlength="3"
-                .value="${String(this._draftHalfLength)}"
-                @input="${this._onHalfLengthInput}" />
-              <span class="half-length-unit">min</span>
+          <div class="team-fields-row">
+            <div class="team-field">
+              <label for="format-select">Format</label>
+              <span class="select-wrap">
+                <select
+                  id="format-select"
+                  .value="${this._draftFormat}"
+                  @change="${this._onGameFormatChange}">
+                  ${GAME_FORMATS.map(f => html`
+                    <option value="${f.key}" ?selected="${f.key === this._draftFormat}">${f.label}</option>
+                  `)}
+                </select>
+                <span class="caret"></span>
+              </span>
+            </div>
+            <div class="team-field">
+              <label for="formation-select">Formation</label>
+              <span class="select-wrap">
+                <select
+                  id="formation-select"
+                  .value="${this._draftFormation}"
+                  @change="${(e: Event) => this._draftFormation = (e.target as HTMLSelectElement).value as FormationKey}">
+                  ${FORMATIONS_BY_FORMAT[this._draftFormat].map(f => html`
+                    <option value="${f.key}" ?selected="${f.key === this._draftFormation}">${f.label}</option>
+                  `)}
+                </select>
+                <span class="caret"></span>
+              </span>
+            </div>
+            <div class="team-field">
+              <label for="half-length">Half length</label>
+              <div class="half-length-input-wrap">
+                <input
+                  id="half-length"
+                  class="player-input settings-number"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="3"
+                  .value="${String(this._draftHalfLength)}"
+                  @input="${this._onHalfLengthInput}" />
+                <span class="half-length-unit">min</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1158,28 +1302,64 @@ export class PtEditTeamView extends LitElement {
         ` : nothing}
 
         <div class="add-player-card">
-          <svg class="add-player-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m600 600c110.44 0 200.02-89.531 200.02-200.02 0-110.44-89.578-199.97-200.02-199.97s-200.02 89.531-200.02 199.97c0 110.48 89.578 200.02 200.02 200.02z" fill="currentColor" fill-rule="evenodd"/><path d="m944.58 901.5c3 16.5 4.5 32.484 5.0156 48.984 0.42188-0.46875 0.46875 29.156 0.46875 35.531 0 8.4844-6.4688 15-15 15h-669.98c-8.4844 0-15-6.5156-15-15 0-17.016-0.51562-33.516 0.98438-50.016 1.0312-8.4844 2.0156-20.016 5.0156-33.984 5.4844-27.516 16.5-64.5 39-102 46.5-78.516 138-150 305.02-150 166.97 0 258.47 71.484 305.48 149.48 22.5 37.5 33.516 74.484 39 102z" fill="currentColor"/></svg>
           <fieldset class="add-player-fieldset">
-            <legend class="add-player-label">Add Player</legend>
+            <legend class="add-player-legend">
+              <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m600 600c110.44 0 200.02-89.531 200.02-200.02 0-110.44-89.578-199.97-200.02-199.97s-200.02 89.531-200.02 199.97c0 110.48 89.578 200.02 200.02 200.02z" fill="currentColor" fill-rule="evenodd"/><path d="m944.58 901.5c3 16.5 4.5 32.484 5.0156 48.984 0.42188-0.46875 0.46875 29.156 0.46875 35.531 0 8.4844-6.4688 15-15 15h-669.98c-8.4844 0-15-6.5156-15-15 0-17.016-0.51562-33.516 0.98438-50.016 1.0312-8.4844 2.0156-20.016 5.0156-33.984 5.4844-27.516 16.5-64.5 39-102 46.5-78.516 138-150 305.02-150 166.97 0 258.47 71.484 305.48 149.48 22.5 37.5 33.516 74.484 39 102z" fill="currentColor"/></svg>
+              Add Player
+            </legend>
             <div class="add-row">
-              <input
-                class="player-input number-input"
-                type="text"
-                inputmode="numeric"
-                maxlength="2"
-                placeholder="#"
-                aria-label="New player jersey number"
-                .value="${this._addNumber}"
-                @input="${this._onAddNumberInput}"
-                @keydown="${this._addPlayerKeydown}" />
-              <input
-                class="player-input name-input"
-                type="text"
-                placeholder="Player name"
-                aria-label="New player name"
-                .value="${this._addName}"
-                @input="${this._onAddNameInput}"
-                @keydown="${this._addPlayerKeydown}" />
+              <div class="add-field num-field">
+                <label for="add-number">Num.</label>
+                <input id="add-number"
+                  class="player-input"
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="2"
+                  placeholder="#"
+                  .value="${this._addNumber}"
+                  @input="${this._onAddNumberInput}"
+                  @keydown="${this._addPlayerKeydown}" />
+              </div>
+              <div class="add-field name-field">
+                <label for="add-name">Player Name</label>
+                <input id="add-name"
+                  class="player-input"
+                  type="text"
+                  placeholder="Name"
+                  .value="${this._addName}"
+                  @input="${this._onAddNameInput}"
+                  @keydown="${this._addPlayerKeydown}" />
+              </div>
+              <div class="add-field nickname-field">
+                <label for="add-nickname">Nickname</label>
+                <input id="add-nickname"
+                  class="player-input"
+                  type="text"
+                  placeholder="Optional"
+                  .value="${this._addNickname}"
+                  @input="${this._onAddNicknameInput}"
+                  @keydown="${this._addPlayerKeydown}" />
+              </div>
+              <div class="add-field pos-field">
+                <label for="add-pos1">Position 1</label>
+                <span class="select-wrap">
+                  <select id="add-pos1" class="player-input" .value="${this._addPrimaryPos}" @change="${this._onAddPrimaryPosChange}">
+                    <option value="">—</option>
+                    ${POSITIONS.map(p => html`<option value="${p}" ?selected="${p === this._addPrimaryPos}">${p}</option>`)}
+                  </select>
+                  <span class="caret"></span>
+                </span>
+              </div>
+              <div class="add-field pos-field">
+                <label for="add-pos2">Position 2</label>
+                <span class="select-wrap">
+                  <select id="add-pos2" class="player-input" .value="${this._addSecondaryPos}" @change="${this._onAddSecondaryPosChange}">
+                    <option value="">—</option>
+                    ${POSITIONS.map(p => html`<option value="${p}" ?selected="${p === this._addSecondaryPos}">${p}</option>`)}
+                  </select>
+                  <span class="caret"></span>
+                </span>
+              </div>
               <button class="add-player-btn" @click="${this._addPlayer}" aria-label="Add Player" title="Add Player">
                 <svg class="add-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m600 99.984c275.95 0 500.02 224.06 500.02 500.02s-224.06 500.02-500.02 500.02-500.02-224.06-500.02-500.02 224.06-500.02 500.02-500.02zm0 100.03c-220.78 0-399.98 179.26-399.98 399.98 0 220.78 179.26 399.98 399.98 399.98 220.78 0 399.98-179.26 399.98-399.98 0-220.78-179.26-399.98-399.98-399.98zm-50.016 450h-150c-27.609 0-49.969-22.406-49.969-50.016s22.406-50.016 49.969-50.016h150v-150c0-27.609 22.406-49.969 50.016-49.969s50.016 22.406 50.016 49.969v150h150c27.609 0 49.969 22.406 49.969 50.016s-22.406 50.016-49.969 50.016h-150v150c0 27.609-22.406 49.969-50.016 49.969s-50.016-22.406-50.016-49.969z" fill-rule="evenodd" fill="currentColor"/></svg>
                 Add
@@ -1193,30 +1373,26 @@ export class PtEditTeamView extends LitElement {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Player name</th>
+                <th>Name</th>
+                <th>Positions</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              ${this._draftRoster.map((p, i) => this._editingIdx === i ? html`
-                <tr class="editing-row">
-                  <td><input class="inline-input number-inline" type="text" inputmode="numeric" maxlength="2" .value="${this._editNumber}" @input="${(e: InputEvent) => this._editNumber = (e.target as HTMLInputElement).value}" /></td>
-                  <td><input class="inline-input" type="text" .value="${this._editName}" @input="${(e: InputEvent) => this._editName = (e.target as HTMLInputElement).value}" @keydown="${(e: KeyboardEvent) => { if (e.key === 'Enter') this._saveRow(i); if (e.key === 'Escape') this._cancelEdit(); }}" /></td>
-                  <td class="action-cell">
-                    <div class="action-group">
-                      <button class="save-row-btn" @click="${() => this._saveRow(i)}">Save</button>
-                      <button class="delete-row-btn" @click="${() => this._requestDeletePlayer(i)}" aria-label="Delete" title="Delete"><svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m300 393.61 55.172 618.74h489.74l55.078-618.74zm123.14 117.33h75.094v374.76h-75.094zm139.22 0h75.094v374.76h-75.094zm139.55 0h75.094v374.76h-75.094z" fill="currentColor"/><path d="m410.44 149.95v112.41h-147.89v75h674.9v-75h-147.89v-112.41zm75 75h229.18v37.406h-229.18z" fill="currentColor"/></svg></button>
-                    </div>
-                  </td>
-                </tr>
-              ` : html`
+              ${this._draftRoster.map((p, i) => html`
                 <tr>
                   <td class="jersey-col">${p.number}</td>
-                  <td id="player-name-${i}">${p.name}</td>
+                  <td>${p.nickname ? html`${p.name} <span class="pos-col">(${p.nickname})</span>` : p.name}</td>
+                  <td class="pos-col">${p.primaryPos ?? ''}${p.secondaryPos ? html` / ${p.secondaryPos}` : nothing}</td>
                   <td class="action-cell">
-                    <button class="edit-row-btn" aria-label="Edit" aria-describedby="player-name-${i}" title="Edit" @click="${() => this._startEdit(i)}">
-                      <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m751.21 316.68c-14.977 0-29.969 5.6602-41.281 16.973l-17.441 17.441c-6.3828 6.3867-9.9727 15.047-9.9766 24.074 0 9.0312 3.582 17.695 9.9648 24.082l108.3 108.42h-0.003907c6.3828 6.3906 15.039 9.9805 24.066 9.9883 9.0273 0.003906 17.691-3.5781 24.078-9.957l17.566-17.547c22.625-22.625 22.625-60.078 0-82.703l-73.984-73.801c-11.312-11.312-26.305-16.973-41.281-16.973zm-131.75 107.39-244.17 244.04c-26.129 26.129-43.371 59.723-49.445 96.172l-8.3477 50.738c-6.5156 39.094 28.527 74.137 67.621 67.617l50.508-8.3945c36.449-6.0781 70.043-23.5 96.172-49.629l244.26-244.13h-0.003906c4.0977-4.1016 6.4023-9.6602 6.4023-15.461 0-5.7969-2.3086-11.359-6.4102-15.457l-125.64-125.5c-4.1055-4.1016-9.6719-6.4023-15.473-6.4023-5.8047 0-11.367 2.3047-15.473 6.4062z" fill="currentColor"/></svg>
-                    </button>
+                    <div class="action-group">
+                      <button class="edit-row-btn" aria-label="Edit ${p.name}" title="Edit" @click="${() => this._openEditPlayer(i)}">
+                        <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m751.21 316.68c-14.977 0-29.969 5.6602-41.281 16.973l-17.441 17.441c-6.3828 6.3867-9.9727 15.047-9.9766 24.074 0 9.0312 3.582 17.695 9.9648 24.082l108.3 108.42h-0.003907c6.3828 6.3906 15.039 9.9805 24.066 9.9883 9.0273 0.003906 17.691-3.5781 24.078-9.957l17.566-17.547c22.625-22.625 22.625-60.078 0-82.703l-73.984-73.801c-11.312-11.312-26.305-16.973-41.281-16.973zm-131.75 107.39-244.17 244.04c-26.129 26.129-43.371 59.723-49.445 96.172l-8.3477 50.738c-6.5156 39.094 28.527 74.137 67.621 67.617l50.508-8.3945c36.449-6.0781 70.043-23.5 96.172-49.629l244.26-244.13h-0.003906c4.0977-4.1016 6.4023-9.6602 6.4023-15.461 0-5.7969-2.3086-11.359-6.4102-15.457l-125.64-125.5c-4.1055-4.1016-9.6719-6.4023-15.473-6.4023-5.8047 0-11.367 2.3047-15.473 6.4062z" fill="currentColor"/></svg>
+                      </button>
+                      <button class="delete-row-btn" aria-label="Delete ${p.name}" title="Delete" @click="${() => this._requestDeletePlayerDirect(i)}">
+                        <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m300 393.61 55.172 618.74h489.74l55.078-618.74zm123.14 117.33h75.094v374.76h-75.094zm139.22 0h75.094v374.76h-75.094zm139.55 0h75.094v374.76h-75.094z" fill="currentColor"/><path d="m410.44 149.95v112.41h-147.89v75h674.9v-75h-147.89v-112.41zm75 75h229.18v37.406h-229.18z" fill="currentColor"/></svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               `)}
@@ -1238,13 +1414,13 @@ export class PtEditTeamView extends LitElement {
       </div>
 
       <dialog id="confirm-dialog" class="confirm-dialog">
-        <div class="confirm-dialog-header">
+        <div class="dialog-header">
           <h2>Delete Team</h2>
-          <button class="confirm-dialog-close" @click="${this._cancelConfirm}" aria-label="Close" title="Close">
+          <button class="dialog-close" @click="${this._cancelConfirm}" aria-label="Close" title="Close">
             <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
         </div>
-        <div class="confirm-dialog-body">
+        <div class="dialog-body">
           <p>Delete "${this._draftName || 'Untitled'}"? This cannot be undone.</p>
           <div class="confirm-actions">
             <button class="cancel-btn" @click="${this._cancelConfirm}">Cancel</button>
@@ -1253,14 +1429,77 @@ export class PtEditTeamView extends LitElement {
         </div>
       </dialog>
 
-      <dialog id="delete-player-dialog" class="confirm-dialog">
-        <div class="confirm-dialog-header">
-          <h2>Delete Player</h2>
-          <button class="confirm-dialog-close" @click="${this._cancelDeletePlayer}" aria-label="Close" title="Close">
+      <dialog id="edit-player-dialog">
+        <div class="dialog-header">
+          <h2>Edit Player</h2>
+          <button class="dialog-close" @click="${this._cancelEditPlayer}" aria-label="Close" title="Close">
             <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
         </div>
-        <div class="confirm-dialog-body">
+        <div class="dialog-body">
+          <div class="edit-player-fields">
+            <div class="edit-player-row">
+              <div class="edit-player-field number-field">
+                <label for="edit-player-number">#</label>
+                <input id="edit-player-number" type="text" inputmode="numeric" maxlength="2"
+                       .value="${this._editNumber}"
+                       @input="${(e: InputEvent) => this._editNumber = (e.target as HTMLInputElement).value}" />
+              </div>
+              <div class="edit-player-field">
+                <label for="edit-player-name">Player Name</label>
+                <input id="edit-player-name" type="text"
+                       .value="${this._editName}"
+                       @input="${(e: InputEvent) => this._editName = (e.target as HTMLInputElement).value}" />
+              </div>
+            </div>
+            <div class="edit-player-field">
+              <label for="edit-player-nickname">Nickname</label>
+              <input id="edit-player-nickname" type="text" placeholder="Optional"
+                     .value="${this._editNickname}"
+                     @input="${(e: InputEvent) => this._editNickname = (e.target as HTMLInputElement).value}" />
+            </div>
+            <div class="edit-player-row">
+              <div class="edit-player-field">
+                <label for="edit-player-primary">Position 1</label>
+                <span class="select-wrap">
+                  <select id="edit-player-primary"
+                          .value="${this._editPrimaryPos}"
+                          @change="${(e: Event) => this._editPrimaryPos = (e.target as HTMLSelectElement).value as Position | ''}">
+                    <option value="">—</option>
+                    ${POSITIONS.map(pos => html`<option value="${pos}" ?selected="${pos === this._editPrimaryPos}">${pos}</option>`)}
+                  </select>
+                  <span class="caret"></span>
+                </span>
+              </div>
+              <div class="edit-player-field">
+                <label for="edit-player-secondary">Position 2</label>
+                <span class="select-wrap">
+                  <select id="edit-player-secondary"
+                          .value="${this._editSecondaryPos}"
+                          @change="${(e: Event) => this._editSecondaryPos = (e.target as HTMLSelectElement).value as Position | ''}">
+                    <option value="">—</option>
+                    ${POSITIONS.map(pos => html`<option value="${pos}" ?selected="${pos === this._editSecondaryPos}">${pos}</option>`)}
+                  </select>
+                  <span class="caret"></span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="edit-player-actions">
+            <button class="cancel-btn" @click="${this._cancelEditPlayer}">Cancel</button>
+            <button class="save-player-btn" @click="${this._saveEditPlayer}">Save</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="delete-player-dialog" class="confirm-dialog">
+        <div class="dialog-header">
+          <h2>Delete Player</h2>
+          <button class="dialog-close" @click="${this._cancelDeletePlayer}" aria-label="Close" title="Close">
+            <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="dialog-body">
           <p>Are you sure you want to delete ${this._deleteIdx != null ? this._draftRoster[this._deleteIdx]?.name || 'this player' : 'this player'}?</p>
           <div class="confirm-actions">
             <button class="cancel-btn" @click="${this._cancelDeletePlayer}">Cancel</button>

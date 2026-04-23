@@ -12,10 +12,10 @@ import type { TeamSelectedEvent, NavigateEditTeamEvent, ImportExampleEvent } fro
 import type { TeamSavedEvent, EditCancelledEvent, EditTeamDeletedEvent } from './pt-edit-team-view.js';
 import type { NavigateSettingsBackEvent } from './pt-settings-view.js';
 import { renderField, FIELD, PADDING } from '../lib/field.js';
-import { getFormationPositions } from '../lib/formations.js';
+import { getFormationPositions, getSlotPositions, positionFitScore, POS_TO_GROUP, formationHasGK } from '../lib/formations.js';
 import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadAppState, saveAppState, createNewTeam, createGamePlan } from '../lib/storage.js';
-import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState, GameEvent, StoredHalfPlan, TimeDisplayFormat } from '../lib/types.js';
+import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState, GameEvent, StoredHalfPlan, LineupSlot, TimeDisplayFormat } from '../lib/types.js';
 import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, FORMATIONS_BY_FORMAT, getPlayerCount, getDefaultFormation, formatTime } from '../lib/types.js';
 import type {
   RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent,
@@ -24,7 +24,6 @@ import type {
   OpponentChangedEvent, TimeFormatChangedEvent,
 } from './pt-toolbar.js';
 import type { TimerTickEvent, ResetHalfEvent, ResetGameEvent, SavePlanEvent, EditLineupEvent, CancelPlanEvent, DeletePlanEvent, PlanHalfSwitchEvent, GameHalfSwitchedEvent } from './pt-timer-bar.js';
-import type { StoredPosition } from '../lib/types.js';
 
 const GOAL_DEPTH = 2;
 const MAX_NAME_CHARS = 8;
@@ -254,36 +253,42 @@ export class PlayingTime extends LitElement {
       }
     }
 
-    .game-dialog {
+    dialog:not([open]) {
+      display: none;
+    }
+
+    dialog {
       background: var(--pt-bg-surface);
       border: 1px solid var(--pt-border);
       border-radius: 10px;
       padding: 0;
-      max-width: 400px;
       width: calc(100% - 32px);
-      height: fit-content;
+      max-width: 400px;
       box-shadow: 0 8px 32px var(--pt-shadow-lg);
       color: var(--pt-text);
     }
 
-    .game-dialog::backdrop {
+    dialog::backdrop {
       background: var(--pt-backdrop);
     }
 
-    .game-dialog .dialog-header {
+    .dialog-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 16px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--pt-border-subtle);
+      flex-shrink: 0;
     }
 
-    .game-dialog .dialog-header h2 {
+    .dialog-header h2 {
       margin: 0;
-      font-size: 1rem;
+      font-size: 0.95rem;
+      font-weight: bold;
+      color: var(--pt-text);
     }
 
-    .game-dialog .dialog-close {
+    .dialog-close {
       background: transparent;
       border: none;
       color: var(--pt-text-muted);
@@ -294,66 +299,78 @@ export class PlayingTime extends LitElement {
       justify-content: center;
       border-radius: 4px;
       transition: color 0.15s;
+      min-height: 0;
     }
 
-    .game-dialog .dialog-close:hover {
-      color: var(--pt-text);
-    }
+    .dialog-close:hover { color: var(--pt-text); }
 
-    .game-dialog .dialog-close svg {
+    .dialog-close svg {
       width: 14px;
       height: 14px;
     }
 
-    .game-dialog .dialog-body {
-      padding: 16px;
+    .dialog-body {
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
-    .game-dialog .dialog-body p {
-      margin: 0 0 16px;
+    .dialog-body p {
+      margin: 0;
       font-size: 0.85rem;
+      color: var(--pt-text);
       line-height: 1.4;
     }
 
-    .game-dialog .confirm-actions {
+    .confirm-actions {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
       gap: 8px;
+      justify-content: space-between;
+      margin-top: 32px;
     }
 
-    .game-dialog .confirm-actions button {
-      padding: 8px 16px;
-      min-height: 44px;
-      border-radius: 6px;
-      font: inherit;
+    .confirm-actions button {
+      padding: 8px 20px;
       font-size: 0.85rem;
-      cursor: pointer;
+      border-radius: 6px;
     }
 
-    .game-dialog .cancel-btn {
-      background: transparent;
+    .confirm-actions .cancel-btn {
       border: 1px solid var(--pt-text-muted);
       color: var(--pt-text);
+      background: transparent;
     }
 
-    .game-dialog .cancel-btn:hover {
+    .confirm-actions .cancel-btn:hover {
       background: var(--pt-hover-overlay);
     }
 
-    .game-dialog .confirm-yes {
+    .confirm-actions .confirm-yes {
       background: var(--pt-accent);
       border: 1px solid var(--pt-accent);
       color: var(--pt-accent-solid-text);
     }
 
-    .game-dialog .confirm-yes:hover {
+    .confirm-actions .confirm-yes:hover {
       background: var(--pt-accent-solid-hover);
     }
 
-    #attendance-dialog {
-      max-width: 400px;
+    .confirm-actions .confirm-danger {
+      background: var(--pt-danger);
+      border: 1px solid var(--pt-danger);
+      color: var(--pt-text-white);
     }
+
+    .confirm-actions .confirm-danger:hover {
+      background: var(--pt-danger-hover);
+    }
+
+    .confirm-actions-right {
+      display: flex;
+      gap: 8px;
+    }
+
 
     .attendance-body {
       padding: 8px 16px;
@@ -429,7 +446,7 @@ export class PlayingTime extends LitElement {
   @state() accessor teamName = '';
   @state() accessor roster: RosterEntry[] = [];
   @state() accessor gameFormat: GameFormat = '11v11';
-  @state() accessor formation: FormationKey = '4-3-3';
+  @state() accessor formation: FormationKey = '1-4-3-3';
   @state() accessor fieldPlayers: FieldPlayer[] = [];
   @state() accessor subPlayers: FieldPlayer[] = [];
   @state() accessor halfLength = 45;
@@ -457,6 +474,7 @@ export class PlayingTime extends LitElement {
   @query('#plan-2h-dialog') accessor plan2HDialog!: HTMLDialogElement;
   @query('#copy-match-dialog') accessor copyMatchDialog!: HTMLDialogElement;
   @query('#attendance-dialog') accessor attendanceDialog!: HTMLDialogElement;
+  @query('#leave-game-dialog') accessor leaveGameDialog!: HTMLDialogElement;
   @state() accessor _attendanceAbsentIds: Set<string> = new Set();
 
   #dragState: {
@@ -494,10 +512,54 @@ export class PlayingTime extends LitElement {
     this.#navigateTo('team', 'slide-to-left', 'slide-from-right');
   }
 
-  #onNavigateTeam() { this.#navigateTo('team', 'slide-to-right', 'slide-from-left'); }
+  #onNavigateTeam() {
+    if (this.matchPhase === 'game' && (this.half1Started || this.half2Started)) {
+      this.leaveGameDialog?.showModal();
+      return;
+    }
+    this.#navigateTo('team', 'slide-to-right', 'slide-from-left');
+  }
+
+  #leaveGameSave() {
+    this.leaveGameDialog?.close();
+    this.timerBar?.stopTimer();
+    this.#saveState();
+    this.#navigateTo('team', 'slide-to-right', 'slide-from-left');
+  }
+
+  #leaveGameCancel() {
+    this.leaveGameDialog?.close();
+  }
+
+  #leaveGameDiscard() {
+    this.leaveGameDialog?.close();
+    this.timerBar?.stopTimer();
+    this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0, benchTime: 0, onFieldTime: 0 }));
+    this.gameEvents = [];
+    this.half1Started = false;
+    this.half2Started = false;
+    if (this.#halfPlan1H) {
+      this.#restoreHalfPlan(this.#halfPlan1H);
+    }
+    this.#saveState();
+    this.#navigateTo('team', 'slide-to-right', 'slide-from-left');
+  }
   #onNavigateBack(_e: NavigateBackEvent) { this.#navigateTo('home', 'slide-to-right', 'slide-from-left'); }
   #onNavigateNext(_e: NavigateNextEvent) { this.#navigateTo('game', 'slide-to-left', 'slide-from-right'); }
-  #onNavigateSettings() { this.#navigateTo('settings', 'slide-to-bottom', 'slide-from-top'); }
+  #pendingTimerRestore: { elapsed: number; half: 1 | 2 } | null = null;
+
+  #onNavigateSettings() {
+    if (this.currentView === 'game' && this.timerBar) {
+      const wasRunning = (this.timerBar as unknown as { _running: boolean })._running;
+      if (wasRunning) {
+        this.#pendingTimerRestore = {
+          elapsed: this.timerBar.elapsed,
+          half: this.timerBar.half,
+        };
+      }
+    }
+    this.#navigateTo('settings', 'slide-to-bottom', 'slide-from-top');
+  }
   #onNavigateSettingsBack(_e: NavigateSettingsBackEvent) {
     const returnTo = this.previousView;
     this.#navigateTo(returnTo, 'slide-to-up', 'slide-from-bottom');
@@ -526,7 +588,6 @@ export class PlayingTime extends LitElement {
     this.activeGamePlanId = e.planId;
     localStorage.setItem('pt-active-plan-id', e.planId);
     this.#loadGamePlan(e.planId);
-    this.matchPhase = 'plan';
     this.#navigateTo('game', 'slide-to-left', 'slide-from-right');
   }
 
@@ -609,8 +670,8 @@ export class PlayingTime extends LitElement {
     this.half2Started = plan.half2Started ?? false;
     this.planHalf = 1;
 
-    this.#halfPlan1H = plan.halfPlan1H ?? (plan.fieldPositions1H?.length ? { formation: plan.formation, fieldPositions: plan.fieldPositions1H } : plan.fieldPositions?.length ? { formation: plan.formation, fieldPositions: plan.fieldPositions } : null);
-    this.#halfPlan2H = plan.halfPlan2H ?? (plan.fieldPositions2H?.length ? { formation: plan.formation, fieldPositions: plan.fieldPositions2H } : null);
+    this.#halfPlan1H = plan.halfPlan1H ?? null;
+    this.#halfPlan2H = plan.halfPlan2H ?? null;
     this.has2HPlan = this.#halfPlan2H !== null;
 
     if (plan.playerTimes) {
@@ -676,8 +737,9 @@ export class PlayingTime extends LitElement {
       this.teamName = '';
       this.roster = [];
       this.fieldPlayers = [];
+      this.subPlayers = [];
     }
-    this.#saveState();
+    saveAppState({ activeTeamId: this.activeTeamId, teams: this.teams });
     this.#navigateTo('home', 'slide-to-bottom', 'slide-from-top');
   }
 
@@ -686,6 +748,11 @@ export class PlayingTime extends LitElement {
     if (this.#pendingCopyDialog && this.currentView === 'game' && this.copyMatchDialog) {
       this.#pendingCopyDialog = false;
       this.copyMatchDialog.showModal();
+    }
+    if (this.#pendingTimerRestore && this.currentView === 'game' && this.timerBar) {
+      const { elapsed, half } = this.#pendingTimerRestore;
+      this.#pendingTimerRestore = null;
+      this.timerBar.restoreTimer(elapsed, half, true);
     }
   }
 
@@ -698,11 +765,6 @@ export class PlayingTime extends LitElement {
       this.#loadTeam(appState.activeTeamId);
     } else if (appState.teams.length > 0) {
       this.#loadTeam(appState.teams[0].id);
-    } else {
-      const newTeam = createNewTeam();
-      this.teams = [newTeam];
-      this.#loadTeam(newTeam.id);
-      this.#saveState();
     }
 
     const savedView = localStorage.getItem('pt-current-view');
@@ -743,41 +805,130 @@ export class PlayingTime extends LitElement {
     this.gameFormat = team.gameFormat;
     this.formation = team.formation;
     this.roster = team.players.map(p => ({
-      id: uid('p'),
+      id: p.id || uid('p'),
       number: p.number,
       name: p.name,
+      nickname: p.nickname,
+      primaryPos: p.primaryPos,
+      secondaryPos: p.secondaryPos,
       half1Time: p.half1Time ?? 0,
       half2Time: p.half2Time ?? 0,
       benchTime: p.benchTime ?? 0,
       onFieldTime: p.onFieldTime ?? 0,
     }));
 
-    this.#rebuildFieldPlayers();
-
-    if (team.fieldPositions?.length) {
-      this.fieldPlayers = this.fieldPlayers.map(fp => {
-        const rosterIdx = this.roster.findIndex(r => r.id === fp.id);
-        const saved = team.fieldPositions!.find(sp => sp.rosterIndex === rosterIdx);
-        return saved ? { ...fp, x: saved.x, y: saved.y } : fp;
-      });
+    if (team.lineup?.length) {
+      this.#restoreLineup(team.lineup);
+    } else {
+      this.fieldPlayers = this.#buildInitialLineup(this.roster, this.formation);
+      this.#rebuildSubPlayers();
     }
 
     this.selectedId = null;
     this.swapTargetId = null;
   }
 
-  #rebuildFieldPlayers() {
+  #buildInitialLineup(roster: RosterEntry[], formation: FormationKey): FieldPlayer[] {
+    const coords = getFormationPositions(formation);
+    const slotPositions = getSlotPositions(formation);
+    const count = coords.length;
+    const lineup: (RosterEntry | null)[] = new Array(count).fill(null);
+    const used = new Set<string>();
+    const presentRoster = roster.filter(p => !this.absentIds.has(p.id));
+
+    // Pass 1: Exact primaryPos match (score 4)
+    for (let i = 0; i < count; i++) {
+      const slotPos = slotPositions[i];
+      const match = presentRoster.find(p => !used.has(p.id) && p.primaryPos === slotPos);
+      if (match) {
+        lineup[i] = match;
+        used.add(match.id);
+      }
+    }
+
+    // Pass 2: Exact secondaryPos match (score 4)
+    for (let i = 0; i < count; i++) {
+      if (lineup[i]) continue;
+      const slotPos = slotPositions[i];
+      const match = presentRoster.find(p => !used.has(p.id) && p.secondaryPos === slotPos);
+      if (match) {
+        lineup[i] = match;
+        used.add(match.id);
+      }
+    }
+
+    // Pass 3: Best-fit by group — for each unfilled slot, find the
+    // remaining player with the highest affinity score
+    const openSlots = [];
+    for (let i = 0; i < count; i++) {
+      if (!lineup[i]) openSlots.push(i);
+    }
+    const available = presentRoster.filter(p => !used.has(p.id));
+
+    if (openSlots.length > 0 && available.length > 0) {
+      const remaining = [...available];
+      for (const slotIdx of openSlots) {
+        if (remaining.length === 0) break;
+        const slotPos = slotPositions[slotIdx];
+        let bestIdx = 0;
+        let bestScore = -1;
+        for (let j = 0; j < remaining.length; j++) {
+          const p = remaining[j];
+          const score =
+            positionFitScore(p.primaryPos, slotPos) * 2 +
+            positionFitScore(p.secondaryPos, slotPos);
+          if (score > bestScore) {
+            bestScore = score;
+            bestIdx = j;
+          }
+        }
+        lineup[slotIdx] = remaining[bestIdx];
+        used.add(remaining[bestIdx].id);
+        remaining.splice(bestIdx, 1);
+      }
+    }
+
+    // Pass 4: Fill any still-empty slots with remaining players
+    for (let i = 0; i < count; i++) {
+      if (lineup[i]) continue;
+      const match = presentRoster.find(p => !used.has(p.id));
+      if (match) {
+        lineup[i] = match;
+        used.add(match.id);
+      }
+    }
+
+    return lineup.map((entry, i) => ({
+      id: entry?.id ?? '',
+      rosterId: entry?.id ?? '',
+      x: coords[i]?.x ?? FIELD.WIDTH / 2,
+      y: coords[i]?.y ?? FIELD.LENGTH / 2,
+      number: entry?.number ?? '',
+      name: entry?.nickname || entry?.name || '',
+    })).filter(fp => fp.id !== '');
+  }
+
+  #restoreLineup(lineup: LineupSlot[]) {
     const positions = getFormationPositions(this.formation);
-    const count = getPlayerCount(this.gameFormat);
-    const starters = this.roster.slice(0, count);
-    this.fieldPlayers = starters.map((entry, i) => ({
-      id: entry.id,
-      rosterId: entry.id,
-      x: positions[i]?.x ?? FIELD.WIDTH / 2,
-      y: positions[i]?.y ?? FIELD.LENGTH / 2,
-      number: entry.number,
-      name: entry.name,
-    }));
+    this.fieldPlayers = lineup
+      .map((slot, i) => {
+        const entry = this.roster.find(r => r.id === slot.playerId);
+        if (!entry) return null;
+        return {
+          id: entry.id,
+          rosterId: entry.id,
+          x: positions[i]?.x ?? FIELD.WIDTH / 2,
+          y: positions[i]?.y ?? FIELD.LENGTH / 2,
+          number: entry.number,
+          name: entry.nickname || entry.name,
+        };
+      })
+      .filter((p): p is FieldPlayer => p !== null);
+    this.#rebuildSubPlayers();
+  }
+
+  #rebuildFieldPlayers() {
+    this.fieldPlayers = this.#buildInitialLineup(this.roster, this.formation);
     this.#rebuildSubPlayers();
   }
 
@@ -804,8 +955,12 @@ export class PlayingTime extends LitElement {
       id: this.activeTeamId,
       teamName: this.teamName,
       players: this.roster.map(p => ({
+        id: p.id,
         number: p.number,
         name: p.name,
+        nickname: p.nickname,
+        primaryPos: p.primaryPos,
+        secondaryPos: p.secondaryPos,
         half1Time: p.half1Time,
         half2Time: p.half2Time,
         benchTime: p.benchTime,
@@ -818,11 +973,7 @@ export class PlayingTime extends LitElement {
       timeDisplayFormat: this.timeDisplayFormat,
       gameFormat: this.gameFormat,
       formation: this.formation,
-      fieldPositions: this.fieldPlayers.map(fp => ({
-        rosterIndex: this.roster.findIndex(r => r.id === fp.id),
-        x: fp.x,
-        y: fp.y,
-      })),
+      lineup: this.#currentLineupSnapshot(),
       gamePlans: existingTeam?.gamePlans ?? [],
     };
 
@@ -852,7 +1003,7 @@ export class PlayingTime extends LitElement {
               formation: this.formation,
               opponentName: this.opponentName,
               matchType: this.matchType,
-              fieldPositions: currentSnap.fieldPositions,
+              lineup: currentSnap.lineup,
               halfPlan1H: hp1H,
               halfPlan2H: hp2H,
               half1Started: this.half1Started,
@@ -912,7 +1063,12 @@ export class PlayingTime extends LitElement {
       onFieldTime: p.onFieldTime ?? 0,
     }));
     this.#saveState();
-    this.#rebuildFieldPlayers();
+    if (this.matchPhase === 'game' && this.fieldPlayers.length > 0) {
+      this.#rebuildSubPlayers();
+    } else {
+      this.fieldPlayers = this.#buildInitialLineup(this.roster, this.formation);
+      this.#rebuildSubPlayers();
+    }
     this.selectedId = null;
   }
 
@@ -1111,7 +1267,7 @@ export class PlayingTime extends LitElement {
 
   #onFormationChanged(e: FormationChangedEvent) {
     this.formation = e.formation;
-    this.#rebuildFieldPlayers();
+    this.#repositionFieldPlayers();
     this.#saveState();
     this.selectedId = null;
   }
@@ -1142,25 +1298,14 @@ export class PlayingTime extends LitElement {
 
   #applyAttendance(newAbsentIds: Set<string>) {
     this.absentIds = newAbsentIds;
-    const count = getPlayerCount(this.gameFormat);
-    const positions = getFormationPositions(this.formation);
-    const presentRoster = this.roster.filter(p => !this.absentIds.has(p.id));
-    const starters = presentRoster.slice(0, count);
-
-    this.fieldPlayers = starters.map((entry, i) => ({
-      id: entry.id,
-      rosterId: entry.id,
-      x: positions[i]?.x ?? FIELD.WIDTH / 2,
-      y: positions[i]?.y ?? FIELD.LENGTH / 2,
-      number: entry.number,
-      name: entry.name,
-    }));
+    this.fieldPlayers = this.#buildInitialLineup(this.roster, this.formation);
     this.#rebuildSubPlayers();
     this.#saveState();
     this.selectedId = null;
   }
 
-  #resetFormationPositions() {
+  #repositionFieldPlayers() {
+    if (this.fieldPlayers.length === 0) return;
     const positions = getFormationPositions(this.formation);
     this.fieldPlayers = this.fieldPlayers.map((fp, i) => ({
       ...fp,
@@ -1168,6 +1313,10 @@ export class PlayingTime extends LitElement {
       y: positions[i]?.y ?? fp.y,
     }));
     this.#rebuildSubPlayers();
+  }
+
+  #resetFormationPositions() {
+    this.#repositionFieldPlayers();
     this.#saveState();
     this.selectedId = null;
   }
@@ -1178,50 +1327,33 @@ export class PlayingTime extends LitElement {
     this.#saveState();
   }
 
-  #currentPositionsSnapshot(): StoredPosition[] {
-    return this.fieldPlayers.map(fp => ({
-      rosterIndex: this.roster.findIndex(r => r.id === fp.id),
-      playerId: fp.id,
-      x: fp.x,
-      y: fp.y,
-    }));
+  #currentLineupSnapshot(): LineupSlot[] {
+    return this.fieldPlayers.map(fp => ({ playerId: fp.id }));
   }
 
   #currentHalfSnapshot(): StoredHalfPlan {
     return {
       formation: this.formation,
-      fieldPositions: this.#currentPositionsSnapshot(),
+      lineup: this.#currentLineupSnapshot(),
     };
   }
 
   #restoreHalfPlan(plan: StoredHalfPlan) {
     this.formation = plan.formation;
-    this.#rebuildFieldPlayers();
 
-    if (plan.fieldPositions.length > 0) {
-      const storedFieldPlayers = plan.fieldPositions
-        .map(sp => {
-          const entry = sp.playerId
-            ? this.roster.find(r => r.id === sp.playerId)
-            : (sp.rosterIndex >= 0 && sp.rosterIndex < this.roster.length ? this.roster[sp.rosterIndex] : undefined);
-          if (!entry) return null;
-          return {
-            id: entry.id,
-            rosterId: entry.id,
-            x: sp.x,
-            y: sp.y,
-            number: entry.number,
-            name: entry.name,
-          };
-        })
-        .filter((p): p is NonNullable<typeof p> => p !== null);
-
-      if (storedFieldPlayers.length > 0) {
-        this.fieldPlayers = storedFieldPlayers;
-      }
+    if (plan.lineup?.length) {
+      this.#restoreLineup(plan.lineup);
+    } else if (plan.fieldPositions?.length) {
+      const lineup: LineupSlot[] = plan.fieldPositions.map(sp => {
+        const entry = sp.playerId
+          ? this.roster.find(r => r.id === sp.playerId)
+          : (sp.rosterIndex >= 0 && sp.rosterIndex < this.roster.length ? this.roster[sp.rosterIndex] : undefined);
+        return { playerId: entry?.id ?? '' };
+      }).filter(s => s.playerId !== '');
+      this.#restoreLineup(lineup);
+    } else {
+      this.#rebuildFieldPlayers();
     }
-
-    this.#rebuildSubPlayers();
   }
 
   #onPlanHalfSwitch(e: PlanHalfSwitchEvent) {
@@ -1283,66 +1415,64 @@ export class PlayingTime extends LitElement {
 
   // --- Swap logic ---
 
-  #swapFieldPositions(draggedId: string, targetId: string, originX: number, originY: number) {
-    const target = this.fieldPlayers.find(p => p.id === targetId);
-    if (!target) return;
+  #swapFieldPositions(draggedId: string, targetId: string, _originX: number, _originY: number) {
+    const draggedIdx = this.fieldPlayers.findIndex(p => p.id === draggedId);
+    const targetIdx = this.fieldPlayers.findIndex(p => p.id === targetId);
+    if (draggedIdx === -1 || targetIdx === -1) return;
 
-    const dragged = this.fieldPlayers.find(p => p.id === draggedId);
-    if (dragged) {
-      this.gameEvents = [...this.gameEvents, {
-        type: 'swap',
-        half: this.timerBar?.half ?? 1,
-        elapsed: this.timerBar?.elapsed ?? 0,
-        playerA: dragged.name,
-        playerB: target.name,
-      }];
-    }
+    const dragged = this.fieldPlayers[draggedIdx];
+    const target = this.fieldPlayers[targetIdx];
+    this.gameEvents = [...this.gameEvents, {
+      type: 'swap',
+      half: this.timerBar?.half ?? 1,
+      elapsed: this.timerBar?.elapsed ?? 0,
+      playerA: dragged.name,
+      playerB: target.name,
+    }];
 
-    const targetX = target.x;
-    const targetY = target.y;
-
-    this.fieldPlayers = this.fieldPlayers.map(p => {
-      if (p.id === draggedId) return { ...p, x: targetX, y: targetY };
-      if (p.id === targetId) return { ...p, x: originX, y: originY };
-      return p;
-    });
+    const positions = getFormationPositions(this.formation);
+    const newField = [...this.fieldPlayers];
+    newField[draggedIdx] = { ...target, x: positions[draggedIdx]?.x ?? target.x, y: positions[draggedIdx]?.y ?? target.y };
+    newField[targetIdx] = { ...dragged, x: positions[targetIdx]?.x ?? dragged.x, y: positions[targetIdx]?.y ?? dragged.y };
+    this.fieldPlayers = newField;
 
     this.selectedId = null;
     this.swapTargetId = null;
     this.#saveState();
   }
 
-  #doSubstitution(fieldId: string, subId: string, restoreX?: number, restoreY?: number) {
-    const rosterCopy = [...this.roster];
-    const fieldIdx = rosterCopy.findIndex(p => p.id === fieldId);
-    const subIdx = rosterCopy.findIndex(p => p.id === subId);
-    if (fieldIdx === -1 || subIdx === -1) return;
+  #doSubstitution(fieldId: string, subId: string, _restoreX?: number, _restoreY?: number) {
+    const fieldEntry = this.roster.find(p => p.id === fieldId);
+    const subEntry = this.roster.find(p => p.id === subId);
+    if (!fieldEntry || !subEntry) return;
 
     this.gameEvents = [...this.gameEvents, {
       type: 'sub',
       half: this.timerBar?.half ?? 1,
       elapsed: this.timerBar?.elapsed ?? 0,
-      playerA: rosterCopy[subIdx].name,
-      playerB: rosterCopy[fieldIdx].name,
+      playerA: subEntry.name,
+      playerB: fieldEntry.name,
     }];
 
-    const tmp = { ...rosterCopy[fieldIdx], onFieldTime: 0 };
-    rosterCopy[fieldIdx] = { ...rosterCopy[subIdx], benchTime: 0, onFieldTime: 0 };
-    rosterCopy[subIdx] = tmp;
-
-    const newFieldEntry = rosterCopy[fieldIdx];
-    const updatedFieldPlayers = this.fieldPlayers.map(fp => {
+    const positions = getFormationPositions(this.formation);
+    this.fieldPlayers = this.fieldPlayers.map((fp, i) => {
       if (fp.id !== fieldId) return fp;
-      const restored = { ...fp, id: newFieldEntry.id, rosterId: newFieldEntry.id, number: newFieldEntry.number, name: newFieldEntry.name };
-      if (restoreX != null && restoreY != null) {
-        restored.x = restoreX;
-        restored.y = restoreY;
-      }
-      return restored;
+      return {
+        id: subEntry.id,
+        rosterId: subEntry.id,
+        x: positions[i]?.x ?? fp.x,
+        y: positions[i]?.y ?? fp.y,
+        number: subEntry.number,
+        name: subEntry.nickname || subEntry.name,
+      };
     });
 
-    this.roster = rosterCopy;
-    this.fieldPlayers = updatedFieldPlayers;
+    this.roster = this.roster.map(p => {
+      if (p.id === subId) return { ...p, benchTime: 0, onFieldTime: 0 };
+      if (p.id === fieldId) return { ...p, onFieldTime: 0 };
+      return p;
+    });
+
     this.#rebuildSubPlayers();
     this.selectedId = null;
     this.swapTargetId = null;
@@ -1460,12 +1590,8 @@ export class PlayingTime extends LitElement {
       } else if (!this.#dragState.moved) {
         this.#selectPlayer(this.#dragState.id);
       } else if (this.#dragState.source === 'field') {
-        const draggedPlayer = this.fieldPlayers.find(p => p.id === this.#dragState!.id);
-        if (draggedPlayer && draggedPlayer.y > FIELD.LENGTH + GOAL_DEPTH) {
-          this.#snapBack();
-          return;
-        }
-        this.#saveState();
+        this.#snapBack();
+        return;
       } else {
         this.#rebuildSubPlayers();
       }
@@ -1476,11 +1602,14 @@ export class PlayingTime extends LitElement {
 
   #snapBack() {
     if (!this.#dragState) return;
-    const { id, originX, originY, source } = this.#dragState;
+    const { source } = this.#dragState;
     if (source === 'field') {
-      this.fieldPlayers = this.fieldPlayers.map(p =>
-        p.id === id ? { ...p, x: originX, y: originY } : p,
-      );
+      const positions = getFormationPositions(this.formation);
+      this.fieldPlayers = this.fieldPlayers.map((p, i) => ({
+        ...p,
+        x: positions[i]?.x ?? p.x,
+        y: positions[i]?.y ?? p.y,
+      }));
     } else {
       this.#rebuildSubPlayers();
     }
@@ -1544,10 +1673,15 @@ export class PlayingTime extends LitElement {
     `;
   }
 
+  #displayName(p: FieldPlayer): string {
+    const entry = this.roster.find(r => r.id === p.id);
+    return entry?.nickname || p.name;
+  }
+
   #isGK(p: FieldPlayer): boolean {
     if (this.fieldPlayers.length === 0) return false;
-    const maxY = Math.max(...this.fieldPlayers.map(fp => fp.y));
-    return p.y === maxY && this.fieldPlayers.some(fp => fp.id === p.id);
+    if (!formationHasGK(this.formation)) return false;
+    return this.fieldPlayers[0]?.id === p.id;
   }
 
   #renderPlayerCircle(p: FieldPlayer, kind: string) {
@@ -1602,7 +1736,7 @@ export class PlayingTime extends LitElement {
               font-family="system-ui, sans-serif"
               filter="url(#text-shadow)"
               style="pointer-events: none">
-          ${truncName(p.name)}
+          ${truncName(this.#displayName(p))}
         </text>
         ${kind === 'sub' && this.matchPhase === 'game' && this.showBenchTime && this.#getBenchTime(p.id) > 0 ? svg`
           <text x="${p.x}" y="${p.y + PLAYER_RADIUS + 2 + NAME_FONT_SIZE + 1}"
@@ -1746,7 +1880,7 @@ export class PlayingTime extends LitElement {
           ` : nothing}
           <span class="select-wrap">
             <label for="formation-select" class="visually-hidden">Formation</label>
-            <select id="formation-select" @change="${(e: Event) => { this.formation = (e.target as HTMLSelectElement).value as FormationKey; this.#rebuildFieldPlayers(); this.#saveState(); this.selectedId = null; }}">
+            <select id="formation-select" @change="${(e: Event) => { this.formation = (e.target as HTMLSelectElement).value as FormationKey; this.#repositionFieldPlayers(); this.#saveState(); this.selectedId = null; }}">
               ${FORMATIONS_BY_FORMAT[this.gameFormat].map(f => html`
                 <option value="${f.key}" .selected="${f.key === this.formation}">${f.label}</option>
               `)}
@@ -1764,9 +1898,10 @@ export class PlayingTime extends LitElement {
           ${this.matchPhase === 'game' && !(this.half1Started && this.half2Started) ? html`
             <button class="edit-lineup-btn"
                     @click="${this.#onEditLineup}"
-                    aria-label="Edit Lineup"
-                    title="Edit Lineup">
+                    aria-label="Edit Plan"
+                    title="Edit Plan">
               <svg viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg"><path d="M1366.67,23.33H233.33c-23.94,0-43.33,19.49-43.33,43.33v1466.66c0,23.85,19.4,43.34,43.33,43.34h1133.34c23.85,0,43.33-19.48,43.33-43.34V66.67c0-23.86-19.48-43.33-43.33-43.33ZM990,1376.67v113.33h-380v-113.33h380ZM610,223.33v-113.33h380v113.33h-380ZM1033.33,1290h-466.66c-23.94,0-43.33,19.49-43.33,43.33v156.67h-246.67v-646.67h256.42c20.8,128.58,132.53,227.07,266.91,227.07s246.11-98.48,266.92-227.07h256.41v646.67h-246.66v-156.67c0-23.85-19.48-43.33-43.34-43.33ZM621.44,756.67c19.54-80.38,92.18-140.4,178.56-140.4s159.04,60.02,178.56,140.4h-357.12ZM978.56,843.33c-19.55,80.38-92.23,140.4-178.56,140.4s-159-60.01-178.56-140.4h357.11ZM800,529.6c-134.38,0-246.11,98.48-266.91,227.07h-256.42V110h246.67v156.67c0,23.84,19.4,43.33,43.33,43.33h466.66c23.86,0,43.34-19.48,43.34-43.33V110h246.66v646.67h-256.41c-20.81-128.58-132.54-227.07-266.92-227.07Z" fill="currentColor"/></svg>
+              Edit Plan
             </button>
           ` : nothing}
         </div>
@@ -1855,7 +1990,7 @@ export class PlayingTime extends LitElement {
           @plan-half-switch="${this.#onPlanHalfSwitch}">
         </pt-timer-bar>
 
-        <dialog id="plan-2h-dialog" class="game-dialog">
+        <dialog id="plan-2h-dialog" class="confirm-dialog">
           <div class="dialog-header">
             <h2>Plan 2nd Half</h2>
             <button class="dialog-close" @click="${this.#cancelPlan2H}" aria-label="Close" title="Close">
@@ -1873,7 +2008,7 @@ export class PlayingTime extends LitElement {
           </div>
         </dialog>
 
-        <dialog id="attendance-dialog" class="game-dialog">
+        <dialog id="attendance-dialog" class="confirm-dialog">
           <div class="dialog-header">
             <h2>Attendance</h2>
             <button class="dialog-close" @click="${this.#closeAttendance}" aria-label="Close" title="Close">
@@ -1896,7 +2031,7 @@ export class PlayingTime extends LitElement {
           </div>
         </dialog>
 
-        <dialog id="copy-match-dialog" class="game-dialog">
+        <dialog id="copy-match-dialog" class="confirm-dialog">
           <div class="dialog-header">
             <h2>Copy Lineups</h2>
             <button class="dialog-close" @click="${this.#skipCopyMatch}" aria-label="Close" title="Close">
@@ -1909,6 +2044,25 @@ export class PlayingTime extends LitElement {
               <button class="cancel-btn" @click="${this.#skipCopyMatch}">Start Fresh</button>
               <div class="confirm-actions-right">
                 <button class="confirm-yes" @click="${this.#confirmCopyMatch}">Copy Lineups</button>
+              </div>
+            </div>
+          </div>
+        </dialog>
+
+        <dialog id="leave-game-dialog" class="confirm-dialog">
+          <div class="dialog-header">
+            <h2>Game in progress</h2>
+            <button class="dialog-close" @click="${this.#leaveGameCancel}" aria-label="Close" title="Close">
+              <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="dialog-body">
+            <p>You have a game in progress. Leaving will stop the clock.</p>
+            <div class="confirm-actions">
+              <button class="cancel-btn" @click="${this.#leaveGameCancel}">Cancel</button>
+              <div class="confirm-actions-right">
+                <button class="confirm-danger" @click="${this.#leaveGameDiscard}">Discard</button>
+                <button class="confirm-yes" @click="${this.#leaveGameSave}">Save progress</button>
               </div>
             </div>
           </div>

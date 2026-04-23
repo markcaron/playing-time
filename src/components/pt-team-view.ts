@@ -1,6 +1,12 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { RosterEntry, FormationKey, GameFormat, StoredTeam, StoredGamePlan } from '../lib/types.js';
+import { FORMATIONS_BY_FORMAT } from '../lib/types.js';
+
+function formationLabel(key: FormationKey, format: GameFormat): string {
+  const entry = FORMATIONS_BY_FORMAT[format]?.find(f => f.key === key);
+  return entry?.label ?? key;
+}
 
 export class NavigateBackEvent extends Event {
   static readonly eventName = 'navigate-back' as const;
@@ -300,6 +306,12 @@ export class PtTeamView extends LitElement {
       width: 32px;
     }
 
+    .roster-table td.pos-col {
+      color: var(--pt-text-muted);
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+
     .empty-warning {
       background: var(--pt-bg-warning);
       border: 1px solid var(--pt-warning);
@@ -311,6 +323,10 @@ export class PtTeamView extends LitElement {
       display: flex;
       align-items: center;
       gap: 12px;
+    }
+
+    .empty-warning--plans {
+      margin-top: 16px;
     }
 
     .empty-warning .warning-icon {
@@ -474,7 +490,7 @@ export class PtTeamView extends LitElement {
   @property({ type: String }) teamName = '';
   @property({ type: Array }) roster: RosterEntry[] = [];
   @property({ type: String }) gameFormat: GameFormat = '11v11';
-  @property({ type: String }) formation: FormationKey = '4-3-3';
+  @property({ type: String }) formation: FormationKey = '1-4-3-3';
   @property({ type: Number }) halfLength = 45;
   @property({ type: Array }) teams: StoredTeam[] = [];
   @property({ type: String }) activeTeamId: string | null = null;
@@ -567,7 +583,7 @@ export class PtTeamView extends LitElement {
         <h3 class="panel-heading">Matches</h3>
         <p class="panel-desc">Creating a match allows you to plan lineups and substitutions.</p>
         ${this.roster.length === 0 ? html`
-          <div class="empty-warning" style="margin-top: 16px"><span class="warning-icon">&#9888;</span> You must add players before you can create matches. <a href="#" class="edit-link" @click="${(e: Event) => { e.preventDefault(); this._navigateEdit(); }}">Edit Roster</a></div>
+          <div class="empty-warning empty-warning--plans"><span class="warning-icon">&#9888;</span> You must add players before you can create matches. <a href="#" class="edit-link" @click="${(e: Event) => { e.preventDefault(); this._navigateEdit(); }}">Edit Roster</a></div>
         ` : html`
           ${this.gamePlans.length === 0 ? html`
             <p class="empty-plans">No matches yet.</p>
@@ -576,7 +592,7 @@ export class PtTeamView extends LitElement {
               <svg class="plan-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m1025 1175h-850c-13.801 0-25-11.25-25-25v-1100c0-13.75 11.199-25 25-25h850c13.75 0 25 11.25 25 25v1100c0 13.75-11.25 25-25 25zm-825-50h800v-1050h-800z" fill="currentColor"/><path d="m775 225h-350c-13.801 0-25-11.25-25-25v-150c0-13.75 11.199-25 25-25h350c13.75 0 25 11.25 25 25v150c0 13.75-11.25 25-25 25zm-325-50h300v-100h-300z" fill="currentColor"/><path d="m775 1175h-350c-13.801 0-25-11.25-25-25v-150c0-13.75 11.199-25 25-25h350c13.75 0 25 11.25 25 25v150c0 13.75-11.25 25-25 25zm-325-50h300v-100h-300z" fill="currentColor"/><path d="m200 575h800v50h-800z" fill="currentColor"/><path d="m600 795.3c-107.7 0-195.3-87.602-195.3-195.3s87.602-195.3 195.3-195.3 195.3 87.602 195.3 195.3-87.602 195.3-195.3 195.3zm0-340.6c-80.148 0-145.3 65.301-145.3 145.3s65.199 145.3 145.3 145.3 145.3-65.301 145.3-145.3-65.102-145.3-145.3-145.3z" fill="currentColor"/></svg>
               <div class="plan-info">
                 <span class="plan-name">${plan.matchType ?? 'vs'} ${plan.opponentName || 'Opponent'}</span>
-                <span class="plan-meta">${plan.formation}</span>
+                <span class="plan-meta">${formationLabel(plan.formation, this.gameFormat)}</span>
               </div>
               <svg class="plan-chevron" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><polyline points="9,4 17,12 9,20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -599,14 +615,16 @@ export class PtTeamView extends LitElement {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Player name</th>
+                <th>Name</th>
+                <th>Positions</th>
               </tr>
             </thead>
             <tbody>
               ${this.roster.map(p => html`
                 <tr>
                   <td class="jersey-col">${p.number}</td>
-                  <td>${p.name}</td>
+                  <td>${p.nickname ? html`${p.name} <span class="pos-col">(${p.nickname})</span>` : p.name}</td>
+                  <td class="pos-col">${p.primaryPos ?? ''}${p.secondaryPos ? html` / ${p.secondaryPos}` : nothing}</td>
                 </tr>
               `)}
             </tbody>

@@ -1,7 +1,14 @@
+export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'CDM' | 'CM' | 'CAM' | 'LW' | 'RW' | 'LM' | 'RM' | 'CF' | 'ST';
+
+export const POSITIONS: Position[] = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST'];
+
 export interface RosterEntry {
   id: string;
   number: string;
   name: string;
+  nickname?: string;
+  primaryPos?: Position;
+  secondaryPos?: Position;
   half1Time: number;
   half2Time: number;
   benchTime: number;
@@ -35,32 +42,32 @@ export function getStandardHalfLength(format: GameFormat): number {
 }
 
 export type FormationKey =
-  | '4-3-3' | '4-2-3-1' | '4-4-2' | '3-5-2' | '3-4-3'
-  | '3-3-2' | '4-3-1' | '2-4-2' | '3-2-3' | '1-3-3-1'
-  | '2-3-1' | '3-2-1' | '2-1-2-1' | '3-1-2' | '2-2-2'
+  | '1-4-3-3' | '1-4-2-3-1' | '1-4-4-2' | '1-3-5-2' | '1-3-4-3'
+  | '1-3-3-2' | '1-4-3-1' | '1-2-4-2' | '1-3-2-3' | '1-1-3-3-1'
+  | '1-2-3-1' | '1-3-2-1' | '1-2-1-2-1' | '1-3-1-2' | '1-2-2-2'
   | '2-2' | '1-2-1';
 
 export const FORMATIONS_BY_FORMAT: Record<GameFormat, { key: FormationKey; label: string }[]> = {
   '11v11': [
-    { key: '4-3-3',   label: '4-3-3' },
-    { key: '4-2-3-1', label: '4-2-3-1' },
-    { key: '4-4-2',   label: '4-4-2' },
-    { key: '3-5-2',   label: '3-5-2' },
-    { key: '3-4-3',   label: '3-4-3' },
+    { key: '1-4-3-3',   label: '4-3-3' },
+    { key: '1-4-2-3-1', label: '4-2-3-1' },
+    { key: '1-4-4-2',   label: '4-4-2' },
+    { key: '1-3-5-2',   label: '3-5-2' },
+    { key: '1-3-4-3',   label: '3-4-3' },
   ],
   '9v9': [
-    { key: '3-3-2',   label: '3-3-2' },
-    { key: '4-3-1',   label: '4-3-1' },
-    { key: '2-4-2',   label: '2-4-2' },
-    { key: '3-2-3',   label: '3-2-3' },
-    { key: '1-3-3-1', label: '1-3-3-1' },
+    { key: '1-3-3-2',   label: '3-3-2' },
+    { key: '1-4-3-1',   label: '4-3-1' },
+    { key: '1-2-4-2',   label: '2-4-2' },
+    { key: '1-3-2-3',   label: '3-2-3' },
+    { key: '1-1-3-3-1', label: '1-3-3-1' },
   ],
   '7v7': [
-    { key: '2-3-1',   label: '2-3-1' },
-    { key: '3-2-1',   label: '3-2-1' },
-    { key: '2-1-2-1', label: '2-1-2-1' },
-    { key: '3-1-2',   label: '3-1-2' },
-    { key: '2-2-2',   label: '2-2-2' },
+    { key: '1-2-3-1',   label: '2-3-1' },
+    { key: '1-3-2-1',   label: '3-2-1' },
+    { key: '1-2-1-2-1', label: '2-1-2-1' },
+    { key: '1-3-1-2',   label: '3-1-2' },
+    { key: '1-2-2-2',   label: '2-2-2' },
   ],
   '4v4': [
     { key: '2-2',     label: '2-2' },
@@ -77,15 +84,24 @@ export const PLAYER_HIT_RADIUS = 4.2;
 export const PLAYER_FONT_SIZE = 2.4;
 export const NAME_FONT_SIZE = 2.25;
 
+export interface LineupSlot {
+  playerId: string;
+}
+
 export interface StoredPlayer {
+  id?: string;
   number: string;
   name: string;
+  nickname?: string;
+  primaryPos?: Position;
+  secondaryPos?: Position;
   half1Time?: number;
   half2Time?: number;
   benchTime?: number;
   onFieldTime?: number;
 }
 
+/** @deprecated kept for migration only */
 export interface StoredPosition {
   rosterIndex: number;
   playerId?: string;
@@ -98,7 +114,9 @@ export type MatchPhase = 'plan' | 'game';
 
 export interface StoredHalfPlan {
   formation: FormationKey;
-  fieldPositions: StoredPosition[];
+  lineup: LineupSlot[];
+  /** @deprecated Use lineup instead */
+  fieldPositions?: StoredPosition[];
 }
 
 export interface StoredGamePlan {
@@ -108,9 +126,7 @@ export interface StoredGamePlan {
   opponentName?: string;
   matchType?: MatchType;
   phase: MatchPhase;
-  fieldPositions?: StoredPosition[];
-  fieldPositions1H?: StoredPosition[];
-  fieldPositions2H?: StoredPosition[];
+  lineup?: LineupSlot[];
   halfPlan1H?: StoredHalfPlan;
   halfPlan2H?: StoredHalfPlan;
   half1Started?: boolean;
@@ -119,6 +135,12 @@ export interface StoredGamePlan {
   gameEvents?: GameEvent[];
   timerElapsed?: number;
   timerHalf?: 1 | 2;
+  /** @deprecated Use lineup instead */
+  fieldPositions?: StoredPosition[];
+  /** @deprecated Use halfPlan1H instead */
+  fieldPositions1H?: StoredPosition[];
+  /** @deprecated Use halfPlan2H instead */
+  fieldPositions2H?: StoredPosition[];
 }
 
 export interface StoredTeam {
@@ -128,12 +150,14 @@ export interface StoredTeam {
   halfLength: number;
   gameFormat: GameFormat;
   formation: FormationKey;
-  fieldPositions?: StoredPosition[];
+  lineup?: LineupSlot[];
   showBenchTime?: boolean;
   showOnFieldTime?: boolean;
   largeTimeDisplay?: boolean;
   timeDisplayFormat?: TimeDisplayFormat;
   gamePlans?: StoredGamePlan[];
+  /** @deprecated Use lineup instead */
+  fieldPositions?: StoredPosition[];
 }
 
 export interface StoredAppState {
@@ -166,3 +190,22 @@ export function formatTime(seconds: number, format: TimeDisplayFormat = 'mm:ss')
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
+
+/** Map from old (pre-v2) formation keys to new GK-inclusive keys */
+export const FORMATION_KEY_MIGRATION: Record<string, FormationKey> = {
+  '4-3-3':   '1-4-3-3',
+  '4-2-3-1': '1-4-2-3-1',
+  '4-4-2':   '1-4-4-2',
+  '3-5-2':   '1-3-5-2',
+  '3-4-3':   '1-3-4-3',
+  '3-3-2':   '1-3-3-2',
+  '4-3-1':   '1-4-3-1',
+  '2-4-2':   '1-2-4-2',
+  '3-2-3':   '1-3-2-3',
+  '1-3-3-1': '1-1-3-3-1',
+  '2-3-1':   '1-2-3-1',
+  '3-2-1':   '1-3-2-1',
+  '2-1-2-1': '1-2-1-2-1',
+  '3-1-2':   '1-3-1-2',
+  '2-2-2':   '1-2-2-2',
+};

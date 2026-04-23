@@ -1078,7 +1078,7 @@ export class PtSettingsBar extends LitElement {
 
   `;
 
-  @property({ type: String }) formation: FormationKey = '4-3-3';
+  @property({ type: String }) formation: FormationKey = '1-4-3-3';
   @property({ type: String }) gameFormat: GameFormat = '11v11';
   @property({ type: String }) teamName = '';
   @property({ type: Array }) roster: RosterEntry[] = [];

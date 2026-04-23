@@ -742,6 +742,12 @@ export class PtTimerBar extends LitElement {
   get elapsed() { return this._elapsed; }
   get half(): 1 | 2 { return this._half; }
 
+  restoreTimer(elapsed: number, half: 1 | 2, running: boolean) {
+    this._elapsed = elapsed;
+    this._half = half;
+    if (running) this._startTimer();
+  }
+
   private get _timeDisplay(): string {
     return formatTime(this._elapsed);
   }

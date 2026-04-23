@@ -45,6 +45,8 @@ export class EditTeamDeletedEvent extends Event {
   }
 }
 
+const ALL_FORMATION_KEYS = new Set(Object.values(FORMATIONS_BY_FORMAT).flat().map(f => f.key));
+
 @customElement('pt-edit-team-view')
 export class PtEditTeamView extends LitElement {
   static styles = css`
@@ -1134,11 +1136,12 @@ export class PtEditTeamView extends LitElement {
     if (parsed.meta.format && GAME_FORMATS.some(f => f.key === parsed.meta.format)) {
       this._draftFormat = parsed.meta.format as GameFormat;
     }
-    if (parsed.meta.halfLength) this._draftHalfLength = parsed.meta.halfLength;
+    if (parsed.meta.halfLength != null && parsed.meta.halfLength > 0 && parsed.meta.halfLength <= 90) {
+      this._draftHalfLength = parsed.meta.halfLength;
+    }
     if (parsed.meta.formation) {
-      const migrated = (FORMATION_KEY_MIGRATION[parsed.meta.formation] ?? parsed.meta.formation) as string;
-      const allFormations = Object.values(FORMATIONS_BY_FORMAT).flat();
-      if (allFormations.some(f => f.key === migrated)) {
+      const migrated = FORMATION_KEY_MIGRATION[parsed.meta.formation] ?? parsed.meta.formation;
+      if (ALL_FORMATION_KEYS.has(migrated as FormationKey)) {
         this._draftFormation = migrated as FormationKey;
       }
     }

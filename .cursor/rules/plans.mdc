@@ -1,0 +1,11 @@
+---
+description: Save plans to the workspace .cursor/plans/ directory
+globs: .cursor/plans/*.plan.md
+alwaysApply: true
+---
+
+# Plans
+
+When creating a plan using the CreatePlan tool, it may be saved to the Cursor-level directory (`~/.cursor/plans/`) rather than the workspace. Always ensure plan files end up in the workspace at `.cursor/plans/` so they are committed to the repo.
+
+After creating a plan, verify the file exists at `.cursor/plans/<name>.plan.md` in the workspace. If it was saved elsewhere, copy it to the workspace plans directory.

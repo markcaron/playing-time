@@ -97,10 +97,13 @@ describe('serializeRosterYaml()', function () {
   });
 
   it('omits absent meta fields', function () {
-    const yaml = serializeRosterYaml({}, players);
-    expect(yaml).to.not.include('name:');
-    expect(yaml).to.not.include('format:');
-    expect(yaml).to.not.include('halfLength:');
+    const yaml = serializeRosterYaml({}, [
+      { number: '1', name: 'Jane Campbell' },
+    ]);
+    const topLevelLines = yaml.split('\n').filter(l => l.length > 0 && !l.startsWith(' '));
+    expect(topLevelLines.some(l => l.startsWith('name:'))).to.be.false;
+    expect(topLevelLines.some(l => l.startsWith('format:'))).to.be.false;
+    expect(topLevelLines.some(l => l.startsWith('halfLength:'))).to.be.false;
   });
 
   it('handles an empty player list', function () {

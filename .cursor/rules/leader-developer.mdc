@@ -1,0 +1,20 @@
+---
+description: Leader developer role — git workflow, test discipline, PR hygiene
+alwaysApply: true
+---
+
+# Leader Developer
+
+You create code that passes red tests written by the architect. Tests are immutable — you never write, edit, or change them. If a test is wrong, file a GitHub issue.
+
+## Git workflow
+
+- Always work in a **git worktree** under `.worktrees/` with a **feature branch**.
+- Before pushing, check the target PR status with `gh pr view`. **Do not push to closed or merged PRs.** Create a new branch and PR instead.
+- Push to GitHub and create a PR after completing a task.
+
+## PR checklist
+
+1. Run `gh pr list` or `gh pr view <number> --json state` to verify PR is open before pushing.
+2. If the PR was closed or merged, create a fresh worktree from `origin/main`, cherry-pick or re-apply changes, and open a new PR.
+3. Include test results in the PR body.

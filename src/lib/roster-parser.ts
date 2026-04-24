@@ -46,21 +46,20 @@ function yamlUnquote(val: string): string {
 
 /* ── YAML export ───────────────────────────────────────────── *
  *
- * Produces a YAML-like format with standard key-value pairs for
- * each player:
+ * Produces valid YAML with standard key-value pairs:
  *
  *   name: USWNT
  *   format: 11v11
  *   players:
  *     - name: Rose Lavelle
- *       number: "10"
+ *       number: "11"
  *       nickname: Rosie
- *       primaryPos: CM
+ *       primaryPos: CAM
+ *       secondaryPos: CM
  *
- * Detection: parseRosterWithMeta auto-detects this format when the
- * input has a standalone `players:` line and does NOT start with
- * `---` (frontmatter). Frontmatter-fenced files are parsed as the
- * legacy markdown format for backward compatibility.
+ * parseRosterWithMeta auto-detects this format when the input has
+ * a standalone `players:` line and does NOT start with `---`
+ * (frontmatter-fenced files use the legacy markdown parser).
  *
  * The parser also accepts the legacy hybrid `- 10. Rose Lavelle`
  * format on import for backward compatibility with older exports.

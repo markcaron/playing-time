@@ -21,6 +21,7 @@ players:
   - name: Emily Fox
     number: "5"
     primaryPos: LB
+    secondaryPos: RB
   - name: Emily Sams
     number: "3"
     primaryPos: CB
@@ -68,10 +69,13 @@ players:
     primaryPos: GK
   - name: Rose Lavelle
     number: "11"
+    nickname: Rosie
     primaryPos: CAM
+    secondaryPos: CM
   - name: Sam Coffey
     number: "10"
     primaryPos: CDM
+    secondaryPos: CM
   - name: Sophia Wilson
     number: "13"
     primaryPos: ST

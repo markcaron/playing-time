@@ -269,7 +269,7 @@ export class PtHomeView extends LitElement {
   private async _onTryExample(e: Event) {
     e.preventDefault();
     try {
-      const res = await fetch('/examples/uswnt.md');
+      const res = await fetch('/examples/uswnt.yaml');
       const text = await res.text();
       const parsed = parseRosterWithMeta(text);
       this.dispatchEvent(new ImportExampleEvent(parsed));

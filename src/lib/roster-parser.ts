@@ -46,26 +46,23 @@ function yamlUnquote(val: string): string {
 
 /* ── YAML export ───────────────────────────────────────────── *
  *
- * Produces a YAML-like format that is NOT standard YAML. Player
- * entries use `  - NUMBER. Name` (the markdown numbered-list style)
- * followed by indented key-value pairs for optional fields:
+ * Produces valid YAML with standard key-value pairs:
  *
  *   name: USWNT
  *   format: 11v11
  *   players:
- *     - 10. Rose Lavelle
+ *     - name: Rose Lavelle
+ *       number: "11"
  *       nickname: Rosie
- *       primaryPos: CM
+ *       primaryPos: CAM
+ *       secondaryPos: CM
  *
- * A standard YAML parser would treat `10. Rose Lavelle` as a plain
- * scalar string. Do not use a YAML library to parse this output —
- * use parseRosterWithMeta() which handles both this format and the
- * standard YAML key-value style (- number: "10" / name: ...).
+ * parseRosterWithMeta auto-detects this format when the input has
+ * a standalone `players:` line and does NOT start with `---`
+ * (frontmatter-fenced files use the legacy markdown parser).
  *
- * Detection: parseRosterWithMeta auto-detects this format when the
- * input has a standalone `players:` line and does NOT start with
- * `---` (frontmatter). Frontmatter-fenced files are parsed as the
- * legacy markdown format for backward compatibility.
+ * The parser also accepts the legacy hybrid `- 10. Rose Lavelle`
+ * format on import for backward compatibility with older exports.
  * ─────────────────────────────────────────────────────────── */
 
 export function serializeRosterYaml(
@@ -88,9 +85,8 @@ export function serializeRosterYaml(
   lines.push('players:');
 
   for (const p of players) {
-    const num = p.number ?? '';
-    const nameStr = yamlQuote(p.name);
-    lines.push(num ? `  - ${num}. ${nameStr}` : `  - ${nameStr}`);
+    lines.push(`  - name: ${yamlQuote(p.name)}`);
+    if (p.number) lines.push(`    number: "${p.number}"`);
     if (p.nickname) lines.push(`    nickname: ${yamlQuote(p.nickname)}`);
     if (p.primaryPos) lines.push(`    primaryPos: ${p.primaryPos}`);
     if (p.secondaryPos) lines.push(`    secondaryPos: ${p.secondaryPos}`);

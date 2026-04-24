@@ -1,3 +1,7 @@
+import { POSITIONS } from './types.js';
+
+const VALID_POSITIONS = new Set<string>(POSITIONS);
+
 export interface RosterMeta {
   name?: string;
   format?: string;
@@ -21,15 +25,18 @@ export interface ParsedRoster {
 /* ── YAML value helpers ────────────────────────────────────── */
 
 function yamlQuote(val: string): string {
-  if (/[:#"'\[\]{}|>&*!?@`]/.test(val) || val !== val.trim()) {
-    return `"${val.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  if (/[:#"'\[\]{}|>&*!?@`\n\r]/.test(val) || val !== val.trim()) {
+    return `"${val.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}"`;
   }
   return val;
 }
 
 function yamlUnquote(val: string): string {
   if (val.length >= 2 && val.startsWith('"') && val.endsWith('"')) {
-    return val.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    return val.slice(1, -1).replace(
+      /\\(.)/g,
+      (_, c) => c === 'n' ? '\n' : c === 'r' ? '\r' : c === 't' ? '\t' : c,
+    );
   }
   if (val.length >= 2 && val.startsWith("'") && val.endsWith("'")) {
     return val.slice(1, -1);
@@ -194,8 +201,8 @@ function applyPlayerKv(player: ParsedPlayer, line: string): void {
   if (key === 'number') player.number = String(val);
   else if (key === 'name') player.name = val;
   else if (key === 'nickname' && val) player.nickname = val;
-  else if (key === 'primarypos' && val) player.primaryPos = val;
-  else if (key === 'secondarypos' && val) player.secondaryPos = val;
+  else if (key === 'primarypos' && val && VALID_POSITIONS.has(val)) player.primaryPos = val;
+  else if (key === 'secondarypos' && val && VALID_POSITIONS.has(val)) player.secondaryPos = val;
 }
 
 /* ── CSV-with-header parser ────────────────────────────────── */
@@ -222,10 +229,10 @@ function parseCsvWithHeader(text: string): ParsedRoster {
     if (nickname) player.nickname = nickname;
 
     const primaryPos = colIdx.has('primarypos') ? (values[colIdx.get('primarypos')!] ?? '').trim() : '';
-    if (primaryPos) player.primaryPos = primaryPos;
+    if (primaryPos && VALID_POSITIONS.has(primaryPos)) player.primaryPos = primaryPos;
 
     const secondaryPos = colIdx.has('secondarypos') ? (values[colIdx.get('secondarypos')!] ?? '').trim() : '';
-    if (secondaryPos) player.secondaryPos = secondaryPos;
+    if (secondaryPos && VALID_POSITIONS.has(secondaryPos)) player.secondaryPos = secondaryPos;
 
     players.push(player);
   }

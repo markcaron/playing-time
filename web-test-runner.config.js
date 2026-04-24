@@ -6,9 +6,12 @@ import { a11ySnapshotPlugin } from './src/test/helpers/a11y-snapshot-plugin.js';
 
 const MIME = { '.yaml': 'text/yaml', '.yml': 'text/yaml', '.md': 'text/markdown', '.json': 'application/json' };
 
+const PUBLIC_ROOT = path.resolve('public');
+
 function servePublicDir() {
   return (ctx, next) => {
-    const filePath = path.join('public', ctx.url);
+    const filePath = path.resolve('public', ctx.url.slice(1));
+    if (!filePath.startsWith(PUBLIC_ROOT)) return next();
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
       ctx.body = fs.readFileSync(filePath, 'utf-8');
       ctx.type = MIME[path.extname(filePath)] || 'application/octet-stream';

@@ -1,0 +1,83 @@
+name: USWNT
+format: 11v11
+halfLength: 45
+formation: 1-4-3-3
+players:
+  - name: Ally Sentnor
+    number: "7"
+    primaryPos: LW
+  - name: Alyssa Thompson
+    number: "12"
+    primaryPos: RW
+  - name: Avery Patterson
+    number: "22"
+    primaryPos: CB
+  - name: Claire Hutton
+    number: "16"
+    primaryPos: CM
+  - name: Claudia Dickey
+    number: "18"
+    primaryPos: GK
+  - name: Emily Fox
+    number: "5"
+    primaryPos: LB
+  - name: Emily Sams
+    number: "3"
+    primaryPos: CB
+  - name: Emily Sonnett
+    number: "14"
+    primaryPos: CB
+  - name: Emma Sears
+    number: "8"
+    primaryPos: CM
+  - name: Gisele Thompson
+    number: "24"
+    primaryPos: RB
+  - name: Jaedyn Shaw
+    number: "9"
+    primaryPos: ST
+  - name: Jameese Joseph
+    number: "19"
+    primaryPos: RW
+  - name: Jane Campbell
+    number: "1"
+    primaryPos: GK
+  - name: Kennedy Wesley
+    number: "25"
+    primaryPos: LB
+  - name: Lilly Reale
+    number: "26"
+    primaryPos: CB
+  - name: Lily Yohannes
+    number: "15"
+    primaryPos: CAM
+  - name: Lindsey Heaps
+    number: "6"
+    primaryPos: CDM
+  - name: Michelle Cooper
+    number: "23"
+    primaryPos: ST
+  - name: Naomi Girma
+    number: "20"
+    primaryPos: CB
+  - name: Olivia Moultrie
+    number: "17"
+    primaryPos: CM
+  - name: Phallon Tullis-Joyce
+    number: "21"
+    primaryPos: GK
+  - name: Rose Lavelle
+    number: "11"
+    primaryPos: CAM
+  - name: Sam Coffey
+    number: "10"
+    primaryPos: CDM
+  - name: Sophia Wilson
+    number: "13"
+    primaryPos: ST
+  - name: Tierna Davidson
+    number: "4"
+    primaryPos: CB
+  - name: Trinity Rodman
+    number: "2"
+    primaryPos: RW

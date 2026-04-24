@@ -1191,7 +1191,7 @@ export class PtEditTeamView extends LitElement {
   private async _onTryExample(e: Event) {
     e.preventDefault();
     try {
-      const res = await fetch('/examples/uswnt.md');
+      const res = await fetch('/examples/uswnt.yaml');
       const text = await res.text();
       this._applyParsedRoster(parseRosterWithMeta(text));
     } catch { /* silently fail */ }

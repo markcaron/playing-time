@@ -2,14 +2,18 @@ import { getFormationPositions, getSlotPositions, positionFitScore } from './for
 import type { RosterEntry, FormationKey, LineupSlot, FieldPlayer } from './types.js';
 
 /**
- * Build an initial lineup by auto-filling formation slots in 4 passes:
+ * Build an initial lineup by auto-filling formation slots in 3 passes:
  *   1. Exact primaryPos match
  *   2. Exact secondaryPos match
- *   3. Best-fit by positional group affinity score
- *   4. Fill remaining with unpositioned players by roster order
+ *   3. Best-fit by positional group affinity score, which also
+ *      handles unpositioned players (score 0 still beats the
+ *      initial bestScore of -1, so Pass 3 subsumes what would
+ *      otherwise be a separate "fill remaining" pass)
  *
  * Returns only slots that were filled (may be fewer than formation
  * slots if the roster is smaller).
+ *
+ * @see .cursor/plans/position-based_lineup_engine_6e998405.plan.md
  */
 export function buildInitialLineup(
   roster: RosterEntry[],
@@ -44,6 +48,11 @@ export function buildInitialLineup(
     }
   }
 
+  // Pass 3 handles both group-affinity placement AND unpositioned
+  // players: bestScore starts at -1, so even a score of 0 (no
+  // position data) wins. This fills every open slot that has an
+  // available player, making a separate "fill remaining" pass
+  // unnecessary.
   const openSlots: number[] = [];
   for (let i = 0; i < count; i++) {
     if (!lineup[i]) openSlots.push(i);
@@ -72,15 +81,6 @@ export function buildInitialLineup(
     }
   }
 
-  for (let i = 0; i < count; i++) {
-    if (lineup[i]) continue;
-    const match = presentRoster.find(p => !used.has(p.id));
-    if (match) {
-      lineup[i] = match;
-      used.add(match.id);
-    }
-  }
-
   return lineup
     .filter((entry): entry is RosterEntry => entry !== null)
     .map(entry => ({ playerId: entry.id }));
@@ -90,13 +90,13 @@ export function buildInitialLineup(
  * Snapshot: extract player IDs from FieldPlayer[] in slot order.
  */
 export function toLineupSlots(fieldPlayers: FieldPlayer[]): LineupSlot[] {
-  return fieldPlayers.map(fp => ({ playerId: fp.id }));
+  return fieldPlayers.map(fp => ({ playerId: fp.rosterId }));
 }
 
 /**
  * Restore: rebuild FieldPlayer[] from lineup slots + roster data +
  * formation coordinates. Uses nickname as display name when available.
- * Skips players not found in the roster.
+ * Skips players not found in the roster or beyond formation bounds.
  */
 export function fromLineupSlots(
   lineup: LineupSlot[],
@@ -107,7 +107,7 @@ export function fromLineupSlots(
   return lineup
     .map((slot, i) => {
       const entry = roster.find(r => r.id === slot.playerId);
-      if (!entry) return null;
+      if (!entry || !coords[i]) return null;
       return {
         id: entry.id,
         rosterId: entry.id,

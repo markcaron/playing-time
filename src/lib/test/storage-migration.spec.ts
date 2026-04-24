@@ -326,3 +326,35 @@ describe('loadAppState() — legacy v1 roster migration', function () {
     expect(loaded.teams).to.deep.equal([]);
   });
 });
+
+/* ─── Corrupt / partial data ──────────────────────────────── */
+
+describe('loadAppState() — corrupt data fallback', function () {
+  beforeEach(clearStorage);
+  afterEach(clearStorage);
+
+  it('returns empty state for malformed JSON', function () {
+    localStorage.setItem(APP_KEY, '{not valid json!!!');
+    const loaded = loadAppState();
+    expect(loaded.activeTeamId).to.be.null;
+    expect(loaded.teams).to.deep.equal([]);
+  });
+
+  it('returns empty state when teams is not an array', function () {
+    localStorage.setItem(APP_KEY, JSON.stringify({ activeTeamId: 't1', teams: 'oops' }));
+    const loaded = loadAppState();
+    expect(loaded.activeTeamId).to.be.null;
+    expect(loaded.teams).to.deep.equal([]);
+  });
+
+  it('falls back to legacy key when app key has corrupt data', function () {
+    localStorage.setItem(APP_KEY, 'corrupt');
+    localStorage.setItem(OLD_KEY, JSON.stringify({
+      teamName: 'Fallback Team',
+      players: [{ number: '1', name: 'Alice' }],
+    }));
+    const loaded = loadAppState();
+    expect(loaded.teams).to.have.length(1);
+    expect(loaded.teams[0].teamName).to.equal('Fallback Team');
+  });
+});

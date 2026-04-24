@@ -196,18 +196,39 @@ describe('buildInitialLineup() — Pass 4: fill remaining', function () {
     expect(new Set(ids).size).to.equal(7);
   });
 
-  it('returns fewer slots than formation when roster is too small', function () {
+  it('places all available players when roster is smaller than formation', function () {
     const roster: RosterEntry[] = [
       player('p1', 'Alice', '1'),
       player('p2', 'Bob',   '2'),
       player('p3', 'Carol', '3'),
     ];
     const result = buildInitialLineup(roster, SEVEN_V_SEVEN);
-    // Only 3 players available; can't fill all 7 slots
-    expect(result.length).to.be.lessThanOrEqual(3);
+    expect(result).to.have.length(3);
     for (const slot of result) {
       expect(slot.playerId).to.not.equal('');
     }
+  });
+
+  it('cascades through all 4 passes in a mixed roster', function () {
+    // Roster with a mix: some exact matches, one secondary, one group, one unpositioned
+    const roster: RosterEntry[] = [
+      player('gk1',   'Keeper',    '1',  { primaryPos: 'GK' }),           // Pass 1 → GK slot
+      player('cb1',   'Def One',   '4',  { primaryPos: 'CB' }),           // Pass 1 → CB slot
+      player('cb2',   'Def Two',   '5',  { primaryPos: 'CB' }),           // Pass 1 → CB slot
+      player('cm1',   'Mid One',   '8',  { primaryPos: 'CM' }),           // Pass 1 → CM slot
+      player('lw1',   'Winger',    '7',  { primaryPos: 'LW', secondaryPos: 'CM' }), // Pass 2 → CM slot via secondary
+      player('cam1',  'Playmaker', '11', { primaryPos: 'CAM' }),          // Pass 3 → CM slot via MID group
+      player('nopos', 'Rookie',    '99'),                                  // Pass 4 → ST slot (last open)
+    ];
+    const result = buildInitialLineup(roster, SEVEN_V_SEVEN);
+    expect(result).to.have.length(7);
+    const ids = result.map(s => s.playerId);
+    // All 7 players placed, no duplicates
+    expect(new Set(ids).size).to.equal(7);
+    // GK at slot 0 (Pass 1)
+    expect(result[0].playerId).to.equal('gk1');
+    // The unpositioned player ends up somewhere (Pass 4)
+    expect(ids).to.include('nopos');
   });
 });
 
@@ -273,6 +294,68 @@ describe('buildInitialLineup() — 11v11', function () {
     expect(result).to.have.length(11);
     // GK at slot 0
     expect(result[0].playerId).to.equal('gk1');
+  });
+});
+
+/* ─── Duplicate positions ─────────────────────────────────── */
+
+describe('buildInitialLineup() — duplicate positions', function () {
+  it('places only one GK at slot 0 when two GKs exist', function () {
+    const roster: RosterEntry[] = [
+      player('gk1', 'First GK',  '1', { primaryPos: 'GK' }),
+      player('gk2', 'Second GK', '12', { primaryPos: 'GK' }),
+      player('cb1', 'CB1', '4', { primaryPos: 'CB' }),
+      player('cb2', 'CB2', '5', { primaryPos: 'CB' }),
+      player('cm1', 'CM1', '8', { primaryPos: 'CM' }),
+      player('cm2', 'CM2', '10', { primaryPos: 'CM' }),
+      player('cm3', 'CM3', '6', { primaryPos: 'CM' }),
+      player('st1', 'ST',  '9', { primaryPos: 'ST' }),
+    ];
+    const result = buildInitialLineup(roster, SEVEN_V_SEVEN);
+    // Only one GK slot; first GK in roster should win
+    expect(result[0].playerId).to.equal('gk1');
+    // Second GK should not be at slot 0
+    const ids = result.map(s => s.playerId);
+    expect(ids.filter(id => id === 'gk1')).to.have.length(1);
+  });
+});
+
+/* ─── Round-trip integration ──────────────────────────────── */
+
+describe('lineup round-trip (build → toSlots → fromSlots)', function () {
+  it('build then snapshot then restore preserves all players', function () {
+    const roster = FULL_7V7_ROSTER;
+    const formation = SEVEN_V_SEVEN;
+
+    const lineup = buildInitialLineup(roster, formation);
+    const slots = toLineupSlots(
+      fromLineupSlots(lineup, roster, formation),
+    );
+
+    expect(slots).to.have.length(lineup.length);
+    for (let i = 0; i < slots.length; i++) {
+      expect(slots[i].playerId).to.equal(lineup[i].playerId);
+    }
+  });
+
+  it('formation change preserves player assignments at same slot indices', function () {
+    const roster = FULL_7V7_ROSTER;
+    const original: FormationKey = '1-2-3-1';
+    const changed: FormationKey = '1-3-2-1';
+
+    const lineup = buildInitialLineup(roster, original);
+    // Restore with a different formation — same players, new coordinates
+    const fieldPlayers = fromLineupSlots(lineup, roster, changed);
+    const changedCoords = getFormationPositions(changed);
+
+    expect(fieldPlayers).to.have.length(lineup.length);
+    for (let i = 0; i < fieldPlayers.length; i++) {
+      // Same player at same slot index
+      expect(fieldPlayers[i].id).to.equal(lineup[i].playerId);
+      // But coordinates from the NEW formation
+      expect(fieldPlayers[i].x).to.equal(changedCoords[i].x);
+      expect(fieldPlayers[i].y).to.equal(changedCoords[i].y);
+    }
   });
 });
 

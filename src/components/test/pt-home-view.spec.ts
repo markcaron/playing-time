@@ -200,4 +200,15 @@ describe('<pt-home-view>', function () {
       expect(btn!.getAttribute('aria-label')).to.equal('Add Team');
     });
   });
+
+  describe('example link visibility', function () {
+    it('shows the example link in the empty state (no teams)', async function () {
+      element = await fixture<PtHomeView>(html`
+        <pt-home-view .teams=${[]}></pt-home-view>
+      `);
+      await allUpdates(element);
+      const link = element.shadowRoot!.querySelector('.example-link');
+      expect(link, 'example link should be visible when there are no teams').to.exist;
+    });
+  });
 });

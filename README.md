@@ -77,6 +77,10 @@ Outputs to `dist/` with service worker and precached assets.
 - **vite-plugin-pwa** — service worker and offline support
 - **Workbox** — caching strategies for the service worker
 
+## Third-party assets
+
+The cog SVG on the timer bar **Clock options** control is derived from [Cog #6304961 on Noun Project](https://thenounproject.com/icon/cog-6304961/). Use of that asset is subject to [Noun Project’s terms](https://thenounproject.com/legal/#!) for your license tier (for example, attribution may be required on the free tier).
+
 ## License
 
 This project is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). You're free to use, modify, and share it — just not for commercial purposes.

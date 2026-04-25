@@ -129,7 +129,7 @@ export class PtTimerBar extends LitElement {
       outline-offset: 2px;
     }
 
-    .clock-reset-icon {
+    .clock-options-icon {
       width: 18px;
       height: 18px;
       opacity: 0.35;
@@ -137,7 +137,7 @@ export class PtTimerBar extends LitElement {
       transition: opacity 0.15s;
     }
 
-    .timer-display-btn:hover .clock-reset-icon {
+    .timer-display-btn:hover .clock-options-icon {
       opacity: 0.7;
     }
 
@@ -864,7 +864,7 @@ export class PtTimerBar extends LitElement {
             </button>
             <button class="timer-display-btn" @click="${this._openClock}" aria-label="Clock options" title="Clock options">
               <span class="timer-display ${this._inStoppage ? 'stoppage' : ''}">${this._timeDisplay}</span>
-              <svg class="clock-reset-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
+              <svg class="clock-options-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
                 <path d="m1170 680.4v-160.8l-135.6-15.602c-10.801-50.398-31.199-98.398-58.801-141.6l85.199-108-114-114-108 85.199c-43.199-27.602-91.199-46.801-141.6-58.801l-16.797-136.8h-160.8l-15.602 135.6c-50.398 10.801-98.398 31.199-141.6 58.801l-108-85.199-114 114 85.199 108c-27.602 43.199-46.801 91.199-58.801 141.6l-136.8 16.797v160.8l135.6 15.602c10.801 50.398 31.199 98.398 58.801 141.6l-85.199 108 114 114 108-85.199c43.199 27.602 91.199 46.801 141.6 58.801l15.602 135.6h160.8l15.602-135.6c50.398-10.801 98.398-31.199 141.6-58.801l108 85.199 114-114-85.199-108c27.602-43.199 46.801-91.199 58.801-141.6zm-570 163.2c-134.4 0-243.6-109.2-243.6-243.6 0-134.4 109.2-243.6 243.6-243.6s243.6 109.2 243.6 243.6-109.2 243.6-243.6 243.6z" fill="currentColor"/>
               </svg>
             </button>

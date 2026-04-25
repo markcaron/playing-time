@@ -23,6 +23,7 @@ export class GameClock {
     this._startedAt = null;
   }
 
+  /** Discards all time (including any in-flight running period) and stops. */
   reset(): void {
     this._accumulatedMs = 0;
     this._startedAt = null;
@@ -48,8 +49,8 @@ export class GameClock {
 
   static restore(snap: ClockSnapshot, nowFn?: () => number): GameClock {
     const clock = new GameClock(nowFn);
-    clock._accumulatedMs = snap.accumulatedMs;
-    clock._startedAt = snap.startedAt;
+    clock._accumulatedMs = Math.max(0, snap.accumulatedMs ?? 0);
+    clock._startedAt = typeof snap.startedAt === 'number' ? snap.startedAt : null;
     return clock;
   }
 }

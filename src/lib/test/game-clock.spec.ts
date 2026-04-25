@@ -339,4 +339,118 @@ describe('GameClock — edge cases', function () {
 
     expect(clock.elapsed).to.equal(1);
   });
+
+  it('returns the same value on consecutive reads without time advancing', function () {
+    const fake = fakeClock(0);
+    const clock = new GameClock(fake.now);
+    clock.start();
+    fake.advance(5000);
+    const a = clock.elapsed;
+    const b = clock.elapsed;
+    expect(a).to.equal(b);
+  });
+
+  it('elapsed is non-negative after backward system clock jump', function () {
+    const fake = fakeClock(10000);
+    const clock = new GameClock(fake.now);
+    clock.start();
+    fake.advance(5000);
+    expect(clock.elapsed).to.equal(5);
+
+    fake.set(12000); // clock jumps backward by 3 seconds
+    expect(clock.elapsed).to.be.at.least(0);
+  });
+
+  it('handles backward clock jump during accumulation', function () {
+    const fake = fakeClock(10000);
+    const clock = new GameClock(fake.now);
+    clock.start();
+    fake.advance(10000); // 20000
+    clock.stop();
+    // accumulated = 10s
+
+    clock.start(); // startedAt = 20000
+    fake.set(18000); // clock goes backward
+    clock.stop();
+
+    // accumulated should not decrease below the 10s already banked
+    expect(clock.elapsed).to.be.at.least(10);
+  });
+});
+
+/* ─── ClockSnapshot shape ─────────────────────────────────── */
+
+describe('GameClock — snapshot shape', function () {
+  it('stopped clock snapshot has startedAt as null', function () {
+    const fake = fakeClock(0);
+    const clock = new GameClock(fake.now);
+    clock.start();
+    fake.advance(5000);
+    clock.stop();
+
+    const snap = clock.snapshot();
+    expect(snap.startedAt).to.be.null;
+  });
+
+  it('running clock snapshot has startedAt as a number', function () {
+    const fake = fakeClock(1000);
+    const clock = new GameClock(fake.now);
+    clock.start();
+    fake.advance(5000);
+
+    const snap = clock.snapshot();
+    expect(snap.startedAt).to.be.a('number');
+  });
+
+  it('stopped clock snapshot has correct accumulatedMs', function () {
+    const fake = fakeClock(0);
+    const clock = new GameClock(fake.now);
+    clock.start();
+    fake.advance(7500);
+    clock.stop();
+
+    const snap = clock.snapshot();
+    expect(snap.accumulatedMs).to.equal(7500);
+  });
+
+  it('running clock snapshot has accumulatedMs from prior cycles only', function () {
+    const fake = fakeClock(0);
+    const clock = new GameClock(fake.now);
+
+    clock.start();
+    fake.advance(3000);
+    clock.stop();
+    // accumulated = 3000ms
+
+    clock.start();
+    fake.advance(2000);
+    // running for 2s, but that's in-flight — not yet accumulated
+
+    const snap = clock.snapshot();
+    expect(snap.accumulatedMs).to.equal(3000);
+    expect(snap.startedAt).to.be.a('number');
+  });
+
+  it('restores correctly with a different now function at a later absolute time', function () {
+    const fake1 = fakeClock(1000);
+    const clock = new GameClock(fake1.now);
+    clock.start();
+    fake1.advance(10000);
+    // elapsed = 10s, startedAt = 1000, now = 11000
+
+    const snap = clock.snapshot();
+
+    // Simulate app restart: entirely new clock function at a later time
+    const fake2 = fakeClock(50000);
+    const restored = GameClock.restore(snap, fake2.now);
+
+    // The snapshot stores absolute wall-clock startedAt (1000).
+    // Restored with now=50000: elapsed = accumulated(0) + (50000 - 1000) = 49s
+    expect(restored.running).to.be.true;
+    expect(restored.elapsed).to.equal(49);
+
+    // Advancing the new clock should continue from there
+    fake2.advance(1000);
+    expect(restored.elapsed).to.equal(50);
+  });
 });

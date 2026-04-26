@@ -2,24 +2,26 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { allUpdates } from '../../test/helpers/utils.js';
 import { PtSettingsView } from '../pt-settings-view.js';
 
+const _PtSettingsView = PtSettingsView;
 if (!customElements.get('pt-settings-view')) {
-  throw new Error('pt-settings-view not registered — import may have been tree-shaken');
+  throw new Error('pt-settings-view not registered');
 }
 
 /*
- * Specification: Settings preview widget and player display mode
- * See: .cursor/plans/player_position_tracking_0e77d415.plan.md
+ * Holistic specification: Settings view — player display group
  *
- * 1. A "Player label" toggle (Jersey number / Field position)
- * 2. A live SVG preview of a player circle showing the effect of
- *    all display toggles: number/position, on-field time, bench time,
- *    larger time display, and timer format
+ * This spec covers the FULL behavior of the 5 player display settings
+ * and their preview widget, not just individual elements in isolation.
  *
- * To avoid the WTR multi-fixture hang (#23), all tests share a
- * single describe block with one beforeEach fixture.
+ * What we verify end-to-end:
+ *   1. Layout: 5 settings grouped with preview, in correct order
+ *   2. Preview: reflects ALL setting changes visually
+ *   3. Events: every setting change fires the correct event with value
+ *   4. Persistence: playerDisplayMode passed in is reflected in the UI
+ *   5. Visibility: preview text is actually visible (not transparent)
  */
 
-describe('<pt-settings-view> — player display settings', function () {
+describe('<pt-settings-view> — holistic player display spec', function () {
   let element: PtSettingsView;
 
   beforeEach(async function () {
@@ -36,149 +38,58 @@ describe('<pt-settings-view> — player display settings', function () {
     await allUpdates(element);
   });
 
-  it('is a PtSettingsView instance', function () {
-    expect(element).to.be.an.instanceOf(PtSettingsView);
-  });
+  /* ═══════════════════════════════════════════════════════════
+   * 1. LAYOUT — settings grouped correctly with preview
+   * ═══════════════════════════════════════════════════════════ */
 
-  /* ─── Player label toggle ───────────────────────────────── */
-
-  it('has a Player label setting', function () {
-    const text = element.shadowRoot!.textContent;
-    expect(text).to.include('Player label');
-  });
-
-  it('has options for Jersey number and Field position', function () {
-    const select = element.shadowRoot!.querySelector('#player-label-select') as HTMLSelectElement;
-    expect(select, 'player label select should exist').to.exist;
-    const options = Array.from(select!.options).map(o => o.value);
-    expect(options).to.include('number');
-    expect(options).to.include('position');
-  });
-
-  it('defaults to Jersey number', function () {
-    const select = element.shadowRoot!.querySelector('#player-label-select') as HTMLSelectElement;
-    expect(select!.value).to.equal('number');
-  });
-
-  it('fires a display-mode-changed event when toggled', function () {
-    const select = element.shadowRoot!.querySelector('#player-label-select') as HTMLSelectElement;
-    let firedValue = '';
-    element.addEventListener('display-mode-changed', ((e: CustomEvent) => {
-      firedValue = e.detail?.mode ?? (e as any).mode;
-    }) as EventListener);
-    select!.value = 'position';
-    select!.dispatchEvent(new Event('change'));
-    expect(firedValue).to.not.be.empty;
-  });
-
-  /* ─── Preview widget ────────────────────────────────────── */
-
-  it('renders a player preview SVG', function () {
-    const preview = element.shadowRoot!.querySelector('.settings-preview svg');
-    expect(preview, 'preview SVG should exist').to.exist;
-  });
-
-  it('preview shows a player circle', function () {
-    const circle = element.shadowRoot!.querySelector('.settings-preview circle');
-    expect(circle, 'player circle should exist in preview').to.exist;
-  });
-
-  it('preview shows jersey number by default', function () {
-    const previewText = element.shadowRoot!.querySelector('.settings-preview .player-label');
-    expect(previewText, 'player label element should exist').to.exist;
-    expect(previewText!.textContent!.trim()).to.match(/^\d+$/);
-  });
-
-  it('preview shows on-field time when toggle is on', function () {
-    const timeEl = element.shadowRoot!.querySelector('.settings-preview .player-time');
-    expect(timeEl, 'player time should be visible when showOnFieldTime is on').to.exist;
-  });
-
-  /* ─── Bug #1: Player label persistence ──────────────────── */
-
-  it('fires display-mode-changed with the selected mode value', function () {
-    const select = element.shadowRoot!.querySelector('#player-label-select') as HTMLSelectElement;
-    let mode = '';
-    element.addEventListener('display-mode-changed', ((e: Event) => {
-      mode = (e as any).playerDisplayMode ?? (e as any).detail?.mode ?? '';
-    }) as EventListener);
-    select!.value = 'position';
-    select!.dispatchEvent(new Event('change'));
-    expect(mode).to.equal('position');
-  });
-
-  /* ─── Bug #2: Settings order — player display group ─────── */
-
-  it('renders Player label BEFORE Roster sort', function () {
-    const text = element.shadowRoot!.textContent!;
-    const labelIdx = text.indexOf('Player label');
-    const sortIdx = text.indexOf('Roster sort');
-    expect(labelIdx, 'Player label should exist').to.be.greaterThan(-1);
-    expect(sortIdx, 'Roster sort should exist').to.be.greaterThan(-1);
-    expect(labelIdx, 'Player label should come before Roster sort').to.be.lessThan(sortIdx);
-  });
-
-  it('renders all 5 player display settings before Roster sort', function () {
-    const text = element.shadowRoot!.textContent!;
-    const sortIdx = text.indexOf('Roster sort');
-    const settings = [
-      'Show on-field time',
-      'Show bench time',
-      'Larger time display',
-      'Player timer format',
-      'Player label',
-    ];
-    for (const setting of settings) {
-      const idx = text.indexOf(setting);
-      expect(idx, `"${setting}" should exist`).to.be.greaterThan(-1);
-      expect(idx, `"${setting}" should come before "Roster sort"`).to.be.lessThan(sortIdx);
-    }
-  });
-
-  it('renders the 5 player display settings in correct order', function () {
-    const text = element.shadowRoot!.textContent!;
-    const order = [
-      'Show on-field time',
-      'Show bench time',
-      'Larger time display',
-      'Player timer format',
-      'Player label',
-    ];
-    let lastIdx = -1;
-    for (const setting of order) {
-      const idx = text.indexOf(setting);
-      expect(idx, `"${setting}" should exist`).to.be.greaterThan(-1);
-      expect(idx, `"${setting}" should come after previous setting`).to.be.greaterThan(lastIdx);
-      lastIdx = idx;
-    }
-  });
-
-  /* ─── Bug #2: Preview is grouped with settings via flexbox ─ */
-
-  it('preview is inside the player display settings group', function () {
+  it('wraps the 5 player settings and preview in a .player-display-group', function () {
     const group = element.shadowRoot!.querySelector('.player-display-group');
-    expect(group, '.player-display-group container should exist').to.exist;
-    const preview = group!.querySelector('.settings-preview');
-    expect(preview, 'preview should be inside the group').to.exist;
+    expect(group, 'group container must exist').to.exist;
+    expect(group!.querySelector('.settings-preview'), 'preview inside group').to.exist;
+    expect(group!.querySelector('.settings-options'), 'options inside group').to.exist;
   });
 
-  it('player display group uses flexbox layout', function () {
+  it('group uses flex layout (preview left, options right)', function () {
     const group = element.shadowRoot!.querySelector('.player-display-group') as HTMLElement;
-    expect(group, '.player-display-group should exist').to.exist;
-    const style = getComputedStyle(group!);
-    expect(style.display).to.equal('flex');
+    expect(group).to.exist;
+    expect(getComputedStyle(group).display).to.equal('flex');
   });
 
-  /* ─── Bug #3: Preview uses #10 and CAM ──────────────────── */
+  it('5 player settings appear in order BEFORE Roster sort', function () {
+    const text = element.shadowRoot!.textContent!;
+    const expected = [
+      'Show on-field time',
+      'Show bench time',
+      'Larger time display',
+      'Player timer format',
+      'Player label',
+    ];
+    const sortIdx = text.indexOf('Roster sort');
+    expect(sortIdx).to.be.greaterThan(-1);
 
-  it('preview shows #10 as the example jersey number', function () {
+    let prevIdx = -1;
+    for (const label of expected) {
+      const idx = text.indexOf(label);
+      expect(idx, `"${label}" must exist`).to.be.greaterThan(-1);
+      expect(idx, `"${label}" must be after "${expected[expected.indexOf(label) - 1] ?? 'start'}"`).to.be.greaterThan(prevIdx);
+      expect(idx, `"${label}" must be before "Roster sort"`).to.be.lessThan(sortIdx);
+      prevIdx = idx;
+    }
+  });
+
+  /* ═══════════════════════════════════════════════════════════
+   * 2. PREVIEW — reflects ALL settings, not just existence
+   * ═══════════════════════════════════════════════════════════ */
+
+  // --- 2a. Player label (setting 5) ---
+
+  it('preview shows "10" when playerDisplayMode is "number"', function () {
     const label = element.shadowRoot!.querySelector('.settings-preview .player-label');
     expect(label).to.exist;
     expect(label!.textContent!.trim()).to.equal('10');
   });
 
-  it('preview shows CAM when player label is set to position', function () {
-    // Change the mode to position
+  it('preview shows "CAM" when playerDisplayMode is changed to "position"', function () {
     element.playerDisplayMode = 'position';
     element.requestUpdate();
     return element.updateComplete.then(() => {
@@ -188,12 +99,180 @@ describe('<pt-settings-view> — player display settings', function () {
     });
   });
 
-  /* ─── Bug #3: Preview shows bench time ──────────────────── */
+  // --- 2b. Show on-field time (setting 1) ---
 
-  it('preview shows bench time when toggle is on', function () {
-    const benchTimeEl = element.shadowRoot!.querySelector('.settings-preview .bench-time');
-    expect(benchTimeEl, 'bench time should be visible when showBenchTime is on').to.exist;
-    expect(benchTimeEl!.textContent!.trim()).to.match(/\d+:\d+/);
+  it('preview shows on-field time above the circle when ON', function () {
+    const time = element.shadowRoot!.querySelector('.settings-preview .player-time');
+    expect(time, 'on-field time must be rendered').to.exist;
+    expect(time!.textContent!.trim()).to.not.be.empty;
+  });
+
+  it('preview hides on-field time when OFF', function () {
+    element.showOnFieldTime = false;
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const time = element.shadowRoot!.querySelector('.settings-preview .player-time');
+      expect(time, 'on-field time must be hidden').to.not.exist;
+    });
+  });
+
+  // --- 2c. Show bench time (setting 2) ---
+
+  it('preview shows bench time below the circle when ON', function () {
+    const bench = element.shadowRoot!.querySelector('.settings-preview .bench-time');
+    expect(bench, 'bench time must be rendered').to.exist;
+    expect(bench!.textContent!.trim()).to.not.be.empty;
+  });
+
+  it('preview hides bench time when OFF', function () {
+    element.showBenchTime = false;
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const bench = element.shadowRoot!.querySelector('.settings-preview .bench-time');
+      expect(bench, 'bench time must be hidden').to.not.exist;
+    });
+  });
+
+  // --- 2d. Larger time display (setting 3) ---
+
+  it('preview time text gets larger when largeTimeDisplay is ON', function () {
+    const normalTime = element.shadowRoot!.querySelector('.settings-preview .player-time') as SVGTextElement;
+    const normalSize = parseFloat(normalTime?.getAttribute('font-size') ?? '0');
+
+    element.largeTimeDisplay = true;
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const largeTime = element.shadowRoot!.querySelector('.settings-preview .player-time') as SVGTextElement;
+      expect(largeTime).to.exist;
+      const largeSize = parseFloat(largeTime!.getAttribute('font-size') ?? '0');
+      expect(largeSize, 'large font-size must be bigger than normal').to.be.greaterThan(normalSize);
+    });
+  });
+
+  // --- 2e. Player timer format (setting 4) ---
+
+  it('preview on-field time uses formatTime with mm:ss by default', function () {
+    const time = element.shadowRoot!.querySelector('.settings-preview .player-time');
+    expect(time).to.exist;
+    expect(time!.textContent!.trim()).to.match(/^\d{2}:\d{2}$/);
+  });
+
+  it('preview on-field time updates to mm format', function () {
+    element.timeDisplayFormat = 'mm';
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const time = element.shadowRoot!.querySelector('.settings-preview .player-time');
+      expect(time).to.exist;
+      const text = time!.textContent!.trim();
+      expect(text).to.match(/^\d{2}$/);
+    });
+  });
+
+  it('preview on-field time updates to m format', function () {
+    element.timeDisplayFormat = 'm';
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const time = element.shadowRoot!.querySelector('.settings-preview .player-time');
+      expect(time).to.exist;
+      const text = time!.textContent!.trim();
+      expect(text).to.match(/^\d+$/);
+      expect(text.length).to.be.lessThanOrEqual(2);
+    });
+  });
+
+  it('preview bench time reflects mm format', function () {
+    element.timeDisplayFormat = 'mm';
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const bench = element.shadowRoot!.querySelector('.settings-preview .bench-time');
+      expect(bench).to.exist;
+      expect(bench!.textContent!.trim()).to.match(/^\d{2}$/);
+    });
+  });
+
+  it('preview bench time reflects m format', function () {
+    element.timeDisplayFormat = 'm';
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const bench = element.shadowRoot!.querySelector('.settings-preview .bench-time');
+      expect(bench).to.exist;
+      const text = bench!.textContent!.trim();
+      expect(text).to.match(/^\d+$/);
+      expect(text.length).to.be.lessThanOrEqual(2);
+    });
+  });
+
+  /* ═══════════════════════════════════════════════════════════
+   * 3. EVENTS — setting changes fire events with correct values
+   * ═══════════════════════════════════════════════════════════ */
+
+  it('display-mode-changed event includes the selected mode', function () {
+    const select = element.shadowRoot!.querySelector('#player-label-select') as HTMLSelectElement;
+    expect(select).to.exist;
+    let mode = '';
+    element.addEventListener('display-mode-changed', ((e: CustomEvent) => {
+      mode = e.detail?.mode ?? '';
+    }) as EventListener);
+    select.value = 'position';
+    select.dispatchEvent(new Event('change'));
+    expect(mode).to.equal('position');
+  });
+
+  /* ═══════════════════════════════════════════════════════════
+   * 4. PERSISTENCE — passed-in playerDisplayMode is reflected
+   * ═══════════════════════════════════════════════════════════ */
+
+  it('select shows "position" when playerDisplayMode property is "position"', function () {
+    element.playerDisplayMode = 'position';
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const select = element.shadowRoot!.querySelector('#player-label-select') as HTMLSelectElement;
+      expect(select).to.exist;
+      expect(select.value).to.equal('position');
+    });
+  });
+
+  /* ═══════════════════════════════════════════════════════════
+   * 5. VISIBILITY — preview text is actually visible to the user
+   * ═══════════════════════════════════════════════════════════ */
+
+  it('on-field time text has a visible (non-transparent) fill', function () {
+    const time = element.shadowRoot!.querySelector('.settings-preview .player-time') as SVGTextElement;
+    expect(time).to.exist;
+    const fill = getComputedStyle(time).fill;
+    expect(fill).to.not.equal('none');
+    expect(fill).to.not.equal('transparent');
+    expect(fill).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(fill).to.not.be.empty;
+  });
+
+  it('bench time text has a visible (non-transparent) fill', function () {
+    const bench = element.shadowRoot!.querySelector('.settings-preview .bench-time') as SVGTextElement;
+    expect(bench).to.exist;
+    const fill = getComputedStyle(bench).fill;
+    expect(fill).to.not.equal('none');
+    expect(fill).to.not.equal('transparent');
+    expect(fill).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(fill).to.not.be.empty;
+  });
+
+  it('player label text has a visible fill', function () {
+    const label = element.shadowRoot!.querySelector('.settings-preview .player-label') as SVGTextElement;
+    expect(label).to.exist;
+    const fill = getComputedStyle(label).fill;
+    expect(fill).to.not.equal('none');
+    expect(fill).to.not.equal('transparent');
+    expect(fill).to.not.equal('rgba(0, 0, 0, 0)');
+    expect(fill).to.not.be.empty;
+  });
+
+  it('player circle has a visible fill', function () {
+    const circle = element.shadowRoot!.querySelector('.settings-preview circle') as SVGCircleElement;
+    expect(circle).to.exist;
+    const fill = getComputedStyle(circle).fill;
+    expect(fill).to.not.equal('none');
+    expect(fill).to.not.equal('transparent');
+    expect(fill).to.not.equal('rgba(0, 0, 0, 0)');
   });
 
   /* ─── All 5 settings reflected on preview ───────────────── */

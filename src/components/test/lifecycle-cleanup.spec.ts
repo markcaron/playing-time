@@ -1,6 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { allUpdates } from '../../test/helpers/utils.js';
-import { PtHomeView } from '../pt-home-view.js';
+import { PtHomeView, ImportExampleEvent } from '../pt-home-view.js';
 import type { StoredTeam } from '../../lib/types.js';
 
 /*
@@ -25,6 +25,7 @@ import type { StoredTeam } from '../../lib/types.js';
  */
 
 const _PtHomeView = PtHomeView;
+const _ImportExampleEvent = ImportExampleEvent;
 
 function makeTeam(overrides: Partial<StoredTeam> = {}): StoredTeam {
   return {
@@ -59,14 +60,14 @@ describe('Component lifecycle cleanup — pt-home-view', function () {
     await allUpdates(el);
 
     let eventFired = false;
-    el.addEventListener('import-example', () => { eventFired = true; });
+    el.addEventListener(ImportExampleEvent.eventName, () => { eventFired = true; });
 
     el.remove();
 
     const link = el.shadowRoot?.querySelector('.example-link') as HTMLElement | null;
     if (link) {
       link.click();
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 500));
       expect(eventFired, 'should not fire events after disconnect').to.be.false;
     }
   });

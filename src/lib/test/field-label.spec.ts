@@ -201,4 +201,26 @@ describe('fieldCenterLabel() — edge cases', function () {
     });
     expect(result).to.equal('99');
   });
+
+  it('falls back to primaryPos when field player has no fieldIndex', function () {
+    const result = fieldCenterLabel({
+      player: fp('p1', '10'),
+      kind: 'player',
+      mode: 'position',
+      formation: FORMATION,
+      roster: [roster('p1', '10', 'CAM')],
+    });
+    expect(result).to.equal('CAM');
+  });
+
+  it('falls back to jersey number when field player has no fieldIndex and no primaryPos', function () {
+    const result = fieldCenterLabel({
+      player: fp('p1', '10'),
+      kind: 'player',
+      mode: 'position',
+      formation: FORMATION,
+      roster: [roster('p1', '10')],
+    });
+    expect(result).to.equal('10');
+  });
 });

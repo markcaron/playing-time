@@ -195,4 +195,110 @@ describe('<pt-settings-view> — player display settings', function () {
     expect(benchTimeEl, 'bench time should be visible when showBenchTime is on').to.exist;
     expect(benchTimeEl!.textContent!.trim()).to.match(/\d+:\d+/);
   });
+
+  /* ─── All 5 settings reflected on preview ───────────────── */
+
+  // 1. Show on-field time OFF → preview hides time
+  it('preview hides on-field time when toggle is off', function () {
+    element.showOnFieldTime = false;
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const timeEl = element.shadowRoot!.querySelector('.settings-preview .player-time');
+      expect(timeEl, 'on-field time should be hidden when toggle is off').to.not.exist;
+    });
+  });
+
+  // 2. Show bench time OFF → preview hides bench time
+  it('preview hides bench time when toggle is off', function () {
+    element.showBenchTime = false;
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const benchEl = element.shadowRoot!.querySelector('.settings-preview .bench-time');
+      expect(benchEl, 'bench time should be hidden when toggle is off').to.not.exist;
+    });
+  });
+
+  // 3. Larger time display → preview text size changes
+  it('preview uses larger text when larger time display is on', function () {
+    element.largeTimeDisplay = true;
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const timeEl = element.shadowRoot!.querySelector('.settings-preview .player-time') as SVGTextElement | null;
+      expect(timeEl, 'on-field time should exist').to.exist;
+      const fontSize = parseFloat(timeEl!.getAttribute('font-size') || getComputedStyle(timeEl!).fontSize);
+      const normalEl = element.shadowRoot!.querySelector('.settings-preview .player-label') as SVGTextElement;
+      const labelSize = parseFloat(normalEl?.getAttribute('font-size') || '12');
+      expect(fontSize, 'time font size should be larger than label').to.be.greaterThan(labelSize);
+    });
+  });
+
+  it('preview uses normal text when larger time display is off', function () {
+    element.largeTimeDisplay = false;
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const timeEl = element.shadowRoot!.querySelector('.settings-preview .player-time') as SVGTextElement | null;
+      expect(timeEl, 'on-field time should exist').to.exist;
+      const fontSize = parseFloat(timeEl!.getAttribute('font-size') || getComputedStyle(timeEl!).fontSize);
+      expect(fontSize, 'time font size should be standard').to.be.lessThanOrEqual(12);
+    });
+  });
+
+  // 4. Player timer format → preview times change format (#35)
+  it('preview shows mm:ss format by default', function () {
+    const timeEl = element.shadowRoot!.querySelector('.settings-preview .player-time');
+    expect(timeEl).to.exist;
+    expect(timeEl!.textContent!.trim()).to.match(/^\d{2}:\d{2}$/);
+  });
+
+  it('preview shows mm format when timer format is "mm"', function () {
+    element.timeDisplayFormat = 'mm';
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const timeEl = element.shadowRoot!.querySelector('.settings-preview .player-time');
+      expect(timeEl).to.exist;
+      expect(timeEl!.textContent!.trim()).to.match(/^\d{2}$/);
+    });
+  });
+
+  it('preview shows m format when timer format is "m"', function () {
+    element.timeDisplayFormat = 'm';
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const timeEl = element.shadowRoot!.querySelector('.settings-preview .player-time');
+      expect(timeEl).to.exist;
+      expect(timeEl!.textContent!.trim()).to.match(/^\d+$/);
+    });
+  });
+
+  it('preview bench time also reflects timer format', function () {
+    element.timeDisplayFormat = 'mm';
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const benchEl = element.shadowRoot!.querySelector('.settings-preview .bench-time');
+      expect(benchEl, 'bench time should exist').to.exist;
+      expect(benchEl!.textContent!.trim()).to.match(/^\d{2}$/);
+    });
+  });
+
+  // 5. Player label — already tested above (lines 174-188)
+
+  /* ─── Preview text visibility ───────────────────────────── */
+
+  it('preview on-field time text has a visible fill', function () {
+    const timeEl = element.shadowRoot!.querySelector('.settings-preview .player-time') as SVGTextElement;
+    expect(timeEl, 'on-field time element should exist').to.exist;
+    const fill = getComputedStyle(timeEl!).fill;
+    expect(fill, 'fill should not be none').to.not.equal('none');
+    expect(fill, 'fill should not be transparent').to.not.equal('transparent');
+    expect(fill, 'fill should not be rgba transparent').to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('preview bench time text has a visible fill', function () {
+    const benchEl = element.shadowRoot!.querySelector('.settings-preview .bench-time') as SVGTextElement;
+    expect(benchEl, 'bench time element should exist').to.exist;
+    const fill = getComputedStyle(benchEl!).fill;
+    expect(fill, 'fill should not be none').to.not.equal('none');
+    expect(fill, 'fill should not be transparent').to.not.equal('transparent');
+    expect(fill, 'fill should not be rgba transparent').to.not.equal('rgba(0, 0, 0, 0)');
+  });
 });

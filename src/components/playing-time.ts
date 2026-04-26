@@ -456,6 +456,7 @@ export class PlayingTime extends LitElement {
   @state() accessor largeTimeDisplay = false;
   @state() accessor timeDisplayFormat: TimeDisplayFormat = 'mm:ss';
   @state() accessor rosterSort: RosterSortOrder = 'alpha';
+  @state() accessor playerDisplayMode: 'number' | 'position' = 'number';
   @state() accessor selectedId: string | null = null;
   @state() accessor swapTargetId: string | null = null;
   @state() accessor gameEvents: GameEvent[] = [];
@@ -805,6 +806,7 @@ export class PlayingTime extends LitElement {
     this.largeTimeDisplay = team.largeTimeDisplay ?? false;
     this.timeDisplayFormat = team.timeDisplayFormat ?? 'mm:ss';
     this.rosterSort = team.rosterSort ?? 'alpha';
+    this.playerDisplayMode = team.playerDisplayMode ?? 'number';
     this.gameFormat = team.gameFormat;
     this.formation = team.formation;
     this.roster = team.players.map(p => ({
@@ -975,6 +977,7 @@ export class PlayingTime extends LitElement {
       largeTimeDisplay: this.largeTimeDisplay,
       timeDisplayFormat: this.timeDisplayFormat,
       rosterSort: this.rosterSort,
+      playerDisplayMode: this.playerDisplayMode,
       gameFormat: this.gameFormat,
       formation: this.formation,
       lineup: this.#currentLineupSnapshot(),
@@ -1104,6 +1107,14 @@ export class PlayingTime extends LitElement {
   #onRosterSortChanged(e: RosterSortChangedEvent) {
     this.rosterSort = e.rosterSort;
     this.#saveState();
+  }
+
+  #onDisplayModeChanged(e: Event) {
+    const mode = (e as CustomEvent).detail?.mode;
+    if (mode === 'number' || mode === 'position') {
+      this.playerDisplayMode = mode;
+      this.#saveState();
+    }
   }
 
   #onTimerTick(e: TimerTickEvent) {
@@ -1835,11 +1846,13 @@ export class PlayingTime extends LitElement {
           .largeTimeDisplay="${this.largeTimeDisplay}"
           .timeDisplayFormat="${this.timeDisplayFormat}"
           .rosterSort="${this.rosterSort}"
+          .playerDisplayMode="${this.playerDisplayMode}"
           @bench-time-toggle="${this.#onBenchTimeToggle}"
           @on-field-time-toggle="${this.#onOnFieldTimeToggle}"
           @large-time-display="${this.#onLargeTimeDisplay}"
           @time-format-changed="${this.#onTimeFormatChanged}"
           @roster-sort-changed="${this.#onRosterSortChanged}"
+          @display-mode-changed="${this.#onDisplayModeChanged}"
           @navigate-settings-back="${this.#onNavigateSettingsBack}">
         </pt-settings-view>
       `;

@@ -281,4 +281,24 @@ describe('<pt-settings-view> — player display settings', function () {
   });
 
   // 5. Player label — already tested above (lines 174-188)
+
+  /* ─── Preview text visibility ───────────────────────────── */
+
+  it('preview on-field time text has a visible fill', function () {
+    const timeEl = element.shadowRoot!.querySelector('.settings-preview .player-time') as SVGTextElement;
+    expect(timeEl, 'on-field time element should exist').to.exist;
+    const fill = getComputedStyle(timeEl!).fill;
+    expect(fill, 'fill should not be none').to.not.equal('none');
+    expect(fill, 'fill should not be transparent').to.not.equal('transparent');
+    expect(fill, 'fill should not be rgba transparent').to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('preview bench time text has a visible fill', function () {
+    const benchEl = element.shadowRoot!.querySelector('.settings-preview .bench-time') as SVGTextElement;
+    expect(benchEl, 'bench time element should exist').to.exist;
+    const fill = getComputedStyle(benchEl!).fill;
+    expect(fill, 'fill should not be none').to.not.equal('none');
+    expect(fill, 'fill should not be transparent').to.not.equal('transparent');
+    expect(fill, 'fill should not be rgba transparent').to.not.equal('rgba(0, 0, 0, 0)');
+  });
 });

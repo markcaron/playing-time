@@ -1,5 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { formatTime } from '../lib/types.js';
 import {
   BenchTimeToggleEvent,
   OnFieldTimeToggleEvent,
@@ -386,10 +387,10 @@ export class PtSettingsView extends LitElement {
         <div class="player-display-group">
           <div class="settings-preview">
             <svg viewBox="0 0 68 90" xmlns="http://www.w3.org/2000/svg" width="68" height="90" style="color: var(--pt-text, currentColor)">
-              ${this.showOnFieldTime ? html`<text class="player-time" x="34" y="12" text-anchor="middle" font-size="10" fill="currentColor">12:34</text>` : ''}
+              ${this.showOnFieldTime ? html`<text class="player-time" x="34" y="12" text-anchor="middle" font-size="${this.largeTimeDisplay ? 14 : 10}" fill="currentColor">${formatTime(754, this.timeDisplayFormat)}</text>` : ''}
               <circle cx="34" cy="38" r="16" fill="var(--pt-accent-solid, #2563eb)" />
               <text class="player-label" x="34" y="42" text-anchor="middle" font-size="12" font-weight="bold" fill="var(--pt-accent-solid-text, #fff)">${this.playerDisplayMode === 'position' ? 'CAM' : '10'}</text>
-              ${this.showBenchTime ? html`<text class="bench-time" x="34" y="70" text-anchor="middle" font-size="10" fill="currentColor">5:00</text>` : ''}
+              ${this.showBenchTime ? html`<text class="bench-time" x="34" y="70" text-anchor="middle" font-size="${this.largeTimeDisplay ? 14 : 10}" fill="currentColor">${formatTime(300, this.timeDisplayFormat)}</text>` : ''}
             </svg>
           </div>
           <div class="settings-options">

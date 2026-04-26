@@ -312,9 +312,11 @@ export class PtHomeView extends LitElement {
             `)}
             <div class="add-team-bottom">
               <button class="add-team-accent" @click="${this._onAddTeam}"><svg class="add-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m600 99.984c275.95 0 500.02 224.06 500.02 500.02s-224.06 500.02-500.02 500.02-500.02-224.06-500.02-500.02 224.06-500.02 500.02-500.02zm0 100.03c-220.78 0-399.98 179.26-399.98 399.98 0 220.78 179.26 399.98 399.98 399.98 220.78 0 399.98-179.26 399.98-399.98 0-220.78-179.26-399.98-399.98-399.98zm-50.016 450h-150c-27.609 0-49.969-22.406-49.969-50.016s22.406-50.016 49.969-50.016h150v-150c0-27.609 22.406-49.969 50.016-49.969s50.016 22.406 50.016 49.969v150h150c27.609 0 49.969 22.406 49.969 50.016s-22.406 50.016-49.969 50.016h-150v150c0 27.609-22.406 49.969-50.016 49.969s-50.016-22.406-50.016-49.969z" fill-rule="evenodd" fill="currentColor"/></svg> Add Team</button>
-              <a href="#" class="example-link" @click="${this._onTryExample}">Try with USWNT roster</a>
             </div>
           `}
+        ${!this.teams.some(t => t.teamName.toLowerCase() === 'uswnt')
+          ? html`<a href="#" class="example-link" @click="${this._onTryExample}">Try with USWNT roster</a>`
+          : nothing}
       </div>
     `;
   }

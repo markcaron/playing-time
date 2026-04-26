@@ -70,6 +70,11 @@ describe('<pt-home-view>', function () {
       btn.click();
       expect(fired).to.be.true;
     });
+
+    it('shows the USWNT example link', function () {
+      const link = element.shadowRoot!.querySelector('.example-link');
+      expect(link, 'example link should be visible when there are no teams').to.exist;
+    });
   });
 
   describe('with teams', function () {
@@ -200,4 +205,5 @@ describe('<pt-home-view>', function () {
       expect(btn!.getAttribute('aria-label')).to.equal('Add Team');
     });
   });
+
 });

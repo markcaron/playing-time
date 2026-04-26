@@ -193,5 +193,6 @@ describe('<pt-settings-view> — player display settings', function () {
   it('preview shows bench time when toggle is on', function () {
     const benchTimeEl = element.shadowRoot!.querySelector('.settings-preview .bench-time');
     expect(benchTimeEl, 'bench time should be visible when showBenchTime is on').to.exist;
+    expect(benchTimeEl!.textContent!.trim()).to.match(/\d+:\d+/);
   });
 });

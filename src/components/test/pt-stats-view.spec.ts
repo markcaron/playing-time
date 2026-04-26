@@ -68,6 +68,10 @@ describe('<pt-stats-view>', function () {
     expect(element).to.be.an.instanceOf(PtStatsView);
   });
 
+  it('NavigateStatsBackEvent has the correct event name', function () {
+    expect(NavigateStatsBackEvent.eventName).to.equal('navigate-stats-back');
+  });
+
   it('is accessible', async function () {
     await expect(element).to.be.accessible();
   });
@@ -136,10 +140,38 @@ describe('<pt-stats-view>', function () {
     expect(multiPosCell, 'Defender Dee should have both CB and RB times').to.exist;
   });
 
-  it('omits positions with 0 time', function () {
-    const positionCells = Array.from(element.shadowRoot!.querySelectorAll('.position-col'));
-    const subCell = positionCells[positionCells.length - 1];
-    expect(subCell!.textContent!.trim()).to.equal('');
+  it('omits positions with 0 time for bench-only players', function () {
+    const rows = element.shadowRoot!.querySelectorAll('.times-table tbody tr');
+    const subRow = Array.from(rows).find(row =>
+      row.textContent!.includes('Sub Sam')
+    );
+    expect(subRow, 'Sub Sam row should exist').to.exist;
+    const posCell = subRow!.querySelector('.position-col');
+    expect(posCell!.textContent!.trim()).to.equal('');
+  });
+
+  /* ─── Total column ──────────────────────────────────────── */
+
+  it('renders correct total (1H + 2H) for a player', function () {
+    const rows = element.shadowRoot!.querySelectorAll('.times-table tbody tr');
+    const keeperRow = Array.from(rows).find(row =>
+      row.textContent!.includes('Keeper Kim')
+    );
+    expect(keeperRow, 'Keeper Kim row should exist').to.exist;
+    const totalCell = keeperRow!.querySelector('.total');
+    // 1350 + 1200 = 2550s = 42:30
+    expect(totalCell!.textContent!.trim()).to.equal('42:30');
+  });
+
+  /* ─── Bench time ────────────────────────────────────────── */
+
+  it('shows bench time for players who were subbed', function () {
+    const rows = element.shadowRoot!.querySelectorAll('.times-table tbody tr');
+    const moRow = Array.from(rows).find(row =>
+      row.textContent!.includes('Midfielder Mo')
+    );
+    expect(moRow, 'Midfielder Mo row should exist').to.exist;
+    expect(moRow!.textContent).to.include('10:00');
   });
 
   /* ─── Substitutions & Swaps section ─────────────────────── */

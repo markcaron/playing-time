@@ -385,7 +385,7 @@ export class PtSettingsView extends LitElement {
       <div class="settings-body">
         <div class="player-display-group">
           <div class="settings-preview">
-            <svg viewBox="0 0 68 90" xmlns="http://www.w3.org/2000/svg" width="68" height="90" style="color: var(--pt-text, #333)">
+            <svg viewBox="0 0 68 90" xmlns="http://www.w3.org/2000/svg" width="68" height="90" style="color: var(--pt-text, currentColor)">
               ${this.showOnFieldTime ? html`<text class="player-time" x="34" y="12" text-anchor="middle" font-size="10" fill="currentColor">12:34</text>` : ''}
               <circle cx="34" cy="38" r="16" fill="var(--pt-accent-solid, #2563eb)" />
               <text class="player-label" x="34" y="42" text-anchor="middle" font-size="12" font-weight="bold" fill="var(--pt-accent-solid-text, #fff)">${this.playerDisplayMode === 'position' ? 'CAM' : '10'}</text>

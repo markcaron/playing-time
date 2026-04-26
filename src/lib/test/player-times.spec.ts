@@ -89,6 +89,20 @@ describe('applyTimeDelta() — field vs bench', function () {
     const result = applyTimeDelta(roster, new Set(['p1']), 1, 5);
     expect(result[1].onFieldTime).to.equal(0);
   });
+
+  it('does not add half time to bench players', function () {
+    const roster = [player('field1'), player('bench1')];
+    const result = applyTimeDelta(roster, new Set(['field1']), 1, 5);
+    expect(result[1].half1Time).to.equal(0);
+    expect(result[1].half2Time).to.equal(0);
+  });
+
+  it('adds half time only to on-field players', function () {
+    const roster = [player('field1'), player('bench1')];
+    const result = applyTimeDelta(roster, new Set(['field1']), 2, 10);
+    expect(result[0].half2Time).to.equal(10);
+    expect(result[1].half2Time).to.equal(0);
+  });
 });
 
 /* ─── Large delta (sleep/wake catch-up) ───────────────────── */

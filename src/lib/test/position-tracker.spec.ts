@@ -125,6 +125,17 @@ describe('PositionTracker — accumulate', function () {
 
 /* ─── Formation change grace period ───────────────────────── */
 
+/*
+ * Caller contract: tick() must be called on every timer cycle
+ * (from #onTimerTick) so the grace period timeout is evaluated.
+ * If tick() is never called, the tracker stays paused indefinitely.
+ *
+ * During grace, accumulate() auto-buffers time instead of committing
+ * it. The caller does NOT need to call a separate buffer method.
+ * After a swap/sub, the caller calls transferGraceTime(playerId,
+ * newPosition) to move buffered time to the player's final position.
+ */
+
 describe('PositionTracker — grace period', function () {
   it('pauses position tracking on formation change', function () {
     const fake = fakeClock(0);
@@ -213,26 +224,42 @@ describe('PositionTracker — grace period', function () {
     expect(tracker.paused).to.be.false;
   });
 
-  it('transfers grace-period time to new position after swap', function () {
+  it('auto-buffers time during grace period instead of accumulating', function () {
     const fake = fakeClock(0);
     const tracker = new PositionTracker(fake.now);
     const formation: FormationKey = '1-2-3-1';
 
-    // Player at slot 3 (CM), accumulate 10s
+    // Player at slot 3 (CM), accumulate 10s normally
     tracker.accumulate([{ playerId: 'p1', slotIndex: 3 }], formation, 10);
 
-    // Formation changes — player is now at a "wrong" position
+    // Formation changes — player moves to slot 1 (CB) which may be wrong
     tracker.onFormationChange();
 
-    // 3 seconds pass in grace period at "wrong" slot 1 (CB)
-    // These are buffered, not accumulated
-    tracker.bufferGraceTime('p1', 'CB' as Position, 3);
+    // accumulate during grace: time is buffered, not committed to CB
+    tracker.accumulate([{ playerId: 'p1', slotIndex: 1 }], formation, 3);
+
+    // CB should NOT have any time yet (buffered, not accumulated)
+    const midTimes = tracker.getPositionTimes('p1');
+    expect(midTimes).to.not.have.property('CB');
+    expect(midTimes).to.have.property('CM', 10);
+  });
+
+  it('transfers buffered grace time to new position after swap', function () {
+    const fake = fakeClock(0);
+    const tracker = new PositionTracker(fake.now);
+    const formation: FormationKey = '1-2-3-1';
+
+    tracker.accumulate([{ playerId: 'p1', slotIndex: 3 }], formation, 10);
+    tracker.onFormationChange();
+
+    // 3 seconds at "wrong" slot 1 (CB) — auto-buffered by accumulate
+    tracker.accumulate([{ playerId: 'p1', slotIndex: 1 }], formation, 3);
 
     // Coach swaps player to slot 6 (ST) — their intended position
+    // transferGraceTime moves the buffered 3s to ST
     tracker.onSwapOrSub();
     tracker.transferGraceTime('p1', 'ST' as Position);
 
-    // The 3s of grace time should be at ST, not CB
     const times = tracker.getPositionTimes('p1');
     expect(times).to.have.property('CM', 10);
     expect(times).to.have.property('ST', 3);
@@ -326,5 +353,24 @@ describe('PositionTracker — getAllPositionTimes', function () {
 
     expect(tracker.getPositionTimes('p1')).to.deep.include({ CM: 15, ST: 10 });
     expect(tracker.getPositionTimes('p2')).to.deep.include({ GK: 25 });
+  });
+
+  it('round-trips through getAllPositionTimes and restore', function () {
+    const tracker = new PositionTracker();
+    const formation: FormationKey = '1-2-3-1';
+    tracker.accumulate([
+      { playerId: 'p1', slotIndex: 0 },
+      { playerId: 'p2', slotIndex: 3 },
+    ], formation, 10);
+    tracker.accumulate([
+      { playerId: 'p1', slotIndex: 6 },
+      { playerId: 'p2', slotIndex: 3 },
+    ], formation, 5);
+
+    const saved = tracker.getAllPositionTimes();
+    const restored = PositionTracker.restore(saved);
+
+    expect(restored.getPositionTimes('p1')).to.deep.equal(tracker.getPositionTimes('p1'));
+    expect(restored.getPositionTimes('p2')).to.deep.equal(tracker.getPositionTimes('p2'));
   });
 });

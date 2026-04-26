@@ -159,6 +159,7 @@ export interface StoredTeam {
   largeTimeDisplay?: boolean;
   timeDisplayFormat?: TimeDisplayFormat;
   rosterSort?: RosterSortOrder;
+  playerDisplayMode?: PlayerDisplayMode;
   gamePlans?: StoredGamePlan[];
   /** @deprecated Use lineup instead */
   fieldPositions?: StoredPosition[];

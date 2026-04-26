@@ -149,13 +149,25 @@ function migrateV2(state: StoredAppState): StoredAppState {
   return { activeTeamId: state.activeTeamId, teams };
 }
 
+function applyDefaults(state: StoredAppState): StoredAppState {
+  let changed = false;
+  const teams = state.teams.map(team => {
+    if (team.playerDisplayMode == null) {
+      changed = true;
+      return { ...team, playerDisplayMode: 'number' as const };
+    }
+    return team;
+  });
+  return changed ? { ...state, teams } : state;
+}
+
 export function loadAppState(): StoredAppState {
   try {
     const raw = localStorage.getItem(APP_KEY);
     if (raw) {
       const data = JSON.parse(raw) as StoredAppState;
       if (data.teams && Array.isArray(data.teams)) {
-        const migrated = migrateV2(data);
+        const migrated = applyDefaults(migrateV2(data));
         if (migrated !== data) {
           saveAppState(migrated);
         }
@@ -166,8 +178,9 @@ export function loadAppState(): StoredAppState {
 
   const migrated = migrateOldData();
   if (migrated) {
-    saveAppState(migrated);
-    return migrated;
+    const withDefaults = applyDefaults(migrated);
+    saveAppState(withDefaults);
+    return withDefaults;
   }
 
   return { activeTeamId: null, teams: [] };
@@ -194,6 +207,7 @@ export function createNewTeam(): StoredTeam {
     halfLength: 45,
     gameFormat: '11v11',
     formation: '1-4-3-3',
+    playerDisplayMode: 'number',
   };
 }
 

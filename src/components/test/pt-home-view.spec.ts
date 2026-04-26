@@ -70,6 +70,11 @@ describe('<pt-home-view>', function () {
       btn.click();
       expect(fired).to.be.true;
     });
+
+    it('shows the USWNT example link', function () {
+      const link = element.shadowRoot!.querySelector('.example-link');
+      expect(link, 'example link should be visible when there are no teams').to.exist;
+    });
   });
 
   describe('with teams', function () {
@@ -201,14 +206,4 @@ describe('<pt-home-view>', function () {
     });
   });
 
-  describe('example link visibility', function () {
-    it('shows the example link in the empty state (no teams)', async function () {
-      element = await fixture<PtHomeView>(html`
-        <pt-home-view .teams=${[]}></pt-home-view>
-      `);
-      await allUpdates(element);
-      const link = element.shadowRoot!.querySelector('.example-link');
-      expect(link, 'example link should be visible when there are no teams').to.exist;
-    });
-  });
 });

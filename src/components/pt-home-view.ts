@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import type { StoredTeam, GameFormat } from '../lib/types.js';
 import { parseRosterWithMeta } from '../lib/roster-parser.js';
@@ -203,6 +203,11 @@ export class PtHomeView extends LitElement {
       padding: 24px 16px;
     }
 
+    .example-link-wrap {
+      text-align: center;
+      padding: 16px;
+    }
+
     .example-link {
       font-size: 0.8rem;
       color: var(--pt-text-muted);
@@ -315,7 +320,7 @@ export class PtHomeView extends LitElement {
             </div>
           `}
         ${!this.teams.some(t => t.teamName.toLowerCase() === 'uswnt')
-          ? html`<a href="#" class="example-link" @click="${this._onTryExample}">Try with USWNT roster</a>`
+          ? html`<div class="example-link-wrap"><a href="#" class="example-link" @click="${this._onTryExample}">Try with USWNT roster</a></div>`
           : nothing}
       </div>
     `;

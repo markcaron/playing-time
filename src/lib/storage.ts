@@ -152,7 +152,7 @@ function migrateV2(state: StoredAppState): StoredAppState {
 function applyDefaults(state: StoredAppState): StoredAppState {
   let changed = false;
   const teams = state.teams.map(team => {
-    if (!team.playerDisplayMode) {
+    if (team.playerDisplayMode == null) {
       changed = true;
       return { ...team, playerDisplayMode: 'number' as const };
     }

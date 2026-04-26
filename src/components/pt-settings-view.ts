@@ -1,6 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, svg, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { formatTime } from '../lib/types.js';
+import { formatTime, NAME_FONT_SIZE, PLAYER_RADIUS } from '../lib/types.js';
 import {
   BenchTimeToggleEvent,
   OnFieldTimeToggleEvent,
@@ -99,6 +99,8 @@ export class PtSettingsView extends LitElement {
       -webkit-overflow-scrolling: touch;
       display: flex;
       flex-direction: column;
+      font-size: 0.8rem;
+      line-height: 1.35;
     }
 
     .settings-row {
@@ -126,7 +128,7 @@ export class PtSettingsView extends LitElement {
       background: transparent;
       color: var(--pt-text);
       font: inherit;
-      font-size: 0.85rem;
+      font-size: 1em;
       cursor: pointer;
       background-image: none;
     }
@@ -199,7 +201,7 @@ export class PtSettingsView extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.65rem;
+      font-size: 0.6rem;
       font-weight: bold;
       color: var(--pt-text-on-light);
       user-select: none;
@@ -228,12 +230,32 @@ export class PtSettingsView extends LitElement {
 
     .player-display-group {
       display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 0 0 16px 0;
+      min-width: 0;
+      border: 1px solid var(--pt-border);
+      border-radius: 8px;
+      padding: 4px 12px 12px;
+    }
+
+    .player-display-group > legend {
+      width: max-content;
+      max-width: 100%;
+      padding: 0 0.2em 0 0;
+      font-size: inherit;
+      font-weight: 600;
+      color: var(--pt-text);
+    }
+
+    .player-display-row {
+      display: flex;
       gap: 16px;
-      margin-bottom: 16px;
     }
 
     .player-display-group .settings-options {
       flex: 1;
+      min-width: 0;
     }
 
     .settings-preview {
@@ -242,6 +264,11 @@ export class PtSettingsView extends LitElement {
       justify-content: center;
       flex-shrink: 0;
       padding: 8px;
+    }
+
+    .settings-preview svg .player-time,
+    .settings-preview svg .bench-time {
+      fill: var(--pt-text);
     }
 
     .settings-branding {
@@ -253,7 +280,7 @@ export class PtSettingsView extends LitElement {
       margin-top: auto;
       padding-top: 32px;
       border-top: 1px solid var(--pt-border-subtle);
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: var(--pt-text-muted);
     }
 
@@ -265,7 +292,7 @@ export class PtSettingsView extends LitElement {
 
     .branding-version,
     .branding-license {
-      font-size: 0.65rem;
+      font-size: 0.6rem;
       opacity: 0.8;
     }
 
@@ -292,7 +319,7 @@ export class PtSettingsView extends LitElement {
       min-height: 44px;
       cursor: pointer;
       font: inherit;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
 
     .settings-footer button:hover {
@@ -373,6 +400,24 @@ export class PtSettingsView extends LitElement {
     this.dispatchEvent(new NavigateSettingsBackEvent());
   }
 
+  /**
+   * On the field, timer text uses the same `NAME_FONT_SIZE` scale as names (see
+   * `playing-time` #renderPlayerCircle). Map that into the preview’s viewBox using the
+   * same circle-radius ratio: preview r=16 vs `PLAYER_RADIUS`.
+   */
+  private get _settingsPreviewTimeFont() {
+    const r = 16;
+    const timeFont = this.largeTimeDisplay ? NAME_FONT_SIZE : NAME_FONT_SIZE * 0.75;
+    let scaled = (r / PLAYER_RADIUS) * timeFont;
+    if (this.largeTimeDisplay) {
+      // Field-accurate size is ~11.25 in this viewBox. The example disc label uses font-size 12;
+      // "larger time" mode must read slightly above that; 12.1 is the minimum that satisfies
+      // existing preview tests (time text larger than the 12px label) while staying near field ratio.
+      scaled = Math.max(12.1, scaled);
+    }
+    return Math.round(scaled * 100) / 100;
+  }
+
   render() {
     return html`
       <div class="header">
@@ -384,73 +429,80 @@ export class PtSettingsView extends LitElement {
       </div>
 
       <div class="settings-body">
-        <div class="player-display-group">
-          <div class="settings-preview">
-            <svg viewBox="0 0 68 90" xmlns="http://www.w3.org/2000/svg" width="68" height="90" style="color: var(--pt-text, currentColor)">
-              ${this.showOnFieldTime ? html`<text class="player-time" x="34" y="12" text-anchor="middle" font-size="${this.largeTimeDisplay ? 14 : 10}" fill="currentColor">${formatTime(754, this.timeDisplayFormat)}</text>` : ''}
-              <circle cx="34" cy="38" r="16" fill="var(--pt-accent-solid, #2563eb)" />
-              <text class="player-label" x="34" y="42" text-anchor="middle" font-size="12" font-weight="bold" fill="var(--pt-accent-solid-text, #fff)">${this.playerDisplayMode === 'position' ? 'CAM' : '10'}</text>
-              ${this.showBenchTime ? html`<text class="bench-time" x="34" y="70" text-anchor="middle" font-size="${this.largeTimeDisplay ? 14 : 10}" fill="currentColor">${formatTime(300, this.timeDisplayFormat)}</text>` : ''}
-            </svg>
-          </div>
-          <div class="settings-options">
-            <label class="settings-row">
-              Show on-field time
-              <span class="slide-toggle">
-                <input type="checkbox"
-                       .checked="${this.showOnFieldTime}"
-                       @change="${this._onOnFieldTimeToggle}" />
-                <span class="slide-track"></span>
-                <span class="slide-thumb">${this.showOnFieldTime ? 'On' : 'Off'}</span>
-              </span>
-            </label>
-            <label class="settings-row">
-              Show bench time
-              <span class="slide-toggle">
-                <input type="checkbox"
-                       .checked="${this.showBenchTime}"
-                       @change="${this._onBenchTimeToggle}" />
-                <span class="slide-track"></span>
-                <span class="slide-thumb">${this.showBenchTime ? 'On' : 'Off'}</span>
-              </span>
-            </label>
-            <label class="settings-row">
-              Larger time display
-              <span class="slide-toggle">
-                <input type="checkbox"
-                       .checked="${this.largeTimeDisplay}"
-                       @change="${this._onLargeTimeDisplayToggle}" />
-                <span class="slide-track"></span>
-                <span class="slide-thumb">${this.largeTimeDisplay ? 'On' : 'Off'}</span>
-              </span>
-            </label>
-            <div class="settings-row">
-              <label for="time-format-select">Player timer format</label>
-              <span class="select-wrap">
-                <select id="time-format-select"
-                        .value="${this.timeDisplayFormat}"
-                        @change="${this._onTimeFormatChange}">
-                  <option value="mm:ss" ?selected="${this.timeDisplayFormat === 'mm:ss'}">Minutes & seconds (mm:ss)</option>
-                  <option value="mm" ?selected="${this.timeDisplayFormat === 'mm'}">Minutes only (mm)</option>
-                  <option value="m" ?selected="${this.timeDisplayFormat === 'm'}">Minutes short (m)</option>
-                </select>
-                <span class="caret"></span>
-              </span>
+        <fieldset class="player-display-group">
+          <legend>Player options</legend>
+          <div class="player-display-row">
+            <div class="settings-preview">
+              <svg viewBox="0 0 68 90" xmlns="http://www.w3.org/2000/svg" width="90" height="119">
+                ${this.showOnFieldTime
+                  ? svg`<text class="player-time" x="34" y="12" text-anchor="middle" font-size="${this._settingsPreviewTimeFont}">${formatTime(754, this.timeDisplayFormat)}</text>`
+                  : nothing}
+                <circle cx="34" cy="38" r="16" fill="var(--pt-accent-solid, #2563eb)" />
+                <text class="player-label" x="34" y="42" text-anchor="middle" font-size="12" font-weight="bold" fill="var(--pt-accent-solid-text, #fff)">${this.playerDisplayMode === 'position' ? 'CAM' : '10'}</text>
+                ${this.showBenchTime
+                  ? svg`<text class="bench-time" x="34" y="70" text-anchor="middle" font-size="${this._settingsPreviewTimeFont}">${formatTime(300, this.timeDisplayFormat)}</text>`
+                  : nothing}
+              </svg>
             </div>
-            <div class="settings-row">
-              <label for="player-label-select">Player label</label>
-              <span class="select-wrap">
-                <select id="player-label-select"
-                        .value="${this.playerDisplayMode}"
-                        @change="${this._onPlayerLabelChange}">
-                  <option value="number" ?selected="${this.playerDisplayMode === 'number'}">Jersey number</option>
-                  <option value="position" ?selected="${this.playerDisplayMode === 'position'}">Field position</option>
-                </select>
-                <span class="caret"></span>
-              </span>
+            <div class="settings-options">
+              <label class="settings-row">
+                Show on-field time
+                <span class="slide-toggle">
+                  <input type="checkbox"
+                         .checked="${this.showOnFieldTime}"
+                         @change="${this._onOnFieldTimeToggle}" />
+                  <span class="slide-track"></span>
+                  <span class="slide-thumb">${this.showOnFieldTime ? 'On' : 'Off'}</span>
+                </span>
+              </label>
+              <label class="settings-row">
+                Show bench time
+                <span class="slide-toggle">
+                  <input type="checkbox"
+                         .checked="${this.showBenchTime}"
+                         @change="${this._onBenchTimeToggle}" />
+                  <span class="slide-track"></span>
+                  <span class="slide-thumb">${this.showBenchTime ? 'On' : 'Off'}</span>
+                </span>
+              </label>
+              <label class="settings-row">
+                Larger time display
+                <span class="slide-toggle">
+                  <input type="checkbox"
+                         .checked="${this.largeTimeDisplay}"
+                         @change="${this._onLargeTimeDisplayToggle}" />
+                  <span class="slide-track"></span>
+                  <span class="slide-thumb">${this.largeTimeDisplay ? 'On' : 'Off'}</span>
+                </span>
+              </label>
+              <div class="settings-row">
+                <label for="time-format-select">Player timer format</label>
+                <span class="select-wrap">
+                  <select id="time-format-select"
+                          .value="${this.timeDisplayFormat}"
+                          @change="${this._onTimeFormatChange}">
+                    <option value="mm:ss" ?selected="${this.timeDisplayFormat === 'mm:ss'}">Min. & sec. (mm:ss)</option>
+                    <option value="mm" ?selected="${this.timeDisplayFormat === 'mm'}">Min. only (mm)</option>
+                    <option value="m" ?selected="${this.timeDisplayFormat === 'm'}">Min. short (m)</option>
+                  </select>
+                  <span class="caret"></span>
+                </span>
+              </div>
+              <div class="settings-row">
+                <label for="player-label-select">Player label</label>
+                <span class="select-wrap">
+                  <select id="player-label-select"
+                          .value="${this.playerDisplayMode}"
+                          @change="${this._onPlayerLabelChange}">
+                    <option value="number" ?selected="${this.playerDisplayMode === 'number'}">Jersey number</option>
+                    <option value="position" ?selected="${this.playerDisplayMode === 'position'}">Field position</option>
+                  </select>
+                  <span class="caret"></span>
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        </fieldset>
 
         <div class="settings-options">
         <div class="settings-row">

@@ -1704,7 +1704,31 @@ export class PlayingTime extends LitElement {
     return this.fieldPlayers[0]?.id === p.id;
   }
 
-  #renderPlayerCircle(p: FieldPlayer, kind: string) {
+  /**
+   * In-circle text: jersey #, or formation slot (e.g. CAM) when `playerDisplayMode` is `position`.
+   * @param fieldIndex Index in `fieldPlayers` (formation slot). Omitted for bench; callers on the
+   *   field should pass the index to avoid a per-render `findIndex` scan in hot paths.
+   */
+  #fieldCenterLabel(p: FieldPlayer, kind: string, fieldIndex?: number): string {
+    if (this.playerDisplayMode === 'number') {
+      return p.number;
+    }
+    if (kind === 'player') {
+      const i =
+        fieldIndex != null && fieldIndex >= 0
+          ? fieldIndex
+          : this.fieldPlayers.findIndex(fp => fp.id === p.id);
+      if (i >= 0) {
+        const slotPos = getSlotPositions(this.formation)[i];
+        if (slotPos) return slotPos;
+      }
+    }
+    const entry = this.roster.find(r => r.id === p.id);
+    if (entry?.primaryPos) return entry.primaryPos;
+    return p.number;
+  }
+
+  #renderPlayerCircle(p: FieldPlayer, kind: string, fieldIndex?: number) {
     const selected = p.id === this.selectedId;
     const isSwapTarget = p.id === this.swapTargetId;
     const selR = PLAYER_RADIUS + SEL_RING_OFFSET;
@@ -1714,6 +1738,7 @@ export class PlayingTime extends LitElement {
 
     const onFieldTime = kind === 'player' ? this.#getOnFieldTime(p.id) : 0;
     const timeFontSize = this.largeTimeDisplay ? NAME_FONT_SIZE : NAME_FONT_SIZE * 0.75;
+    const centerLabel = this.#fieldCenterLabel(p, kind, fieldIndex);
 
     return svg`
       <g data-id="${p.id}" data-kind="${kind}" style="cursor: grab">
@@ -1741,13 +1766,13 @@ export class PlayingTime extends LitElement {
         <circle cx="${p.x}" cy="${p.y}" r="${PLAYER_RADIUS}"
                 fill="${fillColor}"
                 style="pointer-events: none" />
-        ${p.number ? svg`
+        ${centerLabel ? svg`
           <text x="${p.x}" y="${p.y}"
                 text-anchor="middle" dominant-baseline="central"
                 fill="${textColor}" font-size="${PLAYER_FONT_SIZE}" font-weight="bold"
                 font-family="system-ui, sans-serif"
                 style="pointer-events: none">
-            ${p.number}
+            ${centerLabel}
           </text>
         ` : nothing}
         <text x="${p.x}" y="${p.y + PLAYER_RADIUS + 2}"
@@ -1960,11 +1985,13 @@ export class PlayingTime extends LitElement {
 
             <g class="players-layer">
               ${this.fieldPlayers
-                .filter(p => p.id !== dragId && p.id !== this.selectedId)
-                .map(p => this.#renderPlayerCircle(p, 'player'))}
+                .map((p, i) => [p, i] as const)
+                .filter(([{ id }]) => id !== dragId && id !== this.selectedId)
+                .map(([p, i]) => this.#renderPlayerCircle(p, 'player', i))}
               ${this.fieldPlayers
-                .filter(p => p.id === this.selectedId && p.id !== dragId)
-                .map(p => this.#renderPlayerCircle(p, 'player'))}
+                .map((p, i) => [p, i] as const)
+                .filter(([{ id }]) => id === this.selectedId && id !== dragId)
+                .map(([p, i]) => this.#renderPlayerCircle(p, 'player', i))}
             </g>
 
             ${subCount > 0 ? svg`
@@ -1988,7 +2015,15 @@ export class PlayingTime extends LitElement {
               <g class="drag-layer">
                 ${[...this.fieldPlayers, ...this.subPlayers]
                   .filter(p => p.id === dragId)
-                  .map(p => this.#renderPlayerCircle(p, this.#dragState?.source === 'field' ? 'player' : 'sub'))}
+                  .map(p => {
+                    const isField = this.#dragState?.source === 'field';
+                    const fieldIdx = isField ? this.fieldPlayers.findIndex(fp => fp.id === p.id) : -1;
+                    return this.#renderPlayerCircle(
+                      p,
+                      isField ? 'player' : 'sub',
+                      fieldIdx >= 0 ? fieldIdx : undefined,
+                    );
+                  })}
               </g>
             ` : nothing}
           </svg>

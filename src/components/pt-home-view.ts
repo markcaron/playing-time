@@ -259,6 +259,13 @@ export class PtHomeView extends LitElement {
   @property({ type: Array }) teams: StoredTeam[] = [];
   @property({ type: String }) activeTeamId: string | null = null;
 
+  private _abortController = new AbortController();
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._abortController.abort();
+  }
+
   private _onTeamClick(teamId: string) {
     this.dispatchEvent(new TeamSelectedEvent(teamId));
   }
@@ -274,11 +281,12 @@ export class PtHomeView extends LitElement {
   private async _onTryExample(e: Event) {
     e.preventDefault();
     try {
-      const res = await fetch('/examples/uswnt.yaml');
+      const res = await fetch('/examples/uswnt.yaml', { signal: this._abortController.signal });
       const text = await res.text();
+      if (this._abortController.signal.aborted) return;
       const parsed = parseRosterWithMeta(text);
       this.dispatchEvent(new ImportExampleEvent(parsed));
-    } catch { /* silently fail */ }
+    } catch { /* silently fail — includes AbortError */ }
   }
 
   render() {

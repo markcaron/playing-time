@@ -225,11 +225,22 @@ export class PtSettingsView extends LitElement {
       margin-bottom: 16px;
     }
 
+    .player-display-group {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .player-display-group .settings-options {
+      flex: 1;
+    }
+
     .settings-preview {
       display: flex;
+      align-items: center;
       justify-content: center;
-      padding: 16px;
-      margin-bottom: 16px;
+      flex-shrink: 0;
+      padding: 8px;
     }
 
     .settings-branding {
@@ -372,50 +383,75 @@ export class PtSettingsView extends LitElement {
       </div>
 
       <div class="settings-body">
-        <div class="settings-options">
-        <label class="settings-row">
-          Show on-field time
-          <span class="slide-toggle">
-            <input type="checkbox"
-                   .checked="${this.showOnFieldTime}"
-                   @change="${this._onOnFieldTimeToggle}" />
-            <span class="slide-track"></span>
-            <span class="slide-thumb">${this.showOnFieldTime ? 'On' : 'Off'}</span>
-          </span>
-        </label>
-        <label class="settings-row">
-          Show bench time
-          <span class="slide-toggle">
-            <input type="checkbox"
-                   .checked="${this.showBenchTime}"
-                   @change="${this._onBenchTimeToggle}" />
-            <span class="slide-track"></span>
-            <span class="slide-thumb">${this.showBenchTime ? 'On' : 'Off'}</span>
-          </span>
-        </label>
-        <label class="settings-row">
-          Larger time display
-          <span class="slide-toggle">
-            <input type="checkbox"
-                   .checked="${this.largeTimeDisplay}"
-                   @change="${this._onLargeTimeDisplayToggle}" />
-            <span class="slide-track"></span>
-            <span class="slide-thumb">${this.largeTimeDisplay ? 'On' : 'Off'}</span>
-          </span>
-        </label>
-        <div class="settings-row">
-          <label for="time-format-select">Player timer format</label>
-          <span class="select-wrap">
-            <select id="time-format-select"
-                    .value="${this.timeDisplayFormat}"
-                    @change="${this._onTimeFormatChange}">
-              <option value="mm:ss" ?selected="${this.timeDisplayFormat === 'mm:ss'}">Minutes & seconds (mm:ss)</option>
-              <option value="mm" ?selected="${this.timeDisplayFormat === 'mm'}">Minutes only (mm)</option>
-              <option value="m" ?selected="${this.timeDisplayFormat === 'm'}">Minutes short (m)</option>
-            </select>
-            <span class="caret"></span>
-          </span>
+        <div class="player-display-group">
+          <div class="settings-preview">
+            <svg viewBox="0 0 68 90" xmlns="http://www.w3.org/2000/svg" width="68" height="90">
+              ${this.showOnFieldTime ? html`<text class="player-time" x="34" y="12" text-anchor="middle" font-size="10" fill="var(--pt-text)">12:34</text>` : ''}
+              <circle cx="34" cy="38" r="16" fill="var(--pt-accent-solid)" />
+              <text class="player-label" x="34" y="42" text-anchor="middle" font-size="12" font-weight="bold" fill="var(--pt-accent-solid-text)">${this.playerDisplayMode === 'position' ? 'CAM' : '10'}</text>
+              ${this.showBenchTime ? html`<text class="bench-time" x="34" y="70" text-anchor="middle" font-size="10" fill="var(--pt-text)">5:00</text>` : ''}
+            </svg>
+          </div>
+          <div class="settings-options">
+            <label class="settings-row">
+              Show on-field time
+              <span class="slide-toggle">
+                <input type="checkbox"
+                       .checked="${this.showOnFieldTime}"
+                       @change="${this._onOnFieldTimeToggle}" />
+                <span class="slide-track"></span>
+                <span class="slide-thumb">${this.showOnFieldTime ? 'On' : 'Off'}</span>
+              </span>
+            </label>
+            <label class="settings-row">
+              Show bench time
+              <span class="slide-toggle">
+                <input type="checkbox"
+                       .checked="${this.showBenchTime}"
+                       @change="${this._onBenchTimeToggle}" />
+                <span class="slide-track"></span>
+                <span class="slide-thumb">${this.showBenchTime ? 'On' : 'Off'}</span>
+              </span>
+            </label>
+            <label class="settings-row">
+              Larger time display
+              <span class="slide-toggle">
+                <input type="checkbox"
+                       .checked="${this.largeTimeDisplay}"
+                       @change="${this._onLargeTimeDisplayToggle}" />
+                <span class="slide-track"></span>
+                <span class="slide-thumb">${this.largeTimeDisplay ? 'On' : 'Off'}</span>
+              </span>
+            </label>
+            <div class="settings-row">
+              <label for="time-format-select">Player timer format</label>
+              <span class="select-wrap">
+                <select id="time-format-select"
+                        .value="${this.timeDisplayFormat}"
+                        @change="${this._onTimeFormatChange}">
+                  <option value="mm:ss" ?selected="${this.timeDisplayFormat === 'mm:ss'}">Minutes & seconds (mm:ss)</option>
+                  <option value="mm" ?selected="${this.timeDisplayFormat === 'mm'}">Minutes only (mm)</option>
+                  <option value="m" ?selected="${this.timeDisplayFormat === 'm'}">Minutes short (m)</option>
+                </select>
+                <span class="caret"></span>
+              </span>
+            </div>
+            <div class="settings-row">
+              <label for="player-label-select">Player label</label>
+              <span class="select-wrap">
+                <select id="player-label-select"
+                        .value="${this.playerDisplayMode}"
+                        @change="${this._onPlayerLabelChange}">
+                  <option value="number" ?selected="${this.playerDisplayMode === 'number'}">Jersey number</option>
+                  <option value="position" ?selected="${this.playerDisplayMode === 'position'}">Field position</option>
+                </select>
+                <span class="caret"></span>
+              </span>
+            </div>
+          </div>
         </div>
+
+        <div class="settings-options">
         <div class="settings-row">
           <label for="roster-sort-select">Roster sort</label>
           <span class="select-wrap">
@@ -441,26 +477,6 @@ export class PtSettingsView extends LitElement {
             <span class="caret"></span>
           </span>
         </div>
-        <div class="settings-row">
-          <label for="player-label-select">Player label</label>
-          <span class="select-wrap">
-            <select id="player-label-select"
-                    .value="${this.playerDisplayMode}"
-                    @change="${this._onPlayerLabelChange}">
-              <option value="number" ?selected="${this.playerDisplayMode === 'number'}">Jersey number</option>
-              <option value="position" ?selected="${this.playerDisplayMode === 'position'}">Field position</option>
-            </select>
-            <span class="caret"></span>
-          </span>
-        </div>
-        </div>
-
-        <div class="settings-preview">
-          <svg viewBox="0 0 68 80" xmlns="http://www.w3.org/2000/svg" width="68" height="80">
-            <circle cx="34" cy="30" r="16" fill="var(--pt-accent-solid)" />
-            <text class="player-label" x="34" y="34" text-anchor="middle" font-size="12" font-weight="bold" fill="var(--pt-accent-solid-text)">${this.playerDisplayMode === 'position' ? 'CM' : '10'}</text>
-            ${this.showOnFieldTime ? html`<text class="player-time" x="34" y="60" text-anchor="middle" font-size="10" fill="var(--pt-text)">12:34</text>` : ''}
-          </svg>
         </div>
 
         <div class="settings-branding">

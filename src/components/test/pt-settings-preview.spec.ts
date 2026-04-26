@@ -1,7 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { allUpdates } from '../../test/helpers/utils.js';
 import { PtSettingsView } from '../pt-settings-view.js';
-import { formatTime } from '../../lib/types.js';
 
 const _PtSettingsView = PtSettingsView;
 if (!customElements.get('pt-settings-view')) {
@@ -181,13 +180,25 @@ describe('<pt-settings-view> — holistic player display spec', function () {
     });
   });
 
-  it('preview bench time also reflects the timer format', function () {
+  it('preview bench time reflects mm format', function () {
     element.timeDisplayFormat = 'mm';
     element.requestUpdate();
     return element.updateComplete.then(() => {
       const bench = element.shadowRoot!.querySelector('.settings-preview .bench-time');
       expect(bench).to.exist;
       expect(bench!.textContent!.trim()).to.match(/^\d{2}$/);
+    });
+  });
+
+  it('preview bench time reflects m format', function () {
+    element.timeDisplayFormat = 'm';
+    element.requestUpdate();
+    return element.updateComplete.then(() => {
+      const bench = element.shadowRoot!.querySelector('.settings-preview .bench-time');
+      expect(bench).to.exist;
+      const text = bench!.textContent!.trim();
+      expect(text).to.match(/^\d+$/);
+      expect(text.length).to.be.lessThanOrEqual(2);
     });
   });
 

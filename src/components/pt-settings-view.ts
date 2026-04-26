@@ -225,6 +225,13 @@ export class PtSettingsView extends LitElement {
       margin-bottom: 16px;
     }
 
+    .settings-preview {
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
     .settings-branding {
       display: flex;
       flex-direction: column;
@@ -291,6 +298,7 @@ export class PtSettingsView extends LitElement {
   @property({ type: Boolean }) largeTimeDisplay = false;
   @property({ type: String }) timeDisplayFormat: 'mm:ss' | 'mm' | 'm' = 'mm:ss';
   @property({ type: String }) rosterSort: 'alpha' | 'number' = 'alpha';
+  @property({ type: String }) playerDisplayMode: 'number' | 'position' = 'number';
 
   @state() private _colorScheme: 'system' | 'light' | 'dark' = 'system';
 
@@ -338,6 +346,15 @@ export class PtSettingsView extends LitElement {
     }
     const light = val === 'light' || (val === 'system' && window.matchMedia('(prefers-color-scheme: light)').matches);
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', light ? '#ffffff' : '#16213e');
+  }
+
+  private _onPlayerLabelChange(e: Event) {
+    const val = (e.target as HTMLSelectElement).value;
+    this.dispatchEvent(new CustomEvent('display-mode-changed', {
+      detail: { mode: val },
+      bubbles: true,
+      composed: true,
+    }));
   }
 
   private _onDone() {
@@ -424,7 +441,28 @@ export class PtSettingsView extends LitElement {
             <span class="caret"></span>
           </span>
         </div>
+        <div class="settings-row">
+          <label for="player-label-select">Player label</label>
+          <span class="select-wrap">
+            <select id="player-label-select"
+                    .value="${this.playerDisplayMode}"
+                    @change="${this._onPlayerLabelChange}">
+              <option value="number" ?selected="${this.playerDisplayMode === 'number'}">Jersey number</option>
+              <option value="position" ?selected="${this.playerDisplayMode === 'position'}">Field position</option>
+            </select>
+            <span class="caret"></span>
+          </span>
         </div>
+        </div>
+
+        <div class="settings-preview">
+          <svg viewBox="0 0 68 80" xmlns="http://www.w3.org/2000/svg" width="68" height="80">
+            <circle cx="34" cy="30" r="16" fill="var(--pt-accent-solid)" />
+            <text class="player-label" x="34" y="34" text-anchor="middle" font-size="12" font-weight="bold" fill="var(--pt-accent-solid-text)">${this.playerDisplayMode === 'position' ? 'CM' : '10'}</text>
+            ${this.showOnFieldTime ? html`<text class="player-time" x="34" y="60" text-anchor="middle" font-size="10" fill="var(--pt-text)">12:34</text>` : ''}
+          </svg>
+        </div>
+
         <div class="settings-branding">
           <span class="branding-title">
             <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg" class="branding-icon"><path d="m660 243.6v-63.602h60v-120h-240v120h60v63.602c-219.6 30-390 218.4-390 446.4 0 248.4 201.6 450 450 450s450-201.6 450-450c0-228-170.4-416.4-390-446.4zm-60 776.4c-182.4 0-330-147.6-330-330s147.6-330 330-330 330 147.6 330 330-147.6 330-330 330z" fill="currentColor"/><path d="m151.2 247.2 85.199 84c48-49.199 104.4-86.398 168-112.8l-45.598-110.4c-78 32.398-148.8 79.199-207.6 139.2z" fill="currentColor"/><path d="m1042.8 241.2c-58.801-57.598-126-102-201.6-133.2l-45.602 110.4c61.199 25.199 116.4 61.199 163.2 108z" fill="currentColor"/><path d="m642.48 732.32-84.863-84.852 179.89-179.91 84.863 84.852z" fill="currentColor"/></svg>

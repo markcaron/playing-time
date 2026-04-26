@@ -2,6 +2,8 @@ export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'CDM' | 'CM' | 'CAM' | 'LW' |
 
 export const POSITIONS: Position[] = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST'];
 
+export type PlayerDisplayMode = 'number' | 'position';
+
 export interface RosterEntry {
   id: string;
   number: string;
@@ -13,6 +15,7 @@ export interface RosterEntry {
   half2Time: number;
   benchTime: number;
   onFieldTime: number;
+  positionTimes?: Partial<Record<Position, number>>;
 }
 
 export interface FieldPlayer {

@@ -410,6 +410,9 @@ export class PtSettingsView extends LitElement {
     const timeFont = this.largeTimeDisplay ? NAME_FONT_SIZE : NAME_FONT_SIZE * 0.75;
     let scaled = (r / PLAYER_RADIUS) * timeFont;
     if (this.largeTimeDisplay) {
+      // Field-accurate size is ~11.25 in this viewBox. The example disc label uses font-size 12;
+      // "larger time" mode must read slightly above that; 12.1 is the minimum that satisfies
+      // existing preview tests (time text larger than the 12px label) while staying near field ratio.
       scaled = Math.max(12.1, scaled);
     }
     return Math.round(scaled * 100) / 100;

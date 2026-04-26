@@ -10,12 +10,6 @@ export class NavigateStatsBackEvent extends Event {
   }
 }
 
-function formatPositionTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
 @customElement('pt-stats-view')
 export class PtStatsView extends LitElement {
   static styles = css`
@@ -142,7 +136,7 @@ export class PtStatsView extends LitElement {
     const entries = Object.entries(p.positionTimes)
       .filter(([, time]) => time != null && time > 0) as [Position, number][];
     if (entries.length === 0) return '';
-    return entries.map(([pos, time]) => `${formatPositionTime(time)} (${pos})`).join('\n');
+    return entries.map(([pos, time]) => `${formatTime(time, this.timeDisplayFormat)} (${pos})`).join('\n');
   }
 
   render() {

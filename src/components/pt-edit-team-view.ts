@@ -900,6 +900,14 @@ export class PtEditTeamView extends LitElement {
   @query('#edit-player-dialog') private _editPlayerDialog!: HTMLDialogElement;
 
   private _prevTeamId: string | null | undefined = undefined;
+  private _abortController = new AbortController();
+  private _dropErrorTimer: ReturnType<typeof setTimeout> | null = null;
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._abortController.abort();
+    if (this._dropErrorTimer) clearTimeout(this._dropErrorTimer);
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -1124,7 +1132,7 @@ export class PtEditTeamView extends LitElement {
     const parsed = parseRosterWithMeta(text);
     if (parsed.players.length === 0) {
       this._dropError = 'Could not parse roster. Check the format.';
-      setTimeout(() => this._dropError = '', 4000);
+      this._dropErrorTimer = setTimeout(() => this._dropError = '', 4000);
       return;
     }
     this._dropError = '';
@@ -1191,10 +1199,11 @@ export class PtEditTeamView extends LitElement {
   private async _onTryExample(e: Event) {
     e.preventDefault();
     try {
-      const res = await fetch('/examples/uswnt.yaml');
+      const res = await fetch('/examples/uswnt.yaml', { signal: this._abortController.signal });
       const text = await res.text();
+      if (this._abortController.signal.aborted) return;
       this._applyParsedRoster(parseRosterWithMeta(text));
-    } catch { /* silently fail */ }
+    } catch { /* silently fail — includes AbortError */ }
   }
 
   private _onFileSelected(e: Event) {

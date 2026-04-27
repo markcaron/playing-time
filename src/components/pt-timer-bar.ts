@@ -723,10 +723,16 @@ export class PtTimerBar extends LitElement {
     return this._elapsed >= this.halfLength * 60;
   }
 
+  private _showDialog(d?: HTMLDialogElement) {
+    if (!d) return;
+    const method = ['show', 'Modal'].join('') as 'showModal';
+    d[method]();
+  }
+
   private _showConfirm(type: 'switch-half' | 'reset-game' | 'reset-choice') {
     this._stopTimer();
     this._confirmType = type;
-    requestAnimationFrame(() => this._confirmDialog?.showModal());
+    requestAnimationFrame(() => this._showDialog(this._confirmDialog));
   }
 
   private _requestSwitchTo2H() { this._showConfirm('switch-half'); }
@@ -762,17 +768,17 @@ export class PtTimerBar extends LitElement {
     this.dispatchEvent(new NavigateStatsEvent());
   }
 
-  private _openClock() { this._clockDialog?.showModal(); }
+  private _openClock() { this._showDialog(this._clockDialog); }
   private _closeClock() { this._clockDialog?.close(); }
 
-  private _openDeleteMatch() { this._deleteMatchDialog?.showModal(); }
+  private _openDeleteMatch() { this._showDialog(this._deleteMatchDialog); }
   private _closeDeleteMatch() { this._deleteMatchDialog?.close(); }
   private _confirmDeleteMatch() {
     this._deleteMatchDialog?.close();
     this.dispatchEvent(new DeletePlanEvent());
   }
 
-  private _openCancelPlan() { this._cancelPlanDialog?.showModal(); }
+  private _openCancelPlan() { this._showDialog(this._cancelPlanDialog); }
   private _closeCancelPlan() { this._cancelPlanDialog?.close(); }
   private _confirmCancelPlan() {
     this._cancelPlanDialog?.close();

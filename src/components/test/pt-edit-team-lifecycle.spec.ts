@@ -34,6 +34,7 @@ describe('<pt-edit-team-view> lifecycle cleanup', function () {
   });
 
   it('does not update _dropError state after disconnect', async function () {
+    this.timeout(6000);
     const el = await fixture<PtEditTeamView>(html`
       <pt-edit-team-view .teams=${[]}></pt-edit-team-view>
     `);

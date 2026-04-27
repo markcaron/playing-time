@@ -146,8 +146,8 @@ describe('pt-stats-view — holistic stats and position column', function () {
     const pos = row!.querySelector('.position-col');
     expect(pos).to.exist;
     const text = pos!.textContent!;
-    expect(text).to.include('CM');
-    expect(text).to.include('CAM');
+    expect(text).to.match(/25:00\s*\(CM\)/);
+    expect(text).to.match(/07:30\s*\(CAM\)/);
   });
 
   it('Sub Sam: position column is empty (bench only, no position times)', function () {

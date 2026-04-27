@@ -19,9 +19,11 @@ let playingTimeSource: string;
 
 before(async function () {
   const timerBarResp = await fetch('/src/components/pt-timer-bar.ts');
+  expect(timerBarResp.ok, 'pt-timer-bar.ts should be fetchable from the dev server').to.be.true;
   timerBarSource = await timerBarResp.text();
 
   const playingTimeResp = await fetch('/src/components/playing-time.ts');
+  expect(playingTimeResp.ok, 'playing-time.ts should be fetchable from the dev server').to.be.true;
   playingTimeSource = await playingTimeResp.text();
 });
 
@@ -91,7 +93,7 @@ describe('playing-time.ts — stats view wiring', function () {
   });
 
   it('has "stats" as a currentView value', function () {
-    expect(playingTimeSource).to.match(/currentView.*stats|'stats'/);
+    expect(playingTimeSource).to.match(/currentView.*['"]stats['"]/);
   });
 
   it('renders <pt-stats-view> in the template', function () {

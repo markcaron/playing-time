@@ -26,7 +26,7 @@ import type {
   BenchTimeToggleEvent, OnFieldTimeToggleEvent, LargeTimeDisplayEvent,
   OpponentChangedEvent, TimeFormatChangedEvent, RosterSortChangedEvent,
 } from './pt-toolbar.js';
-import type { TimerTickEvent, ResetHalfEvent, ResetGameEvent, SavePlanEvent, EditLineupEvent, CancelPlanEvent, DeletePlanEvent, PlanHalfSwitchEvent, GameHalfSwitchedEvent, NavigateStatsEvent } from './pt-timer-bar.js';
+import type { ResetHalfEvent, ResetGameEvent, SavePlanEvent, EditLineupEvent, CancelPlanEvent, DeletePlanEvent, PlanHalfSwitchEvent, GameHalfSwitchedEvent, NavigateStatsEvent, TimerToggleEvent } from './pt-timer-bar.js';
 
 const GOAL_DEPTH = 2;
 const MAX_NAME_CHARS = 8;
@@ -478,11 +478,45 @@ export class PlayingTime extends LitElement {
   @query('svg.field') accessor svgEl!: SVGSVGElement;
   @query('pt-timer-bar') accessor timerBar!: import('./pt-timer-bar.js').PtTimerBar;
   #gameClock = new GameClock();
+  #timerInterval: ReturnType<typeof setInterval> | null = null;
+  @state() accessor gameHalf: 1 | 2 = 1;
   @query('#plan-2h-dialog') accessor plan2HDialog!: HTMLDialogElement;
   @query('#copy-match-dialog') accessor copyMatchDialog!: HTMLDialogElement;
   @query('#attendance-dialog') accessor attendanceDialog!: HTMLDialogElement;
   @query('#leave-game-dialog') accessor leaveGameDialog!: HTMLDialogElement;
   @state() accessor _attendanceAbsentIds: Set<string> = new Set();
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.#stopPolling();
+  }
+
+  #startPolling() {
+    if (this.#timerInterval) return;
+    this.#gameClock.start();
+    this.#timerInterval = setInterval(() => {
+      this.requestUpdate();
+      this.#onTimerTick({ half: this.gameHalf });
+    }, 1000);
+    this.requestUpdate();
+  }
+
+  #stopPolling() {
+    this.#gameClock.stop();
+    if (this.#timerInterval) {
+      clearInterval(this.#timerInterval);
+      this.#timerInterval = null;
+    }
+    this.requestUpdate();
+  }
+
+  #onTimerToggle(_e: TimerToggleEvent) {
+    if (this.#gameClock.running) {
+      this.#stopPolling();
+    } else {
+      this.#startPolling();
+    }
+  }
 
   #dragState: {
     id: string;
@@ -529,7 +563,7 @@ export class PlayingTime extends LitElement {
 
   #leaveGameSave() {
     this.leaveGameDialog?.close();
-    this.timerBar?.stopTimer();
+    this.#stopPolling();
     this.#saveState();
     this.#navigateTo('team', 'slide-to-right', 'slide-from-left');
   }
@@ -540,7 +574,7 @@ export class PlayingTime extends LitElement {
 
   #leaveGameDiscard() {
     this.leaveGameDialog?.close();
-    this.timerBar?.stopTimer();
+    this.#stopPolling();
     this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0, benchTime: 0, onFieldTime: 0 }));
     this.gameEvents = [];
     this.half1Started = false;
@@ -1034,7 +1068,7 @@ export class PlayingTime extends LitElement {
   // --- Team management ---
 
   #onTeamSwitched(e: TeamSwitchedEvent) {
-    this.timerBar?.stopTimer();
+    this.#stopPolling();
     this.#saveState();
     this.gameEvents = [];
     this.#loadTeam(e.teamId);
@@ -1122,7 +1156,7 @@ export class PlayingTime extends LitElement {
     }
   }
 
-  #onTimerTick(e: TimerTickEvent) {
+  #onTimerTick(e: { half: 1 | 2 }) {
     if (e.half === 1 && !this.half1Started) {
       this.half1Started = true;
     } else if (e.half === 2 && !this.half2Started) {
@@ -1142,6 +1176,8 @@ export class PlayingTime extends LitElement {
 
   #onGameHalfSwitched(e: GameHalfSwitchedEvent) {
     if (e.half === 2) {
+      this.gameHalf = 2;
+      this.#gameClock.reset();
       this.half1Started = true;
       if (this.#halfPlan2H) {
         this.#restoreHalfPlan(this.#halfPlan2H);
@@ -1151,6 +1187,7 @@ export class PlayingTime extends LitElement {
   }
 
   #onResetHalf(e: ResetHalfEvent) {
+    this.#gameClock.reset();
     const field = e.half === 1 ? 'half1Time' : 'half2Time';
     this.roster = this.roster.map(p => ({ ...p, [field]: 0, benchTime: 0, onFieldTime: 0 }));
     this.gameEvents = this.gameEvents.filter(ev => ev.half !== e.half);
@@ -1171,6 +1208,8 @@ export class PlayingTime extends LitElement {
   }
 
   #onResetGame(_e: ResetGameEvent) {
+    this.#gameClock.reset();
+    this.gameHalf = 1;
     this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0, benchTime: 0, onFieldTime: 0 }));
     this.gameEvents = [];
     this.half1Started = false;
@@ -1449,8 +1488,8 @@ export class PlayingTime extends LitElement {
     const target = this.fieldPlayers[targetIdx];
     this.gameEvents = [...this.gameEvents, {
       type: 'swap',
-      half: this.timerBar?.half ?? 1,
-      elapsed: this.timerBar?.elapsed ?? 0,
+      half: this.gameHalf,
+      elapsed: this.#gameClock.elapsed,
       playerA: dragged.name,
       playerB: target.name,
     }];
@@ -1473,8 +1512,8 @@ export class PlayingTime extends LitElement {
 
     this.gameEvents = [...this.gameEvents, {
       type: 'sub',
-      half: this.timerBar?.half ?? 1,
-      elapsed: this.timerBar?.elapsed ?? 0,
+      half: this.gameHalf,
+      elapsed: this.#gameClock.elapsed,
       playerA: subEntry.name,
       playerB: fieldEntry.name,
     }];
@@ -2049,6 +2088,7 @@ export class PlayingTime extends LitElement {
 
         <pt-timer-bar
           .timerElapsed="${this.#gameClock.elapsed}"
+          .timerRunning="${this.#gameClock.running}"
           .halfLength="${this.halfLength}"
           .teamName="${this.teamName}"
           .roster="${this.roster}"
@@ -2058,7 +2098,7 @@ export class PlayingTime extends LitElement {
           .half1Started="${this.half1Started}"
           .half2Started="${this.half2Started}"
           .timeDisplayFormat="${this.timeDisplayFormat}"
-          @timer-tick="${this.#onTimerTick}"
+          @timer-toggle="${this.#onTimerToggle}"
           @reset-half="${this.#onResetHalf}"
           @reset-game="${this.#onResetGame}"
           @game-half-switched="${this.#onGameHalfSwitched}"

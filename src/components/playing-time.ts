@@ -17,6 +17,7 @@ import { renderField, FIELD, PADDING } from '../lib/field.js';
 import { getFormationPositions, getSlotPositions, positionFitScore, POS_TO_GROUP, formationHasGK } from '../lib/formations.js';
 import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadAppState, saveAppState, createNewTeam, createGamePlan } from '../lib/storage.js';
+import { GameClock } from '../lib/game-clock.js';
 import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState, GameEvent, StoredHalfPlan, LineupSlot, TimeDisplayFormat, RosterSortOrder } from '../lib/types.js';
 import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, FORMATIONS_BY_FORMAT, getPlayerCount, getDefaultFormation, formatTime } from '../lib/types.js';
 import type {
@@ -476,6 +477,7 @@ export class PlayingTime extends LitElement {
 
   @query('svg.field') accessor svgEl!: SVGSVGElement;
   @query('pt-timer-bar') accessor timerBar!: import('./pt-timer-bar.js').PtTimerBar;
+  #gameClock = new GameClock();
   @query('#plan-2h-dialog') accessor plan2HDialog!: HTMLDialogElement;
   @query('#copy-match-dialog') accessor copyMatchDialog!: HTMLDialogElement;
   @query('#attendance-dialog') accessor attendanceDialog!: HTMLDialogElement;
@@ -551,18 +553,7 @@ export class PlayingTime extends LitElement {
   }
   #onNavigateBack(_e: NavigateBackEvent) { this.#navigateTo('home', 'slide-to-right', 'slide-from-left'); }
   #onNavigateNext(_e: NavigateNextEvent) { this.#navigateTo('game', 'slide-to-left', 'slide-from-right'); }
-  #pendingTimerRestore: { elapsed: number; half: 1 | 2 } | null = null;
-
   #onNavigateSettings() {
-    if (this.currentView === 'game' && this.timerBar) {
-      const wasRunning = (this.timerBar as unknown as { _running: boolean })._running;
-      if (wasRunning) {
-        this.#pendingTimerRestore = {
-          elapsed: this.timerBar.elapsed,
-          half: this.timerBar.half,
-        };
-      }
-    }
     this.#navigateTo('settings', 'slide-to-bottom', 'slide-from-top');
   }
   #onNavigateSettingsBack(_e: NavigateSettingsBackEvent) {
@@ -765,11 +756,6 @@ export class PlayingTime extends LitElement {
     if (this.#pendingCopyDialog && this.currentView === 'game' && this.copyMatchDialog) {
       this.#pendingCopyDialog = false;
       this.copyMatchDialog.showModal();
-    }
-    if (this.#pendingTimerRestore && this.currentView === 'game' && this.timerBar) {
-      const { elapsed, half } = this.#pendingTimerRestore;
-      this.#pendingTimerRestore = null;
-      this.timerBar.restoreTimer(elapsed, half, true);
     }
   }
 
@@ -2057,6 +2043,7 @@ export class PlayingTime extends LitElement {
         </div>
 
         <pt-timer-bar
+          .elapsed="${this.#gameClock.elapsed}"
           .halfLength="${this.halfLength}"
           .teamName="${this.teamName}"
           .roster="${this.roster}"

@@ -66,6 +66,13 @@ export class DeletePlanEvent extends Event {
   }
 }
 
+export class TimerToggleEvent extends Event {
+  static readonly eventName = 'timer-toggle' as const;
+  constructor() {
+    super(TimerToggleEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
 export class NavigateStatsEvent extends Event {
   static readonly eventName = 'navigate-stats' as const;
   constructor() {
@@ -659,73 +666,41 @@ export class PtTimerBar extends LitElement {
   @property({ type: String }) timeDisplayFormat: 'mm:ss' | 'mm' = 'mm:ss';
   @property({ type: Array }) gameEvents: GameEvent[] = [];
   @property({ type: Number }) timerElapsed = 0;
+  @property({ type: Boolean }) timerRunning = false;
   @state() private _showTimesHint = false;
 
-  @state() private _elapsed = 0;
-  @state() private _running = false;
   @state() private _half: 1 | 2 = 1;
   @state() private _confirmType: 'reset-choice' | 'switch-half' | 'reset-game' = 'reset-choice';
-
-  private _timerInterval: ReturnType<typeof setInterval> | null = null;
 
   @query('#confirm-dialog') private _confirmDialog!: HTMLDialogElement;
   @query('#clock-dialog') private _clockDialog!: HTMLDialogElement;
   @query('#delete-match-dialog') private _deleteMatchDialog!: HTMLDialogElement;
   @query('#cancel-plan-dialog') private _cancelPlanDialog!: HTMLDialogElement;
 
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    this._stopTimer();
-  }
-
   private _toggleTimer() {
-    if (this._running) {
-      this._stopTimer();
-    } else {
-      this._startTimer();
-    }
+    this.dispatchEvent(new TimerToggleEvent());
   }
 
-  private _startTimer() {
-    if (this._timerInterval) return;
-    this._running = true;
-    this._timerInterval = setInterval(() => {
-      this._elapsed++;
-      this.dispatchEvent(new TimerTickEvent(this._half));
-    }, 1000);
-  }
+  get half(): 1 | 2 { return this._half; }
 
-  private _stopTimer() {
-    this._running = false;
-    if (this._timerInterval) {
-      clearInterval(this._timerInterval);
-      this._timerInterval = null;
-    }
-    if (this._half === 2 && this._elapsed >= this.halfLength * 60) {
+  willUpdate(changed: Map<string, unknown>) {
+    if (changed.has('timerRunning') && !this.timerRunning && this._half === 2 && this.timerElapsed >= this.halfLength * 60) {
       this._showTimesHint = true;
     }
   }
 
-  stopTimer() { this._stopTimer(); }
-  get elapsed() { return this._elapsed; }
-  get half(): 1 | 2 { return this._half; }
-
-  restoreTimer(elapsed: number, half: 1 | 2, running: boolean) {
-    this._elapsed = elapsed;
-    this._half = half;
-    if (running) this._startTimer();
-  }
-
   private get _timeDisplay(): string {
-    return formatTime(this._elapsed);
+    return formatTime(this.timerElapsed);
   }
 
   private get _inStoppage(): boolean {
-    return this._elapsed >= this.halfLength * 60;
+    return this.timerElapsed >= this.halfLength * 60;
   }
 
   private _showConfirm(type: 'switch-half' | 'reset-game' | 'reset-choice') {
-    this._stopTimer();
+    if (this.timerRunning) {
+      this.dispatchEvent(new TimerToggleEvent());
+    }
     this._confirmType = type;
     requestAnimationFrame(() => this._confirmDialog?.showModal());
   }
@@ -736,20 +711,17 @@ export class PtTimerBar extends LitElement {
 
   private _confirmSwitchHalf() {
     this._half = 2;
-    this._elapsed = 0;
     this._confirmDialog?.close();
     this.dispatchEvent(new GameHalfSwitchedEvent(2));
   }
 
   private _confirmResetGame() {
     this._half = 1;
-    this._elapsed = 0;
     this.dispatchEvent(new ResetGameEvent());
     this._confirmDialog?.close();
   }
 
   private _confirmResetHalf() {
-    this._elapsed = 0;
     this.dispatchEvent(new ResetHalfEvent(this._half));
     this._confirmDialog?.close();
   }
@@ -802,10 +774,10 @@ export class PtTimerBar extends LitElement {
           ` : html`
             <label class="half-toggle">
               Half
-              <span class="half-slide ${this._half === 2 ? 'on' : ''} ${this._running ? 'disabled' : ''}">
+              <span class="half-slide ${this._half === 2 ? 'on' : ''} ${this.timerRunning ? 'disabled' : ''}">
                 <input type="checkbox"
                        .checked="${this._half === 2}"
-                       ?disabled="${this._running}"
+                       ?disabled="${this.timerRunning}"
                        @change="${(e: Event) => { e.preventDefault(); (e.target as HTMLInputElement).checked = this._half === 2; this._half === 1 ? this._requestSwitchTo2H() : this._requestSwitchTo1H(); }}" />
                 <span class="slide-track"></span>
                 <span class="slide-thumb">${this._half === 1 ? '1st' : '2nd'}</span>
@@ -815,11 +787,11 @@ export class PtTimerBar extends LitElement {
         </div>
         ${this.matchPhase === 'game' ? html`
           <div class="timer-center">
-            <button class="play-btn ${this._running ? 'running' : ''}"
+            <button class="play-btn ${this.timerRunning ? 'running' : ''}"
                     @click="${this._toggleTimer}"
-                    aria-label="${this._running ? 'Stop' : 'Play'}"
-                    title="${this._running ? 'Stop' : 'Play'}">
-              ${this._running ? svg`
+                    aria-label="${this.timerRunning ? 'Stop' : 'Play'}"
+                    title="${this.timerRunning ? 'Stop' : 'Play'}">
+              ${this.timerRunning ? svg`
                 <svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
                   <rect x="2" y="2" width="10" height="10" rx="1" fill="currentColor"/>
                 </svg>

@@ -479,6 +479,7 @@ export class PlayingTime extends LitElement {
   @query('pt-timer-bar') accessor timerBar!: import('./pt-timer-bar.js').PtTimerBar;
   #gameClock = new GameClock();
   #timerInterval: ReturnType<typeof setInterval> | null = null;
+  #lastTickElapsed = 0;
   @state() accessor gameHalf: 1 | 2 = 1;
   @query('#plan-2h-dialog') accessor plan2HDialog!: HTMLDialogElement;
   @query('#copy-match-dialog') accessor copyMatchDialog!: HTMLDialogElement;
@@ -494,9 +495,15 @@ export class PlayingTime extends LitElement {
   #startPolling() {
     if (this.#timerInterval) return;
     this.#gameClock.start();
+    this.#lastTickElapsed = this.#gameClock.elapsed;
     this.#timerInterval = setInterval(() => {
+      const now = this.#gameClock.elapsed;
+      const delta = now - this.#lastTickElapsed;
+      this.#lastTickElapsed = now;
       this.requestUpdate();
-      this.#onTimerTick({ half: this.gameHalf });
+      if (delta > 0) {
+        this.#onTimerTick({ half: this.gameHalf, delta });
+      }
     }, 1000);
     this.requestUpdate();
   }
@@ -1156,7 +1163,7 @@ export class PlayingTime extends LitElement {
     }
   }
 
-  #onTimerTick(e: { half: 1 | 2 }) {
+  #onTimerTick(e: { half: 1 | 2; delta: number }) {
     if (e.half === 1 && !this.half1Started) {
       this.half1Started = true;
     } else if (e.half === 2 && !this.half2Started) {
@@ -1164,11 +1171,12 @@ export class PlayingTime extends LitElement {
     }
 
     const field = e.half === 1 ? 'half1Time' : 'half2Time';
+    const d = e.delta;
     const fieldPlayerIds = new Set(this.fieldPlayers.map(fp => fp.id));
     this.roster = this.roster.map(p =>
       fieldPlayerIds.has(p.id)
-        ? { ...p, [field]: p[field] + 1, onFieldTime: p.onFieldTime + 1 }
-        : { ...p, benchTime: p.benchTime + 1 },
+        ? { ...p, [field]: p[field] + d, onFieldTime: p.onFieldTime + d }
+        : { ...p, benchTime: p.benchTime + d },
     );
     this.#rebuildSubPlayers();
     this.#saveState();
@@ -1178,6 +1186,7 @@ export class PlayingTime extends LitElement {
     if (e.half === 2) {
       this.gameHalf = 2;
       this.#gameClock.reset();
+      this.#lastTickElapsed = 0;
       this.half1Started = true;
       if (this.#halfPlan2H) {
         this.#restoreHalfPlan(this.#halfPlan2H);
@@ -1188,6 +1197,7 @@ export class PlayingTime extends LitElement {
 
   #onResetHalf(e: ResetHalfEvent) {
     this.#gameClock.reset();
+    this.#lastTickElapsed = 0;
     const field = e.half === 1 ? 'half1Time' : 'half2Time';
     this.roster = this.roster.map(p => ({ ...p, [field]: 0, benchTime: 0, onFieldTime: 0 }));
     this.gameEvents = this.gameEvents.filter(ev => ev.half !== e.half);
@@ -1209,6 +1219,7 @@ export class PlayingTime extends LitElement {
 
   #onResetGame(_e: ResetGameEvent) {
     this.#gameClock.reset();
+    this.#lastTickElapsed = 0;
     this.gameHalf = 1;
     this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0, benchTime: 0, onFieldTime: 0 }));
     this.gameEvents = [];

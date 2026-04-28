@@ -578,9 +578,14 @@ export class PlayingTime extends LitElement {
     if (meta.name) newTeam.teamName = meta.name;
     if (meta.format) newTeam.gameFormat = meta.format as GameFormat;
     if (meta.halfLength) newTeam.halfLength = meta.halfLength;
+    if (meta.formation) newTeam.formation = meta.formation as FormationKey;
     newTeam.players = players.map(p => ({
+      id: uid('p'),
       number: p.number,
       name: p.name,
+      nickname: p.nickname,
+      primaryPos: p.primaryPos as any,
+      secondaryPos: p.secondaryPos as any,
       half1Time: 0,
       half2Time: 0,
       benchTime: 0,

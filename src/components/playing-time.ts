@@ -18,6 +18,7 @@ import { getFormationPositions, getSlotPositions, positionFitScore, POS_TO_GROUP
 import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadAppState, saveAppState, createNewTeam, createGamePlan } from '../lib/storage.js';
 import { GameClock } from '../lib/game-clock.js';
+import { applyTimeDelta } from '../lib/player-times.js';
 import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState, GameEvent, StoredHalfPlan, LineupSlot, TimeDisplayFormat, RosterSortOrder } from '../lib/types.js';
 import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, FORMATIONS_BY_FORMAT, getPlayerCount, getDefaultFormation, formatTime } from '../lib/types.js';
 import type {
@@ -497,9 +498,9 @@ export class PlayingTime extends LitElement {
     this.#gameClock.start();
     this.#lastTickElapsed = this.#gameClock.elapsed;
     this.#timerInterval = setInterval(() => {
-      const now = this.#gameClock.elapsed;
-      const delta = now - this.#lastTickElapsed;
-      this.#lastTickElapsed = now;
+      const elapsed = this.#gameClock.elapsed;
+      const delta = elapsed - this.#lastTickElapsed;
+      this.#lastTickElapsed = elapsed;
       this.requestUpdate();
       if (delta > 0) {
         this.#onTimerTick({ half: this.gameHalf, delta });
@@ -1170,14 +1171,8 @@ export class PlayingTime extends LitElement {
       this.half2Started = true;
     }
 
-    const field = e.half === 1 ? 'half1Time' : 'half2Time';
-    const d = e.delta;
-    const fieldPlayerIds = new Set(this.fieldPlayers.map(fp => fp.id));
-    this.roster = this.roster.map(p =>
-      fieldPlayerIds.has(p.id)
-        ? { ...p, [field]: p[field] + d, onFieldTime: p.onFieldTime + d }
-        : { ...p, benchTime: p.benchTime + d },
-    );
+    const fieldIds = new Set(this.fieldPlayers.map(fp => fp.id));
+    this.roster = applyTimeDelta(this.roster, fieldIds, e.half, e.delta);
     this.#rebuildSubPlayers();
     this.#saveState();
   }

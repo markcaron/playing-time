@@ -16,7 +16,7 @@ import { expect } from '@open-wc/testing';
 let timerBarSource: string;
 
 before(async function () {
-  const resp = await fetch('/src/components/pt-timer-bar.ts');
+  const resp = await fetch('/__raw/src/components/pt-timer-bar.ts');
   expect(resp.ok, 'pt-timer-bar.ts should be fetchable').to.be.true;
   timerBarSource = await resp.text();
 });
@@ -55,6 +55,11 @@ describe('pt-timer-bar.ts — does NOT own a clock', function () {
   it('does NOT have _running state', function () {
     if (!timerBarSource) this.skip();
     expect(timerBarSource).to.not.match(/_running\s*[=;]/);
+  });
+
+  it('does NOT have restoreTimer method', function () {
+    if (!timerBarSource) this.skip();
+    expect(timerBarSource).to.not.include('restoreTimer');
   });
 });
 

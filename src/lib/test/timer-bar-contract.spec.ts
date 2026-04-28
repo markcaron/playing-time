@@ -18,11 +18,11 @@ let timerBarSource: string;
 let playingTimeSource: string;
 
 before(async function () {
-  const timerBarResp = await fetch('/src/components/pt-timer-bar.ts');
+  const timerBarResp = await fetch('/__raw/src/components/pt-timer-bar.ts');
   expect(timerBarResp.ok, 'pt-timer-bar.ts should be fetchable from the dev server').to.be.true;
   timerBarSource = await timerBarResp.text();
 
-  const playingTimeResp = await fetch('/src/components/playing-time.ts');
+  const playingTimeResp = await fetch('/__raw/src/components/playing-time.ts');
   expect(playingTimeResp.ok, 'playing-time.ts should be fetchable from the dev server').to.be.true;
   playingTimeSource = await playingTimeResp.text();
 });

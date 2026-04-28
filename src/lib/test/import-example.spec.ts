@@ -56,6 +56,11 @@ describe('Example import — USWNT roster round-trip', function () {
     expect(rose!.nickname).to.equal('Rosie');
   });
 
+  it('parsed players include secondaryPos where set', function () {
+    const withSecondary = parsed.players.filter(p => p.secondaryPos);
+    expect(withSecondary.length, 'some players should have secondaryPos').to.be.greaterThan(0);
+  });
+
   it('parsed meta includes formation', function () {
     expect(parsed.meta.formation).to.exist;
     expect(parsed.meta.formation).to.equal('1-4-3-3');

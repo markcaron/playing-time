@@ -28,6 +28,7 @@ function serveRawSource() {
     const relPath = ctx.url.slice('/__raw/'.length);
     const filePath = path.resolve(relPath);
     if (!filePath.startsWith(PROJECT_ROOT)) return next();
+    if (!filePath.endsWith('.ts')) return next();
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
       ctx.body = fs.readFileSync(filePath, 'utf-8');
       ctx.type = 'text/plain';

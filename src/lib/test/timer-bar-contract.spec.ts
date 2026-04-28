@@ -40,8 +40,8 @@ describe('pt-timer-bar.ts — Times/Stats dialog removal', function () {
     expect(timerBarSource).to.not.include('_timesDialog');
   });
 
-  it('does NOT contain _openTimes that calls showModal', function () {
-    expect(timerBarSource).to.not.match(/showModal/);
+  it('does NOT contain _openTimes (times dialog opener)', function () {
+    expect(timerBarSource).to.not.include('_openTimes');
   });
 
   it('does NOT contain _closeTimes', function () {

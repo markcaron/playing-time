@@ -66,6 +66,13 @@ export class DeletePlanEvent extends Event {
   }
 }
 
+export class NavigateStatsEvent extends Event {
+  static readonly eventName = 'navigate-stats' as const;
+  constructor() {
+    super(NavigateStatsEvent.eventName, { bubbles: true, composed: true });
+  }
+}
+
 @customElement('pt-timer-bar')
 export class PtTimerBar extends LitElement {
   static styles = css`
@@ -501,45 +508,6 @@ export class PtTimerBar extends LitElement {
       color: var(--pt-text-white);
     }
 
-    #times-dialog {
-      max-height: calc(100dvh - 32px);
-    }
-
-    #times-dialog .times-dialog-body {
-      min-height: 200px;
-    }
-
-    .times-dialog-body {
-      padding: 16px;
-      flex: 1;
-      overflow-y: auto;
-    }
-
-    .times-dialog-footer {
-      padding: 12px 16px;
-      border-top: 1px solid var(--pt-border-subtle);
-      display: flex;
-      justify-content: flex-end;
-      flex-shrink: 0;
-    }
-
-    .times-dialog-footer button {
-      padding: 8px 24px;
-      min-height: 44px;
-      font-size: 0.85rem;
-      border: none;
-      border-radius: 6px;
-      background: var(--pt-accent-solid);
-      color: var(--pt-accent-solid-text);
-      cursor: pointer;
-      font: inherit;
-    }
-
-    .times-dialog-footer button:focus-visible {
-      outline: 2px solid var(--pt-accent);
-      outline-offset: 2px;
-    }
-
     .times-table {
       width: 100%;
       border-collapse: collapse;
@@ -700,7 +668,6 @@ export class PtTimerBar extends LitElement {
   private _timerInterval: ReturnType<typeof setInterval> | null = null;
 
   @query('#confirm-dialog') private _confirmDialog!: HTMLDialogElement;
-  @query('#times-dialog') private _timesDialog!: HTMLDialogElement;
   @query('#clock-dialog') private _clockDialog!: HTMLDialogElement;
   @query('#delete-match-dialog') private _deleteMatchDialog!: HTMLDialogElement;
   @query('#cancel-plan-dialog') private _cancelPlanDialog!: HTMLDialogElement;
@@ -790,11 +757,10 @@ export class PtTimerBar extends LitElement {
     this._confirmDialog?.close();
   }
 
-  private _openTimes() {
+  private _onNavigateStats() {
     this._showTimesHint = false;
-    this._timesDialog?.showModal();
+    this.dispatchEvent(new NavigateStatsEvent());
   }
-  private _closeTimes() { this._timesDialog?.close(); }
 
   private _openClock() { this._clockDialog?.showModal(); }
   private _closeClock() { this._clockDialog?.close(); }
@@ -889,7 +855,7 @@ export class PtTimerBar extends LitElement {
             <button class="times-btn ${this._showTimesHint ? 'hint' : ''}"
                     aria-label="Times/Stats"
                     title="Times/Stats"
-                    @click="${this._openTimes}">
+                    @click="${this._onNavigateStats}">
               <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
                 <path d="m827.9 140.05-5.9492-17.699c-11.898-35.75-45.352-59.852-83-59.852h-277.9c-37.648 0-71.102 24.102-83 59.852l-5.9492 17.699c-6.3516 19.102-9.6016 39.148-9.6016 59.301v0.64844c0 23.199 9.1992 45.449 25.648 61.852 16.398 16.449 38.648 25.648 61.852 25.648h300c23.199 0 45.449-9.1992 61.852-25.648 16.449-16.398 25.648-38.648 25.648-61.852v-0.64844c0-20.148-3.25-40.199-9.6016-59.301zm-77.102 6 5.9492 17.699c3.8008 11.5 5.75 23.5 5.75 35.602v0.64844c0 3.3008-1.3008 6.5-3.6484 8.8516-2.3516 2.3516-5.5508 3.6484-8.8516 3.6484h-300c-3.3008 0-6.5-1.3008-8.8516-3.6484-2.3516-2.3516-3.6484-5.5508-3.6484-8.8516v-0.64844c0-12.102 1.9492-24.102 5.75-35.602l5.9492-17.699c1.6992-5.1016 6.4492-8.5508 11.852-8.5508h277.9c5.3984 0 10.148 3.4492 11.852 8.5508z" fill-rule="evenodd" fill="currentColor"/>
                 <path d="m400 137.5h-100c-75.949 0-137.5 61.551-137.5 137.5v725c0 75.949 61.551 137.5 137.5 137.5h600c75.949 0 137.5-61.551 137.5-137.5v-725c0-75.949-61.551-137.5-137.5-137.5h-100c-20.699 0-37.5 16.801-37.5 37.5s16.801 37.5 37.5 37.5h100c34.5 0 62.5 28 62.5 62.5v725c0 34.5-28 62.5-62.5 62.5h-600c-34.5 0-62.5-28-62.5-62.5v-725c0-34.5 28-62.5 62.5-62.5h100c20.699 0 37.5-16.801 37.5-37.5s-16.801-37.5-37.5-37.5z" fill-rule="evenodd" fill="currentColor"/>
@@ -997,68 +963,6 @@ export class PtTimerBar extends LitElement {
         </div>
       </dialog>
 
-      <dialog id="times-dialog" @close="${this._closeTimes}">
-        <div class="dialog-header">
-          <h2>${this.teamName ? `${this.teamName} Times & Stats` : 'Times & Stats'}</h2>
-          <button class="dialog-close" @click="${this._closeTimes}" aria-label="Close" title="Close">
-            <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
-        </div>
-        <div class="times-dialog-body">
-          <h3 class="section-heading">Playing Time</h3>
-          <table class="times-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Player name</th>
-                <th class="time-col">1st</th>
-                <th class="time-col">2nd</th>
-                <th class="time-col total-col">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${this.roster.map(p => html`
-                <tr>
-                  <td class="jersey-col">${p.number}</td>
-                  <td>${p.name}</td>
-                  <td class="time-col">${formatTime(p.half1Time, this.timeDisplayFormat)}</td>
-                  <td class="time-col">${formatTime(p.half2Time, this.timeDisplayFormat)}</td>
-                  <td class="time-col total">${formatTime(p.half1Time + p.half2Time, this.timeDisplayFormat)}</td>
-                </tr>
-              `)}
-            </tbody>
-          </table>
-
-          <h3 class="section-heading">Substitutions & Swaps</h3>
-          ${this.gameEvents.length === 0 ? html`
-            <p class="no-events">No substitutions or swaps yet</p>
-          ` : html`
-            <table class="times-table events-table">
-              <thead>
-                <tr>
-                  <th>Half</th>
-                  <th class="time-col">Time</th>
-                  <th>Event</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${this.gameEvents.map(ev => html`
-                  <tr>
-                    <td class="jersey-col">${ev.half === 1 ? '1H' : '2H'}</td>
-                    <td class="time-col">${formatTime(ev.elapsed)}</td>
-                    <td>${ev.type === 'sub'
-                      ? html`<span class="event-sub">&#x25B2;</span> ${ev.playerA} <span class="event-sub-out">&#x25BC;</span> ${ev.playerB}`
-                      : html`${ev.playerA} &#x21C4; ${ev.playerB}`}</td>
-                  </tr>
-                `)}
-              </tbody>
-            </table>
-          `}
-        </div>
-        <div class="times-dialog-footer">
-          <button @click="${this._closeTimes}">Done</button>
-        </div>
-      </dialog>
     `;
   }
 }

@@ -7,14 +7,17 @@ import './pt-home-view.js';
 import './pt-team-view.js';
 import './pt-edit-team-view.js';
 import './pt-settings-view.js';
+import './pt-stats-view.js';
 import type { NavigateBackEvent, NavigateNextEvent, NavigateEditEvent, GamePlanSelectedEvent, CreateGamePlanEvent } from './pt-team-view.js';
 import type { TeamSelectedEvent, NavigateEditTeamEvent, ImportExampleEvent } from './pt-home-view.js';
 import type { TeamSavedEvent, EditCancelledEvent, EditTeamDeletedEvent } from './pt-edit-team-view.js';
 import type { NavigateSettingsBackEvent } from './pt-settings-view.js';
+import type { NavigateStatsBackEvent } from './pt-stats-view.js';
 import { renderField, FIELD, PADDING } from '../lib/field.js';
 import { getFormationPositions, getSlotPositions, positionFitScore, POS_TO_GROUP, formationHasGK } from '../lib/formations.js';
 import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadAppState, saveAppState, createNewTeam, createGamePlan } from '../lib/storage.js';
+import { GameClock } from '../lib/game-clock.js';
 import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState, GameEvent, StoredHalfPlan, LineupSlot, TimeDisplayFormat, RosterSortOrder } from '../lib/types.js';
 import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, FORMATIONS_BY_FORMAT, getPlayerCount, getDefaultFormation, formatTime } from '../lib/types.js';
 import type {
@@ -23,7 +26,7 @@ import type {
   BenchTimeToggleEvent, OnFieldTimeToggleEvent, LargeTimeDisplayEvent,
   OpponentChangedEvent, TimeFormatChangedEvent, RosterSortChangedEvent,
 } from './pt-toolbar.js';
-import type { TimerTickEvent, ResetHalfEvent, ResetGameEvent, SavePlanEvent, EditLineupEvent, CancelPlanEvent, DeletePlanEvent, PlanHalfSwitchEvent, GameHalfSwitchedEvent } from './pt-timer-bar.js';
+import type { TimerTickEvent, ResetHalfEvent, ResetGameEvent, SavePlanEvent, EditLineupEvent, CancelPlanEvent, DeletePlanEvent, PlanHalfSwitchEvent, GameHalfSwitchedEvent, NavigateStatsEvent } from './pt-timer-bar.js';
 
 const GOAL_DEPTH = 2;
 const MAX_NAME_CHARS = 8;
@@ -437,8 +440,8 @@ export class PlayingTime extends LitElement {
     }
   `;
 
-  @state() accessor currentView: 'home' | 'team' | 'game' | 'settings' | 'edit-team' = 'home';
-  @state() accessor previousView: 'home' | 'team' | 'game' = 'home';
+  @state() accessor currentView: 'home' | 'team' | 'game' | 'settings' | 'edit-team' | 'stats' = 'home';
+  @state() accessor previousView: 'home' | 'team' | 'game' | 'stats' = 'home';
   @state() accessor editingTeamId: string | null = null;
   @state() accessor activeGamePlanId: string | null = null;
   @state() accessor matchPhase: 'plan' | 'game' = 'plan';
@@ -474,6 +477,7 @@ export class PlayingTime extends LitElement {
 
   @query('svg.field') accessor svgEl!: SVGSVGElement;
   @query('pt-timer-bar') accessor timerBar!: import('./pt-timer-bar.js').PtTimerBar;
+  #gameClock = new GameClock();
   @query('#plan-2h-dialog') accessor plan2HDialog!: HTMLDialogElement;
   @query('#copy-match-dialog') accessor copyMatchDialog!: HTMLDialogElement;
   @query('#attendance-dialog') accessor attendanceDialog!: HTMLDialogElement;
@@ -490,12 +494,12 @@ export class PlayingTime extends LitElement {
     source: 'field' | 'sub';
   } | null = null;
 
-  #navigateTo(view: 'home' | 'team' | 'game' | 'settings' | 'edit-team', oldAnim: string, newAnim: string) {
+  #navigateTo(view: 'home' | 'team' | 'game' | 'settings' | 'edit-team' | 'stats', oldAnim: string, newAnim: string) {
     const root = document.documentElement;
     root.style.setProperty('--pt-vt-old', oldAnim);
     root.style.setProperty('--pt-vt-new', newAnim);
     if (view === 'settings' || view === 'edit-team') {
-      this.previousView = this.currentView as 'home' | 'team' | 'game';
+      this.previousView = this.currentView as 'home' | 'team' | 'game' | 'stats';
       localStorage.setItem('pt-previous-view', this.previousView);
     }
     if (!document.startViewTransition) {
@@ -549,21 +553,22 @@ export class PlayingTime extends LitElement {
   }
   #onNavigateBack(_e: NavigateBackEvent) { this.#navigateTo('home', 'slide-to-right', 'slide-from-left'); }
   #onNavigateNext(_e: NavigateNextEvent) { this.#navigateTo('game', 'slide-to-left', 'slide-from-right'); }
-  #pendingTimerRestore: { elapsed: number; half: 1 | 2 } | null = null;
-
   #onNavigateSettings() {
-    if (this.currentView === 'game' && this.timerBar) {
-      const wasRunning = (this.timerBar as unknown as { _running: boolean })._running;
-      if (wasRunning) {
-        this.#pendingTimerRestore = {
-          elapsed: this.timerBar.elapsed,
-          half: this.timerBar.half,
-        };
-      }
-    }
     this.#navigateTo('settings', 'slide-to-bottom', 'slide-from-top');
   }
   #onNavigateSettingsBack(_e: NavigateSettingsBackEvent) {
+    const returnTo = this.previousView;
+    this.#navigateTo(returnTo, 'slide-to-up', 'slide-from-bottom');
+  }
+
+  #onNavigateStats() {
+    if (this.currentView === 'game' || this.currentView === 'team') {
+      this.previousView = this.currentView as any;
+    }
+    this.#navigateTo('stats', 'slide-to-bottom', 'slide-from-top');
+  }
+
+  #onNavigateStatsBack() {
     const returnTo = this.previousView;
     this.#navigateTo(returnTo, 'slide-to-up', 'slide-from-bottom');
   }
@@ -752,11 +757,6 @@ export class PlayingTime extends LitElement {
       this.#pendingCopyDialog = false;
       this.copyMatchDialog.showModal();
     }
-    if (this.#pendingTimerRestore && this.currentView === 'game' && this.timerBar) {
-      const { elapsed, half } = this.#pendingTimerRestore;
-      this.#pendingTimerRestore = null;
-      this.timerBar.restoreTimer(elapsed, half, true);
-    }
   }
 
   connectedCallback() {
@@ -771,13 +771,13 @@ export class PlayingTime extends LitElement {
     }
 
     const savedView = localStorage.getItem('pt-current-view');
-    const validViews = ['home', 'team', 'game', 'settings', 'edit-team'];
+    const validViews = ['home', 'team', 'game', 'settings', 'edit-team', 'stats'];
     if (savedView && validViews.includes(savedView)) {
       this.currentView = savedView as typeof this.currentView;
     }
 
     const savedPrev = localStorage.getItem('pt-previous-view');
-    const validPrevViews = ['home', 'team', 'game'];
+    const validPrevViews = ['home', 'team', 'game', 'stats'];
     if (savedPrev && validPrevViews.includes(savedPrev)) {
       this.previousView = savedPrev as typeof this.previousView;
     }
@@ -1883,6 +1883,18 @@ export class PlayingTime extends LitElement {
       `;
     }
 
+    if (this.currentView === 'stats') {
+      return html`
+        <pt-stats-view
+          .teamName="${this.teamName}"
+          .roster="${this.roster}"
+          .gameEvents="${this.gameEvents}"
+          .timeDisplayFormat="${this.timeDisplayFormat}"
+          @navigate-stats-back="${this.#onNavigateStatsBack}">
+        </pt-stats-view>
+      `;
+    }
+
     return html`
       <div class="rotate-overlay">
         <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="M880.71 163.3V163.32L740.23 163.16L738.09 127.98L882.89 128L880.71 163.3ZM106.9 438.69H106.88L105.81 458.31L105.78 459.55L105.99 479.2C106.11 489.65 114.67 498.03 125.12 497.92C135.5 497.81 143.84 489.35 143.84 479L143.63 459.77L144.64 441.37L146.85 423.11L150.26 405.01L154.85 387.19L160.6 369.72L167.5 352.63L175.49 336.07L184.57 320.03L194.67 304.65L205.76 289.97L217.8 276.04L230.73 262.93L244.27 250.89L258.55 239.75L273.53 229.55L289.13 220.35L305.29 212.18L321.96 205.07L339.06 199.05L356.5 194.15L374.21 190.39L392.15 187.78L409.75 186.38L388.69 203.43C384.01 207.22 381.58 212.76 381.58 218.35C381.58 222.59 382.98 226.86 385.86 230.41C392.52 238.64 404.61 239.91 412.84 233.25L475.4 182.59C479.9 178.95 482.51 173.47 482.53 167.68V167.59C482.53 161.81 479.9 156.42 475.4 152.77L413.16 102.35C404.93 95.68 392.85 96.95 386.18 105.18C383.3 108.73 381.9 113 381.9 117.25C381.9 122.84 384.33 128.38 389.01 132.17L409.17 148.5H409.04L407.82 148.56L388.53 150.1L387.31 150.24L368.17 153.02L366.96 153.24L348.04 157.26L346.85 157.55L328.23 162.78L327.06 163.15L308.81 169.58L307.67 170.03L289.88 177.62L288.77 178.14L271.51 186.87L270.44 187.46L253.78 197.29L252.74 197.95L236.75 208.83L235.76 209.55L220.51 221.45L219.57 222.23L205.11 235.09L204.22 235.94L190.42 249.93L189.58 250.84L176.73 265.71L175.95 266.68L164.1 282.36L163.39 283.38L152.6 299.81L151.95 300.87L142.27 317.97L141.69 319.07L133.15 336.77L132.64 337.91L125.28 356.13L124.85 357.3L118.71 375.97L118.36 377.17L113.45 396.2L113.18 397.41L109.54 416.72L109.35 417.95L106.98 437.46L106.93 438.7H106.88H106.9V438.69ZM1034.12 127.99H1035.01C1048.17 128.42 1058.72 139.24 1058.72 152.52V850.85L562.25 850.87V152.52C562.25 139.24 572.79 128.42 585.96 127.99L699.84 128.01L703.25 183.42C703.87 193.49 712.21 201.33 722.3 201.33L898.64 201.38C908.72 201.36 917.06 193.52 917.69 183.46L921.13 127.99H1034.12ZM165.32 878.25V878.27L130.31 880.29L130.22 735.5L165.38 737.71V737.73L165.32 878.26V878.25ZM810.51 955.19H810.54C821.5 955.19 830.33 964.07 830.33 975.02C830.33 985.97 821.45 994.85 810.5 994.85C799.55 994.85 790.67 985.97 790.67 975.02C790.67 964.07 799.52 955.19 810.47 955.19H810.52H810.51ZM810.5 916.95H810.46C778.39 916.95 752.43 942.95 752.43 975.02C752.43 1007.09 778.42 1033.08 810.49 1033.08C842.56 1033.08 868.56 1007.08 868.56 975.02C868.56 942.96 842.59 916.95 810.52 916.95H810.5ZM1058.75 1031.75V1031.8C1058.75 1045.02 1048.2 1056.26 1035.04 1056.28L585.98 1056.3C572.82 1055.87 562.26 1045.04 562.26 1031.76V889.07L1058.74 889.11V1031.75H1058.75ZM153.36 521.44V521.46C153.47 521.44 153.36 521.44 153.36 521.44C121.46 522.14 95.39 546.56 92.24 577.77V577.84C92.01 580 91.87 1031.59 91.87 1031.59C91.87 1055.47 105.03 1076.19 124.65 1086.81L124.74 1086.86C133.33 1091.56 143.14 1094.56 153.58 1094.56L481.57 1094.36C492.12 1094.36 500.68 1085.81 500.68 1075.26C500.68 1064.71 492.23 1056.26 481.77 1056.16C481.51 1056.16 154.65 1056.16 154.65 1056.16C150.38 1056.16 146.37 1055.07 142.87 1053.15L142.82 1053.12C135.64 1049 130.71 1041.43 130.42 1032.66L130.35 918.55L185.58 915.17C195.64 914.55 203.48 906.22 203.5 896.15C203.5 896.06 203.57 719.78 203.57 719.78C203.57 709.7 195.73 701.35 185.67 700.73L130.22 697.28L130.29 581.75C131.64 569.45 142.04 559.9 154.67 559.89L481.58 559.71C492.13 559.69 500.69 551.14 500.69 540.59C500.69 530.04 492.14 521.48 481.58 521.48H153.36V521.5V521.47V521.44ZM586.84 89.74H586.79C552.59 89.74 524.79 117.08 524.04 151.11V1033.18C524.81 1067.22 552.62 1094.56 586.81 1094.56H1034.2C1068.39 1094.54 1096.21 1067.2 1096.96 1033.17V151.11C1096.19 117.07 1068.38 89.73 1034.19 89.73H586.84V89.74Z" fill="white"/></svg>
@@ -2031,6 +2043,7 @@ export class PlayingTime extends LitElement {
         </div>
 
         <pt-timer-bar
+          .elapsed="${this.#gameClock.elapsed}"
           .halfLength="${this.halfLength}"
           .teamName="${this.teamName}"
           .roster="${this.roster}"
@@ -2048,7 +2061,8 @@ export class PlayingTime extends LitElement {
           @edit-lineup="${this.#onEditLineup}"
           @cancel-plan="${this.#onCancelPlan}"
           @delete-plan="${this.#onDeletePlan}"
-          @plan-half-switch="${this.#onPlanHalfSwitch}">
+          @plan-half-switch="${this.#onPlanHalfSwitch}"
+          @navigate-stats="${this.#onNavigateStats}">
         </pt-timer-bar>
 
         <dialog id="plan-2h-dialog" class="confirm-dialog">

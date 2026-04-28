@@ -53,4 +53,16 @@ describe('playing-time.ts — delta-based player time updates', function () {
     if (!playingTimeSource) this.skip();
     expect(playingTimeSource).to.match(/applyTimeDelta\s*\(/);
   });
+
+  it('resets lastTickElapsed on game or half reset', function () {
+    if (!playingTimeSource) this.skip();
+    const resetSection = playingTimeSource.match(
+      /onResetGame|onResetHalf|resetGame|resetHalf/
+    );
+    expect(resetSection, 'should have reset handler(s)').to.not.be.null;
+    const hasResetLastTick = playingTimeSource.match(
+      /lastTickElapsed\s*=\s*0|lastProcessedElapsed\s*=\s*0|_lastElapsed\s*=\s*0/
+    );
+    expect(hasResetLastTick, 'must reset lastTickElapsed to 0 on game/half reset').to.not.be.null;
+  });
 });

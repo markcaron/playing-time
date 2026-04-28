@@ -658,6 +658,7 @@ export class PtTimerBar extends LitElement {
   @property({ type: Boolean }) half2Started = false;
   @property({ type: String }) timeDisplayFormat: 'mm:ss' | 'mm' = 'mm:ss';
   @property({ type: Array }) gameEvents: GameEvent[] = [];
+  @property({ type: Number }) timerElapsed = 0;
   @state() private _showTimesHint = false;
 
   @state() private _elapsed = 0;

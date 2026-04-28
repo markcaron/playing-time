@@ -74,7 +74,7 @@ describe('Example import — USWNT roster round-trip', function () {
 let playingTimeSource: string;
 
 before(async function () {
-  const resp = await fetch('/src/components/playing-time.ts');
+  const resp = await fetch('/__raw/src/components/playing-time.ts');
   expect(resp.ok, 'playing-time.ts should be fetchable').to.be.true;
   playingTimeSource = await resp.text();
 });

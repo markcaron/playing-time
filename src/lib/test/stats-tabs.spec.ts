@@ -152,22 +152,67 @@ describe('<pt-stats-view> — tabbed layout', function () {
     }
   });
 
-  it('supports arrow key navigation between tabs', function () {
-    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+  it('ArrowRight moves focus to the next tab', function () {
     const tablist = el.shadowRoot!.querySelector('[role="tablist"]') as HTMLElement;
-    expect(tablist).to.exist;
-
-    const activeTab = tabs.find(t => t.getAttribute('aria-selected') === 'true') as HTMLElement;
+    const activeTab = el.shadowRoot!.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement;
     activeTab.focus();
 
     tablist.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
 
     return el.updateComplete.then(() => {
-      const newActive = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'))
-        .find(t => t.getAttribute('aria-selected') === 'true');
+      const newActive = el.shadowRoot!.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement;
       expect(newActive).to.exist;
-      expect(newActive!.textContent!.trim().toLowerCase()).to.not.equal('totals');
+      expect(newActive.textContent!.trim().toLowerCase()).to.equal('halves');
     });
+  });
+
+  it('ArrowLeft moves focus to the previous tab (wraps to last)', function () {
+    const tablist = el.shadowRoot!.querySelector('[role="tablist"]') as HTMLElement;
+    const activeTab = el.shadowRoot!.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement;
+    activeTab.focus();
+
+    tablist.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+
+    return el.updateComplete.then(() => {
+      const newActive = el.shadowRoot!.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement;
+      expect(newActive).to.exist;
+      const label = newActive.textContent!.trim().toLowerCase();
+      expect(label.includes('sub'), 'ArrowLeft from first tab should wrap to last (Subs)').to.be.true;
+    });
+  });
+
+  it('Home key moves focus to the first tab', function () {
+    // First move to a non-first tab
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    const secondTab = tabs[1] as HTMLElement;
+    secondTab.click();
+
+    return el.updateComplete.then(() => {
+      const tablist = el.shadowRoot!.querySelector('[role="tablist"]') as HTMLElement;
+      tablist.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+
+      return el.updateComplete.then(() => {
+        const active = el.shadowRoot!.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement;
+        expect(active.textContent!.trim().toLowerCase()).to.equal('totals');
+      });
+    });
+  });
+
+  it('End key moves focus to the last tab', function () {
+    const tablist = el.shadowRoot!.querySelector('[role="tablist"]') as HTMLElement;
+    tablist.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+
+    return el.updateComplete.then(() => {
+      const active = el.shadowRoot!.querySelector('[role="tab"][aria-selected="true"]') as HTMLElement;
+      expect(active.textContent!.trim().toLowerCase()).to.include('sub');
+    });
+  });
+
+  it('tabpanels have tabindex="0" for keyboard access', function () {
+    const panels = Array.from(el.shadowRoot!.querySelectorAll('[role="tabpanel"]'));
+    for (const panel of panels) {
+      expect(panel.getAttribute('tabindex'), `tabpanel must have tabindex="0"`).to.equal('0');
+    }
   });
 
   /* ═══════════════════════════════════════════════════════════

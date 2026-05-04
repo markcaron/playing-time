@@ -49,9 +49,14 @@ describe('playing-time.ts — PositionTracker integration', function () {
     expect(playingTimeSource).to.match(/getAllPositionTimes\s*\(/);
   });
 
-  it('writes positionTimes to roster entries', function () {
+  it('writes positionTimes to roster entries in the tick handler', function () {
     if (!playingTimeSource) this.skip();
-    expect(playingTimeSource).to.include('positionTimes');
+    const tickIdx = playingTimeSource.indexOf('lastTickElapsed');
+    expect(tickIdx, 'tick handler should reference lastTickElapsed').to.be.greaterThan(-1);
+    const tickSection = playingTimeSource.slice(
+      Math.max(0, tickIdx - 200), tickIdx + 800
+    );
+    expect(tickSection).to.include('positionTimes');
   });
 
   it('resets the PositionTracker on game reset', function () {
@@ -64,6 +69,17 @@ describe('playing-time.ts — PositionTracker integration', function () {
       /positionTracker.*\.reset|#positionTracker.*\.reset|tracker.*\.reset(?!.*gameClock)/i
     );
     expect(hasTrackerReset, 'must reset PositionTracker (not just GameClock) on game reset').to.not.be.null;
+  });
+
+  it('resets the PositionTracker on half reset', function () {
+    if (!playingTimeSource) this.skip();
+    const halfResetIdx = playingTimeSource.indexOf('onResetHalf');
+    expect(halfResetIdx, 'onResetHalf handler should exist').to.be.greaterThan(-1);
+    const halfResetSection = playingTimeSource.slice(halfResetIdx, halfResetIdx + 500);
+    const hasTrackerReset = halfResetSection.match(
+      /positionTracker.*\.reset|#positionTracker.*\.reset|tracker.*\.reset(?!.*gameClock)/i
+    );
+    expect(hasTrackerReset, 'must reset PositionTracker on half reset').to.not.be.null;
   });
 
   it('passes positionTimes to pt-stats-view', function () {

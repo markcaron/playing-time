@@ -431,10 +431,34 @@ export class PtTimerBar extends LitElement {
       outline-offset: 2px;
     }
 
-    .confirm-actions .confirm-yes {
+    .confirm-actions .confirm-primary {
+      background: var(--pt-accent);
+      border-color: var(--pt-accent);
+      color: var(--pt-accent-solid-text);
+    }
+
+    .confirm-actions .confirm-primary:hover {
+      background: var(--pt-accent-solid-hover);
+    }
+
+    .confirm-actions .confirm-danger {
       background: var(--pt-danger);
       border-color: var(--pt-danger);
       color: var(--pt-text-white);
+    }
+
+    .confirm-actions .confirm-danger:hover {
+      background: var(--pt-danger-hover);
+    }
+
+    .confirm-actions .confirm-danger-outline {
+      border: 1px solid var(--pt-danger);
+      color: var(--pt-danger);
+      background: transparent;
+    }
+
+    .confirm-actions .confirm-danger-outline:hover {
+      background: var(--pt-hover-overlay);
     }
 
     .confirm-actions .cancel-btn {
@@ -445,10 +469,6 @@ export class PtTimerBar extends LitElement {
 
     .confirm-actions .cancel-btn:hover {
       background: var(--pt-hover-overlay);
-    }
-
-    .confirm-actions .confirm-yes:hover {
-      background: var(--pt-danger-hover);
     }
 
     .confirm-actions .confirm-warn {
@@ -856,7 +876,7 @@ export class PtTimerBar extends LitElement {
             <div class="confirm-actions">
               <button class="cancel-btn" @click="${this._cancelConfirm}">Cancel</button>
               <div class="confirm-actions-right">
-                <button class="confirm-yes" @click="${this._confirmSwitchHalf}">Start 2nd Half</button>
+                <button class="confirm-primary" @click="${this._confirmSwitchHalf}">Start 2nd Half</button>
               </div>
             </div>
           ` : this._confirmType === 'reset-game' ? html`
@@ -864,7 +884,7 @@ export class PtTimerBar extends LitElement {
             <div class="confirm-actions">
               <button class="cancel-btn" @click="${this._cancelConfirm}">Cancel</button>
               <div class="confirm-actions-right">
-                <button class="confirm-yes" @click="${this._confirmResetGame}">Reset Game</button>
+                <button class="confirm-danger" @click="${this._confirmResetGame}">Reset Game</button>
               </div>
             </div>
           ` : html`
@@ -876,7 +896,7 @@ export class PtTimerBar extends LitElement {
               <button class="cancel-btn" @click="${this._cancelConfirm}">Cancel</button>
               <div class="confirm-actions-right">
                 <button class="confirm-warn" @click="${this._confirmResetHalf}">Reset Half</button>
-                <button class="confirm-yes" @click="${this._confirmResetGame}">Reset Game</button>
+                <button class="confirm-danger" @click="${this._confirmResetGame}">Reset Game</button>
               </div>
             </div>
           `}
@@ -912,7 +932,7 @@ export class PtTimerBar extends LitElement {
           <div class="confirm-actions">
             <button class="cancel-btn" @click="${this._closeDeleteMatch}">Cancel</button>
             <div class="confirm-actions-right">
-              <button class="confirm-yes" @click="${this._confirmDeleteMatch}">Delete Match</button>
+              <button class="confirm-danger" @click="${this._confirmDeleteMatch}">Delete Match</button>
             </div>
           </div>
         </div>
@@ -928,9 +948,9 @@ export class PtTimerBar extends LitElement {
         <div class="dialog-body">
           <p>You have unsaved changes. Would you like to save before leaving?</p>
           <div class="confirm-actions">
-            <button class="cancel-btn" @click="${this._confirmCancelPlan}">Discard</button>
+            <button class="confirm-danger-outline" @click="${this._confirmCancelPlan}">Discard</button>
             <div class="confirm-actions-right">
-              <button class="confirm-yes" @click="${this._saveThenCancel}">Save</button>
+              <button class="confirm-primary" @click="${this._saveThenCancel}">Save</button>
             </div>
           </div>
         </div>

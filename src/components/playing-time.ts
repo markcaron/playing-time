@@ -192,6 +192,13 @@ export class PlayingTime extends LitElement {
       outline-offset: 2px;
     }
 
+    .attendance-btn:focus-visible,
+    .reset-positions-btn:focus-visible,
+    .edit-lineup-btn:focus-visible {
+      outline: 2px solid var(--pt-accent);
+      outline-offset: 2px;
+    }
+
     .select-wrap {
       position: relative;
       display: inline-flex;

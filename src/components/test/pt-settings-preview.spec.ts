@@ -380,4 +380,43 @@ describe('<pt-settings-view> — holistic player display spec', function () {
     expect(fill, 'fill should not be transparent').to.not.equal('transparent');
     expect(fill, 'fill should not be rgba transparent').to.not.equal('rgba(0, 0, 0, 0)');
   });
+
+  /* ═══════════════════════════════════════════════════════════
+   * Responsive layout — settings rows must not overflow
+   * ═══════════════════════════════════════════════════════════ */
+
+  it('settings rows use flex-wrap to prevent overflow', function () {
+    const rows = Array.from(element.shadowRoot!.querySelectorAll('.settings-row'));
+    expect(rows.length, 'should have settings-row elements').to.be.greaterThan(0);
+    for (const row of rows) {
+      const style = getComputedStyle(row as HTMLElement);
+      if (style.display === 'flex' || style.display === 'inline-flex') {
+        expect(style.flexWrap, `settings-row "${(row as HTMLElement).textContent!.trim().slice(0, 30)}..." must have flex-wrap: wrap`).to.equal('wrap');
+      }
+    }
+  });
+
+  it('no settings row content overflows the fieldset', function () {
+    const fieldset = element.shadowRoot!.querySelector('.player-display-group, fieldset') as HTMLElement;
+    if (!fieldset) return;
+    const fieldsetRect = fieldset.getBoundingClientRect();
+
+    const rows = Array.from(fieldset.querySelectorAll('.settings-row'));
+    for (const row of rows) {
+      const rowRect = (row as HTMLElement).getBoundingClientRect();
+      expect(rowRect.right, `row "${(row as HTMLElement).textContent!.trim().slice(0, 30)}..." right edge must not exceed fieldset`).to.be.at.most(fieldsetRect.right + 1);
+    }
+  });
+
+  it('select elements do not overflow their parent row', function () {
+    const selects = Array.from(element.shadowRoot!.querySelectorAll('.settings-row select, .settings-row .select-wrap'));
+    for (const select of selects) {
+      const selectEl = select as HTMLElement;
+      const parent = selectEl.closest('.settings-row') as HTMLElement;
+      if (!parent) continue;
+      const parentRect = parent.getBoundingClientRect();
+      const selectRect = selectEl.getBoundingClientRect();
+      expect(selectRect.right, 'select must not overflow its row').to.be.at.most(parentRect.right + 1);
+    }
+  });
 });

@@ -180,3 +180,39 @@ describe('Attendance dialog — guest player a11y', function () {
     expect(hasLegend, 'guest fieldset must have a legend for screen readers').to.not.be.null;
   });
 });
+
+/* ═══════════════════════════════════════════════════════════════
+ * Guest player deletion from Attendance dialog
+ * ═══════════════════════════════════════════════════════════════ */
+
+describe('Attendance dialog — delete guest player', function () {
+  it('has a delete button for guest players', function () {
+    if (!playingTimeSource) this.skip();
+    const hasDeleteGuest = playingTimeSource.match(/[Dd]elete guest/);
+    expect(hasDeleteGuest, 'should have a delete guest button').to.not.be.null;
+  });
+
+  it('delete button has title="Delete guest player"', function () {
+    if (!playingTimeSource) this.skip();
+    expect(playingTimeSource).to.match(/title=["']Delete guest player["']/);
+  });
+
+  it('delete button has aria-label="Delete guest player"', function () {
+    if (!playingTimeSource) this.skip();
+    expect(playingTimeSource).to.match(/aria-label=["']Delete guest player["']/);
+  });
+
+  it('delete button uses the same trash icon as other delete buttons', function () {
+    if (!playingTimeSource) this.skip();
+    const trashIcons = playingTimeSource.match(/delete.*svg|trash.*svg|svg[\s\S]{0,500}[Dd]elete/gi) || [];
+    expect(trashIcons.length, 'should have trash/delete SVG icons').to.be.greaterThan(0);
+  });
+
+  it('delete guest triggers a confirmation dialog before removal', function () {
+    if (!playingTimeSource) this.skip();
+    const hasConfirm = playingTimeSource.match(
+      /[Dd]elete.*guest[\s\S]{0,500}(?:confirm|dialog|showModal)|guest[\s\S]{0,500}[Dd]elete[\s\S]{0,500}(?:confirm|dialog|showModal)/
+    );
+    expect(hasConfirm, 'deleting a guest must show a confirmation dialog').to.not.be.null;
+  });
+});

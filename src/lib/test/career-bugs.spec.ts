@@ -80,4 +80,22 @@ describe('playing-time.ts — career accumulation on all exit paths', function (
     const section = playingTimeSource.slice(idx, idx + 500);
     expect(section).to.match(/updateCareerTimes|careerTimes|saveState/);
   });
+
+  it('leaveGameDiscard does NOT accumulate career times', function () {
+    if (!playingTimeSource) this.skip();
+    const idx = playingTimeSource.indexOf('leaveGameDiscard');
+    expect(idx, 'leaveGameDiscard handler should exist').to.be.greaterThan(-1);
+    const section = playingTimeSource.slice(idx, idx + 500);
+    expect(section).to.not.include('updateCareerTimes');
+    expect(section).to.not.include('careerTimes');
+  });
+
+  it('new game plans start with careerTimesApplied unset or false', function () {
+    if (!playingTimeSource) this.skip();
+    const createIdx = playingTimeSource.indexOf('createGamePlan');
+    if (createIdx === -1) this.skip();
+    const section = playingTimeSource.slice(createIdx, createIdx + 500);
+    const hasGuardTrue = section.match(/careerTimesApplied\s*:\s*true/);
+    expect(hasGuardTrue, 'new game plans must NOT have careerTimesApplied: true').to.be.null;
+  });
 });

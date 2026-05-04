@@ -192,7 +192,14 @@ export function loadAppState(): StoredAppState {
 }
 
 export function saveAppState(state: StoredAppState): void {
-  localStorage.setItem(APP_KEY, JSON.stringify(state));
+  const cleaned: StoredAppState = {
+    ...state,
+    teams: state.teams.map(team => ({
+      ...team,
+      players: team.players.filter(p => !p.isGuest),
+    })),
+  };
+  localStorage.setItem(APP_KEY, JSON.stringify(cleaned));
 }
 
 export function createGamePlan(name: string, formation: FormationKey): StoredGamePlan {

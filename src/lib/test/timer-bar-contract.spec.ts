@@ -108,3 +108,44 @@ describe('playing-time.ts — stats view wiring', function () {
     expect(playingTimeSource).to.include('navigate-stats-back');
   });
 });
+
+/* ═══════════════════════════════════════════════════════════════
+ * pt-timer-bar.ts — confirm dialog button roles (semantic classes)
+ * ═══════════════════════════════════════════════════════════════ */
+
+describe('pt-timer-bar.ts — confirm dialog button roles', function () {
+  it('does not use legacy confirm-yes (regression: all actions looked destructive)', function () {
+    expect(timerBarSource).to.not.include('confirm-yes');
+  });
+
+  it('wires Start 2nd Half and unsaved-plan Save to confirm-primary', function () {
+    expect(timerBarSource).to.include(
+      'class="confirm-primary" @click="${this._confirmSwitchHalf}">Start 2nd Half',
+    );
+    expect(timerBarSource).to.include(
+      'class="confirm-primary" @click="${this._saveThenCancel}">Save',
+    );
+  });
+
+  it('wires Reset Game and Delete Match to confirm-danger', function () {
+    expect(timerBarSource).to.include(
+      'class="confirm-danger" @click="${this._confirmResetGame}">Reset Game',
+    );
+    expect(timerBarSource).to.include(
+      'class="confirm-danger" @click="${this._confirmDeleteMatch}">Delete Match',
+    );
+  });
+
+  it('wires unsaved-plan Discard to confirm-danger-outline', function () {
+    expect(timerBarSource).to.include(
+      'class="confirm-danger-outline" @click="${this._confirmCancelPlan}">Discard',
+    );
+  });
+
+  it('uses design-token hover variables for solid primary and danger buttons', function () {
+    expect(timerBarSource).to.include('.confirm-actions .confirm-primary:hover');
+    expect(timerBarSource).to.include('var(--pt-accent-solid-hover)');
+    expect(timerBarSource).to.include('.confirm-actions .confirm-danger:hover');
+    expect(timerBarSource).to.include('var(--pt-danger-hover)');
+  });
+});

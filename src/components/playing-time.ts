@@ -494,6 +494,7 @@ export class PlayingTime extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    window.removeEventListener('beforeunload', this.#onBeforeUnload); // saves careerTimes via saveState
     this.#stopPolling();
   }
 
@@ -502,6 +503,7 @@ export class PlayingTime extends LitElement {
     this.#gameClock.start();
     this.#lastTickElapsed = this.#gameClock.elapsed;
     this.#timerInterval = setInterval(() => {
+      this.#positionTracker.tick();
       const elapsed = this.#gameClock.elapsed;
       const delta = elapsed - this.#lastTickElapsed;
       this.#lastTickElapsed = elapsed;
@@ -580,6 +582,7 @@ export class PlayingTime extends LitElement {
   #leaveGameSave() {
     this.leaveGameDialog?.close();
     this.#stopPolling();
+    this.#updateCareerTimes(); // checks careerTimesApplied guard, accumulates career totalTime + positionTimes
     this.#saveState();
     this.#navigateTo('team', 'slide-to-right', 'slide-from-left');
   }
@@ -816,6 +819,7 @@ export class PlayingTime extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    window.addEventListener('beforeunload', this.#onBeforeUnload);
     const appState = loadAppState();
     this.teams = appState.teams;
 
@@ -1006,6 +1010,51 @@ export class PlayingTime extends LitElement {
     }));
   }
 
+  #updateCareerTimes() {
+    if (!this.activeTeamId) return;
+    if (this.activeGamePlanId) {
+      const plan = this.teams.flatMap(t => t.gamePlans ?? []).find(p => p.id === this.activeGamePlanId);
+      if (plan?.careerTimesApplied) return;
+    }
+    const team = this.teams.find(t => t.id === this.activeTeamId);
+    if (!team) return;
+    const careerTimes = { ...(team.careerTimes ?? {}) };
+    for (const p of this.roster) {
+      const totalTime = p.half1Time + p.half2Time;
+      if (totalTime <= 0 && !p.positionTimes) continue;
+      const existing = careerTimes[p.id] ?? { totalTime: 0, positionTimes: {} };
+      existing.totalTime += totalTime;
+      if (p.positionTimes) {
+        const positionTimes = { ...existing.positionTimes };
+        for (const [pos, time] of Object.entries(p.positionTimes)) {
+          if (time != null && time > 0) {
+            positionTimes[pos as keyof typeof positionTimes] =
+              ((positionTimes[pos as keyof typeof positionTimes] as number) ?? 0) + time;
+          }
+        }
+        existing.positionTimes = positionTimes;
+      }
+      careerTimes[p.id] = existing;
+    }
+    this.teams = this.teams.map(t =>
+      t.id === this.activeTeamId ? { ...t, careerTimes } : t
+    );
+    if (this.activeGamePlanId) {
+      const careerTimesApplied = true;
+      this.teams = this.teams.map(t => ({
+        ...t,
+        gamePlans: (t.gamePlans ?? []).map(p =>
+          p.id === this.activeGamePlanId ? { ...p, careerTimesApplied } : p
+        ),
+      }));
+    }
+  }
+
+  #onBeforeUnload = () => {
+    this.#updateCareerTimes();
+    this.#saveState();
+  };
+
   #saveState() {
     if (!this.activeTeamId) return;
 
@@ -1085,6 +1134,7 @@ export class PlayingTime extends LitElement {
 
   #onTeamSwitched(e: TeamSwitchedEvent) {
     this.#stopPolling();
+    this.#updateCareerTimes();
     this.#saveState();
     this.gameEvents = [];
     this.#loadTeam(e.teamId);
@@ -1347,6 +1397,7 @@ export class PlayingTime extends LitElement {
 
   #onFormationChanged(e: FormationChangedEvent) {
     this.formation = e.formation;
+    this.#positionTracker.onFormationChange();
     this.#repositionFieldPlayers();
     this.#saveState();
     this.selectedId = null;
@@ -1510,6 +1561,8 @@ export class PlayingTime extends LitElement {
       playerB: target.name,
     }];
 
+    this.#positionTracker.onSwapOrSub();
+
     const positions = getFormationPositions(this.formation);
     const newField = [...this.fieldPlayers];
     newField[draggedIdx] = { ...target, x: positions[draggedIdx]?.x ?? target.x, y: positions[draggedIdx]?.y ?? target.y };
@@ -1526,24 +1579,23 @@ export class PlayingTime extends LitElement {
     const subEntry = this.roster.find(p => p.id === subId);
     if (!fieldEntry || !subEntry) return;
 
+    this.#positionTracker.onSwapOrSub();
+    const slotIdx = this.fieldPlayers.findIndex(fp => fp.id === fieldId);
+    const slotPos = slotIdx >= 0 ? getSlotPositions(this.formation)[slotIdx] : undefined;
+    if (slotPos) this.#positionTracker.transferGraceTime(subId, slotPos);
+
     this.gameEvents = [...this.gameEvents, {
-      type: 'sub',
-      half: this.gameHalf,
-      elapsed: this.#gameClock.elapsed,
-      playerA: subEntry.name,
-      playerB: fieldEntry.name,
+      type: 'sub', half: this.gameHalf, elapsed: this.#gameClock.elapsed,
+      playerA: subEntry.name, playerB: fieldEntry.name,
     }];
 
     const positions = getFormationPositions(this.formation);
     this.fieldPlayers = this.fieldPlayers.map((fp, i) => {
       if (fp.id !== fieldId) return fp;
       return {
-        id: subEntry.id,
-        rosterId: subEntry.id,
-        x: positions[i]?.x ?? fp.x,
-        y: positions[i]?.y ?? fp.y,
-        number: subEntry.number,
-        name: subEntry.nickname || subEntry.name,
+        id: subEntry.id, rosterId: subEntry.id,
+        x: positions[i]?.x ?? fp.x, y: positions[i]?.y ?? fp.y,
+        number: subEntry.number, name: subEntry.nickname || subEntry.name,
       };
     });
 
@@ -1900,6 +1952,7 @@ export class PlayingTime extends LitElement {
           .teams="${this.teams}"
           .activeTeamId="${this.activeTeamId}"
           .gamePlans="${this.teams.find(t => t.id === this.activeTeamId)?.gamePlans ?? []}"
+          .careerTimes="${this.teams.find(t => t.id === this.activeTeamId)?.careerTimes ?? {}}"
           @navigate-back="${this.#onNavigateBack}"
           @navigate-next="${this.#onNavigateNext}"
           @navigate-edit="${this.#onNavigateEditTeamExisting}"
@@ -2106,6 +2159,7 @@ export class PlayingTime extends LitElement {
         <pt-timer-bar
           .timerElapsed="${this.#gameClock.elapsed}"
           .timerRunning="${this.#gameClock.running}"
+          .gameHalf="${this.gameHalf}"
           .halfLength="${this.halfLength}"
           .teamName="${this.teamName}"
           .roster="${this.roster}"

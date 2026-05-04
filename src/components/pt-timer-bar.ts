@@ -669,7 +669,7 @@ export class PtTimerBar extends LitElement {
   @property({ type: Boolean }) timerRunning = false;
   @state() private _showTimesHint = false;
 
-  @state() private _half: 1 | 2 = 1;
+  @property({ type: Number }) gameHalf: 1 | 2 = 1;
   @state() private _confirmType: 'reset-choice' | 'switch-half' | 'reset-game' = 'reset-choice';
 
   @query('#confirm-dialog') private _confirmDialog!: HTMLDialogElement;
@@ -681,10 +681,10 @@ export class PtTimerBar extends LitElement {
     this.dispatchEvent(new TimerToggleEvent());
   }
 
-  get half(): 1 | 2 { return this._half; }
+  get half(): 1 | 2 { return this.gameHalf; }
 
   willUpdate(changed: Map<string, unknown>) {
-    if (changed.has('timerRunning') && !this.timerRunning && this._half === 2 && this.timerElapsed >= this.halfLength * 60) {
+    if (changed.has('timerRunning') && !this.timerRunning && this.gameHalf === 2 && this.timerElapsed >= this.halfLength * 60) {
       this._showTimesHint = true;
     }
   }
@@ -710,19 +710,19 @@ export class PtTimerBar extends LitElement {
   private _requestReset() { this._showConfirm('reset-choice'); }
 
   private _confirmSwitchHalf() {
-    this._half = 2;
+    this.gameHalf = 2;
     this._confirmDialog?.close();
     this.dispatchEvent(new GameHalfSwitchedEvent(2));
   }
 
   private _confirmResetGame() {
-    this._half = 1;
+    this.gameHalf = 1;
     this.dispatchEvent(new ResetGameEvent());
     this._confirmDialog?.close();
   }
 
   private _confirmResetHalf() {
-    this.dispatchEvent(new ResetHalfEvent(this._half));
+    this.dispatchEvent(new ResetHalfEvent(this.gameHalf));
     this._confirmDialog?.close();
   }
 
@@ -774,13 +774,13 @@ export class PtTimerBar extends LitElement {
           ` : html`
             <label class="half-toggle">
               Half
-              <span class="half-slide ${this._half === 2 ? 'on' : ''} ${this.timerRunning ? 'disabled' : ''}">
+              <span class="half-slide ${this.gameHalf === 2 ? 'on' : ''} ${this.timerRunning ? 'disabled' : ''}">
                 <input type="checkbox"
-                       .checked="${this._half === 2}"
+                       .checked="${this.gameHalf === 2}"
                        ?disabled="${this.timerRunning}"
-                       @change="${(e: Event) => { e.preventDefault(); (e.target as HTMLInputElement).checked = this._half === 2; this._half === 1 ? this._requestSwitchTo2H() : this._requestSwitchTo1H(); }}" />
+                       @change="${(e: Event) => { e.preventDefault(); (e.target as HTMLInputElement).checked = this.gameHalf === 2; this.gameHalf === 1 ? this._requestSwitchTo2H() : this._requestSwitchTo1H(); }}" />
                 <span class="slide-track"></span>
-                <span class="slide-thumb">${this._half === 1 ? '1st' : '2nd'}</span>
+                <span class="slide-thumb">${this.gameHalf === 1 ? '1st' : '2nd'}</span>
               </span>
             </label>
           `}

@@ -152,11 +152,16 @@ function migrateV2(state: StoredAppState): StoredAppState {
 function applyDefaults(state: StoredAppState): StoredAppState {
   let changed = false;
   const teams = state.teams.map(team => {
-    if (team.playerDisplayMode == null) {
+    let t = team;
+    if (t.playerDisplayMode == null) {
       changed = true;
-      return { ...team, playerDisplayMode: 'number' as const };
+      t = { ...t, playerDisplayMode: 'number' as const };
     }
-    return team;
+    if (t.careerTimes == null) {
+      changed = true;
+      t = { ...t, careerTimes: {} };
+    }
+    return t;
   });
   return changed ? { ...state, teams } : state;
 }
@@ -208,6 +213,7 @@ export function createNewTeam(): StoredTeam {
     gameFormat: '11v11',
     formation: '1-4-3-3',
     playerDisplayMode: 'number',
+    careerTimes: {},
   };
 }
 

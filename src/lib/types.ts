@@ -138,6 +138,7 @@ export interface StoredGamePlan {
   gameEvents?: GameEvent[];
   timerElapsed?: number;
   timerHalf?: 1 | 2;
+  careerTimesApplied?: boolean;
   /** @deprecated Use lineup instead */
   fieldPositions?: StoredPosition[];
   /** @deprecated Use halfPlan1H instead */
@@ -161,6 +162,7 @@ export interface StoredTeam {
   rosterSort?: RosterSortOrder;
   playerDisplayMode?: PlayerDisplayMode;
   gamePlans?: StoredGamePlan[];
+  careerTimes?: Record<string, { totalTime: number; positionTimes: Partial<Record<Position, number>> }>;
   /** @deprecated Use lineup instead */
   fieldPositions?: StoredPosition[];
 }

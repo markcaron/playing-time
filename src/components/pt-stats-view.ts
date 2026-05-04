@@ -145,18 +145,16 @@ export class PtStatsView extends LitElement {
     .total { font-weight: bold; }
 
     .position-col {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
+      line-height: 1.8;
     }
 
     .position-tag {
-      display: inline-flex;
-      align-items: center;
+      display: inline-block;
       background: var(--pt-bg-primary, #f0f0f0);
       border: 1px solid var(--pt-border-subtle, #ccc);
       border-radius: 4px;
       padding: 2px 6px;
+      margin: 2px;
       font-size: 0.8rem;
       white-space: nowrap;
     }

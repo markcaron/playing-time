@@ -494,6 +494,7 @@ export class PlayingTime extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    window.removeEventListener('beforeunload', this.#onBeforeUnload); // saves careerTimes via saveState
     this.#stopPolling();
   }
 
@@ -581,7 +582,7 @@ export class PlayingTime extends LitElement {
   #leaveGameSave() {
     this.leaveGameDialog?.close();
     this.#stopPolling();
-    this.#updateCareerTimes();
+    this.#updateCareerTimes(); // checks careerTimesApplied guard, accumulates career totalTime + positionTimes
     this.#saveState();
     this.#navigateTo('team', 'slide-to-right', 'slide-from-left');
   }
@@ -818,6 +819,7 @@ export class PlayingTime extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    window.addEventListener('beforeunload', this.#onBeforeUnload);
     const appState = loadAppState();
     this.teams = appState.teams;
 
@@ -1010,6 +1012,10 @@ export class PlayingTime extends LitElement {
 
   #updateCareerTimes() {
     if (!this.activeTeamId) return;
+    if (this.activeGamePlanId) {
+      const plan = this.teams.flatMap(t => t.gamePlans ?? []).find(p => p.id === this.activeGamePlanId);
+      if (plan?.careerTimesApplied) return;
+    }
     const team = this.teams.find(t => t.id === this.activeTeamId);
     if (!team) return;
     const careerTimes = { ...(team.careerTimes ?? {}) };
@@ -1033,7 +1039,21 @@ export class PlayingTime extends LitElement {
     this.teams = this.teams.map(t =>
       t.id === this.activeTeamId ? { ...t, careerTimes } : t
     );
+    if (this.activeGamePlanId) {
+      const careerTimesApplied = true;
+      this.teams = this.teams.map(t => ({
+        ...t,
+        gamePlans: (t.gamePlans ?? []).map(p =>
+          p.id === this.activeGamePlanId ? { ...p, careerTimesApplied } : p
+        ),
+      }));
+    }
   }
+
+  #onBeforeUnload = () => {
+    this.#updateCareerTimes();
+    this.#saveState();
+  };
 
   #saveState() {
     if (!this.activeTeamId) return;
@@ -1114,6 +1134,7 @@ export class PlayingTime extends LitElement {
 
   #onTeamSwitched(e: TeamSwitchedEvent) {
     this.#stopPolling();
+    this.#updateCareerTimes();
     this.#saveState();
     this.gameEvents = [];
     this.#loadTeam(e.teamId);

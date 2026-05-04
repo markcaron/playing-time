@@ -138,6 +138,7 @@ export interface StoredGamePlan {
   gameEvents?: GameEvent[];
   timerElapsed?: number;
   timerHalf?: 1 | 2;
+  careerTimesApplied?: boolean;
   /** @deprecated Use lineup instead */
   fieldPositions?: StoredPosition[];
   /** @deprecated Use halfPlan1H instead */

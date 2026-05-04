@@ -95,6 +95,82 @@ describe('<pt-stats-view> — tabbed layout', function () {
   });
 
   /* ═══════════════════════════════════════════════════════════
+   * Accessibility — ARIA tab pattern (WAI-ARIA APG)
+   * ═══════════════════════════════════════════════════════════ */
+
+  it('is accessible (axe audit)', async function () {
+    await expect(el).to.be.accessible();
+  });
+
+  it('tablist has an aria-label', function () {
+    const tablist = el.shadowRoot!.querySelector('[role="tablist"]');
+    const label = tablist!.getAttribute('aria-label') || tablist!.getAttribute('aria-labelledby');
+    expect(label, 'tablist must have aria-label or aria-labelledby').to.not.be.null;
+    expect(label).to.not.be.empty;
+  });
+
+  it('each tab has an id and aria-controls pointing to its panel', function () {
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    for (const tab of tabs) {
+      expect(tab.id, `tab "${tab.textContent!.trim()}" must have an id`).to.not.be.empty;
+      const controls = tab.getAttribute('aria-controls');
+      expect(controls, `tab "${tab.textContent!.trim()}" must have aria-controls`).to.not.be.null;
+      const panel = el.shadowRoot!.getElementById(controls!);
+      expect(panel, `aria-controls="${controls}" must point to an existing panel`).to.exist;
+      expect(panel!.getAttribute('role')).to.equal('tabpanel');
+    }
+  });
+
+  it('each tabpanel has aria-labelledby pointing to its tab', function () {
+    const panels = Array.from(el.shadowRoot!.querySelectorAll('[role="tabpanel"]'));
+    for (const panel of panels) {
+      const labelledBy = panel.getAttribute('aria-labelledby');
+      expect(labelledBy, `panel must have aria-labelledby`).to.not.be.null;
+      const tab = el.shadowRoot!.getElementById(labelledBy!);
+      expect(tab, `aria-labelledby="${labelledBy}" must point to an existing tab`).to.exist;
+      expect(tab!.getAttribute('role')).to.equal('tab');
+    }
+  });
+
+  it('inactive tabs have aria-selected="false"', function () {
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    const inactive = tabs.filter(t => t.getAttribute('aria-selected') !== 'true');
+    expect(inactive.length).to.equal(3);
+    for (const tab of inactive) {
+      expect(tab.getAttribute('aria-selected')).to.equal('false');
+    }
+  });
+
+  it('inactive tabs have tabindex="-1" (only active tab is focusable)', function () {
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    const active = tabs.find(t => t.getAttribute('aria-selected') === 'true')!;
+    const inactive = tabs.filter(t => t.getAttribute('aria-selected') !== 'true');
+
+    expect(active.getAttribute('tabindex')).to.not.equal('-1');
+    for (const tab of inactive) {
+      expect(tab.getAttribute('tabindex'), `inactive tab "${tab.textContent!.trim()}" must have tabindex="-1"`).to.equal('-1');
+    }
+  });
+
+  it('supports arrow key navigation between tabs', function () {
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    const tablist = el.shadowRoot!.querySelector('[role="tablist"]') as HTMLElement;
+    expect(tablist).to.exist;
+
+    const activeTab = tabs.find(t => t.getAttribute('aria-selected') === 'true') as HTMLElement;
+    activeTab.focus();
+
+    tablist.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+
+    return el.updateComplete.then(() => {
+      const newActive = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'))
+        .find(t => t.getAttribute('aria-selected') === 'true');
+      expect(newActive).to.exist;
+      expect(newActive!.textContent!.trim().toLowerCase()).to.not.equal('totals');
+    });
+  });
+
+  /* ═══════════════════════════════════════════════════════════
    * Totals tab — #, Player, Total, Bench
    * ═══════════════════════════════════════════════════════════ */
 
@@ -314,5 +390,26 @@ describe('<pt-stats-view> — tabbed layout', function () {
       expect(panel!.textContent).to.include('Sub Sam');
       expect(panel!.textContent).to.include('Defender Dee');
     });
+  });
+
+  /* ═══════════════════════════════════════════════════════════
+   * Table accessibility
+   * ═══════════════════════════════════════════════════════════ */
+
+  it('tables use proper <thead> and <tbody> structure', function () {
+    const tables = el.shadowRoot!.querySelectorAll('table');
+    expect(tables.length).to.be.greaterThan(0);
+    for (const table of Array.from(tables)) {
+      if (table.closest('[hidden]')) continue;
+      expect(table.querySelector('thead'), 'table must have thead').to.exist;
+      expect(table.querySelector('tbody'), 'table must have tbody').to.exist;
+    }
+  });
+
+  it('back button has accessible label', function () {
+    const btn = el.shadowRoot!.querySelector('.back-btn') as HTMLElement;
+    expect(btn).to.exist;
+    const label = btn.getAttribute('aria-label') || btn.getAttribute('title') || btn.textContent!.trim();
+    expect(label).to.not.be.empty;
   });
 });

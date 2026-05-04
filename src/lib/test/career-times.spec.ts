@@ -125,20 +125,38 @@ before(async function () {
 });
 
 describe('pt-team-view.ts — career Times/Stats tab', function () {
-  it('has 3 tabs (roster, plans, times/stats)', function () {
+  it('has at least 3 role="tab" elements', function () {
     if (!teamViewSource) this.skip();
     const tabMatches = teamViewSource.match(/role="tab"/g) || [];
     expect(tabMatches.length).to.be.at.least(3);
   });
 
-  it('has a tab labeled Times/Stats or similar', function () {
+  it('has a tab with text containing "Times" or "Stats" in the template', function () {
     if (!teamViewSource) this.skip();
-    const hasTimesTab = teamViewSource.match(/times|stats/i);
-    expect(hasTimesTab).to.not.be.null;
+    const hasTimesTab = teamViewSource.match(/role="tab"[\s\S]{0,100}(?:Times|Stats)/i);
+    expect(hasTimesTab, 'a tab element must contain Times or Stats text').to.not.be.null;
   });
 
-  it('renders a career times table with Total column', function () {
+  it('references careerTimes to render the career table', function () {
     if (!teamViewSource) this.skip();
     expect(teamViewSource).to.include('careerTimes');
+  });
+
+  it('activeTab type includes a times/stats value', function () {
+    if (!teamViewSource) this.skip();
+    const hasTimesState = teamViewSource.match(
+      /_activeTab[\s\S]{0,200}(?:times|stats)|'times'|'stats'/i
+    );
+    expect(hasTimesState, '_activeTab should accept a times/stats value').to.not.be.null;
+  });
+});
+
+describe('playing-time.ts — career times do NOT reset between matches', function () {
+  it('does NOT zero careerTimes in onResetGame', function () {
+    if (!playingTimeSource) this.skip();
+    const idx = playingTimeSource.indexOf('onResetGame');
+    expect(idx).to.be.greaterThan(-1);
+    const section = playingTimeSource.slice(idx, idx + 500);
+    expect(section).to.not.include('careerTimes');
   });
 });

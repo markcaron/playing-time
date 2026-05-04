@@ -138,6 +138,53 @@ describe('<pt-stats-view> — tabbed layout', function () {
   });
 
   /* ═══════════════════════════════════════════════════════════
+   * Halves tab — #, Player, 1st, 2nd
+   * ═══════════════════════════════════════════════════════════ */
+
+  it('Halves tab has 1st and 2nd half columns', function () {
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    const halvesTab = tabs.find(t => t.textContent!.trim().toLowerCase() === 'halves') as HTMLElement;
+    expect(halvesTab).to.exist;
+    halvesTab.click();
+
+    return el.updateComplete.then(() => {
+      const panel = Array.from(el.shadowRoot!.querySelectorAll('[role="tabpanel"]')).find(p => !p.hasAttribute('hidden'));
+      expect(panel).to.exist;
+      const headers = Array.from(panel!.querySelectorAll('th')).map(h => h.textContent!.trim().toLowerCase());
+      expect(headers.some(h => h.includes('1st'))).to.be.true;
+      expect(headers.some(h => h.includes('2nd'))).to.be.true;
+    });
+  });
+
+  it('Halves tab shows correct times for Keeper Kim', function () {
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    const halvesTab = tabs.find(t => t.textContent!.trim().toLowerCase() === 'halves') as HTMLElement;
+    halvesTab.click();
+
+    return el.updateComplete.then(() => {
+      const panel = Array.from(el.shadowRoot!.querySelectorAll('[role="tabpanel"]')).find(p => !p.hasAttribute('hidden'));
+      const rows = panel!.querySelectorAll('tbody tr');
+      const kimRow = Array.from(rows).find(r => r.textContent!.includes('Keeper Kim'));
+      expect(kimRow).to.exist;
+      expect(kimRow!.textContent).to.include('22:30');
+      expect(kimRow!.textContent).to.include('20:00');
+    });
+  });
+
+  it('Halves tab does NOT have Total or Bench columns', function () {
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    const halvesTab = tabs.find(t => t.textContent!.trim().toLowerCase() === 'halves') as HTMLElement;
+    halvesTab.click();
+
+    return el.updateComplete.then(() => {
+      const panel = Array.from(el.shadowRoot!.querySelectorAll('[role="tabpanel"]')).find(p => !p.hasAttribute('hidden'));
+      const headers = Array.from(panel!.querySelectorAll('th')).map(h => h.textContent!.trim().toLowerCase());
+      expect(headers.some(h => h.includes('total'))).to.be.false;
+      expect(headers.some(h => h.includes('bench'))).to.be.false;
+    });
+  });
+
+  /* ═══════════════════════════════════════════════════════════
    * Positions tab — tags with horizontal wrap
    * ═══════════════════════════════════════════════════════════ */
 
@@ -216,6 +263,38 @@ describe('<pt-stats-view> — tabbed layout', function () {
       const tagSize = parseFloat(getComputedStyle(tag).fontSize);
       const nameSize = parseFloat(getComputedStyle(nameCell).fontSize);
       expect(tagSize).to.be.at.least(nameSize * 0.9);
+    });
+  });
+
+  it('Defender Dee has both CB and RB tags in the same row', function () {
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    const posTab = tabs.find(t => t.textContent!.trim().toLowerCase() === 'positions') as HTMLElement;
+    posTab.click();
+
+    return el.updateComplete.then(() => {
+      const panel = Array.from(el.shadowRoot!.querySelectorAll('[role="tabpanel"]')).find(p => !p.hasAttribute('hidden'));
+      const rows = panel!.querySelectorAll('tbody tr');
+      const deeRow = Array.from(rows).find(r => r.textContent!.includes('Defender Dee'));
+      expect(deeRow).to.exist;
+      const tags = Array.from(deeRow!.querySelectorAll('.position-tag'));
+      const tagTexts = tags.map(t => t.textContent!);
+      expect(tagTexts.some(t => t.includes('CB')), 'should have CB tag').to.be.true;
+      expect(tagTexts.some(t => t.includes('RB')), 'should have RB tag').to.be.true;
+    });
+  });
+
+  it('Sub Sam has no position tags (bench only)', function () {
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    const posTab = tabs.find(t => t.textContent!.trim().toLowerCase() === 'positions') as HTMLElement;
+    posTab.click();
+
+    return el.updateComplete.then(() => {
+      const panel = Array.from(el.shadowRoot!.querySelectorAll('[role="tabpanel"]')).find(p => !p.hasAttribute('hidden'));
+      const rows = panel!.querySelectorAll('tbody tr');
+      const subRow = Array.from(rows).find(r => r.textContent!.includes('Sub Sam'));
+      expect(subRow).to.exist;
+      const tags = subRow!.querySelectorAll('.position-tag');
+      expect(tags.length).to.equal(0);
     });
   });
 

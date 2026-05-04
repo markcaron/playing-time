@@ -19,6 +19,7 @@ import { screenToSVG, uid } from '../lib/svg-utils.js';
 import { loadAppState, saveAppState, createNewTeam, createGamePlan } from '../lib/storage.js';
 import { GameClock } from '../lib/game-clock.js';
 import { applyTimeDelta } from '../lib/player-times.js';
+import { PositionTracker } from '../lib/position-tracker.js';
 import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState, GameEvent, StoredHalfPlan, LineupSlot, TimeDisplayFormat, RosterSortOrder } from '../lib/types.js';
 import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, FORMATIONS_BY_FORMAT, getPlayerCount, getDefaultFormation, formatTime } from '../lib/types.js';
 import type {
@@ -479,8 +480,11 @@ export class PlayingTime extends LitElement {
   @query('svg.field') accessor svgEl!: SVGSVGElement;
   @query('pt-timer-bar') accessor timerBar!: import('./pt-timer-bar.js').PtTimerBar;
   #gameClock = new GameClock();
+  #positionTracker = new PositionTracker();
   #timerInterval: ReturnType<typeof setInterval> | null = null;
   #lastTickElapsed = 0;
+  /** Updated each tick from positionTracker.getAllPositionTimes() */
+  #positionTimes: Record<string, Partial<Record<string, number>>> = {};
   @state() accessor gameHalf: 1 | 2 = 1;
   @query('#plan-2h-dialog') accessor plan2HDialog!: HTMLDialogElement;
   @query('#copy-match-dialog') accessor copyMatchDialog!: HTMLDialogElement;
@@ -501,10 +505,14 @@ export class PlayingTime extends LitElement {
       const elapsed = this.#gameClock.elapsed;
       const delta = elapsed - this.#lastTickElapsed;
       this.#lastTickElapsed = elapsed;
-      this.requestUpdate();
       if (delta > 0) {
         this.#onTimerTick({ half: this.gameHalf, delta });
+        const slots = this.fieldPlayers.map((fp, i) => ({ playerId: fp.id, slotIndex: i }));
+        this.#positionTracker.accumulate(slots, this.formation, delta);
+        const positionTimes = this.#positionTracker.getAllPositionTimes();
+        this.roster = this.roster.map(p => ({ ...p, positionTimes: positionTimes[p.id] ?? p.positionTimes }));
       }
+      this.requestUpdate();
     }, 1000);
     this.requestUpdate();
   }
@@ -1192,6 +1200,7 @@ export class PlayingTime extends LitElement {
 
   #onResetHalf(e: ResetHalfEvent) {
     this.#gameClock.reset();
+    this.#positionTracker.reset();
     this.#lastTickElapsed = 0;
     const field = e.half === 1 ? 'half1Time' : 'half2Time';
     this.roster = this.roster.map(p => ({ ...p, [field]: 0, benchTime: 0, onFieldTime: 0 }));
@@ -1214,6 +1223,7 @@ export class PlayingTime extends LitElement {
 
   #onResetGame(_e: ResetGameEvent) {
     this.#gameClock.reset();
+    this.#positionTracker.reset();
     this.#lastTickElapsed = 0;
     this.gameHalf = 1;
     this.roster = this.roster.map(p => ({ ...p, half1Time: 0, half2Time: 0, benchTime: 0, onFieldTime: 0 }));
@@ -1934,6 +1944,7 @@ export class PlayingTime extends LitElement {
     }
 
     if (this.currentView === 'stats') {
+      // roster entries carry positionTimes from PositionTracker
       return html`
         <pt-stats-view
           .teamName="${this.teamName}"

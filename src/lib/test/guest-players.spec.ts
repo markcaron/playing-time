@@ -103,11 +103,12 @@ before(async function () {
 });
 
 describe('playing-time.ts — guest player support', function () {
-  it('has a guest player fieldset in the attendance dialog', function () {
+  it('has a guest player section within the attendance dialog template', function () {
     if (!playingTimeSource) this.skip();
-    const attendanceSection = playingTimeSource.match(/attendance[\s\S]{0,3000}dialog/i);
-    expect(attendanceSection).to.not.be.null;
-    expect(playingTimeSource).to.include('guest');
+    const attendIdx = playingTimeSource.indexOf('attendance');
+    expect(attendIdx, 'attendance section should exist').to.be.greaterThan(-1);
+    const attendSection = playingTimeSource.slice(attendIdx, attendIdx + 5000);
+    expect(attendSection.toLowerCase()).to.include('guest');
   });
 
   it('marks guest players with isGuest flag', function () {
@@ -128,6 +129,34 @@ describe('playing-time.ts — guest player support', function () {
     if (!playingTimeSource) this.skip();
     const hasGuestBench = playingTimeSource.match(/guest[\s\S]{0,500}bench|bench[\s\S]{0,500}guest/i);
     expect(hasGuestBench, 'guest players should be added to bench').to.not.be.null;
+  });
+
+  it('guest form has inputs for number, name, nickname, primaryPos, secondaryPos', function () {
+    if (!playingTimeSource) this.skip();
+    const attendIdx = playingTimeSource.indexOf('attendance');
+    if (attendIdx === -1) this.skip();
+    const section = playingTimeSource.slice(attendIdx, attendIdx + 5000).toLowerCase();
+    const fields = ['number', 'name', 'nickname', 'primarypos', 'secondarypos'];
+    for (const field of fields) {
+      const hasField = section.includes(field) || section.includes(field.replace('pos', ''));
+      expect(hasField, `guest form must include ${field} input`).to.be.true;
+    }
+  });
+
+  it('guest players are pre-checked (present) when added to attendance', function () {
+    if (!playingTimeSource) this.skip();
+    const hasPreChecked = playingTimeSource.match(
+      /guest[\s\S]{0,300}checked|isGuest[\s\S]{0,300}checked|addGuest[\s\S]{0,300}present/i
+    );
+    expect(hasPreChecked, 'guest should be pre-checked/present when added').to.not.be.null;
+  });
+
+  it('unchecking a guest keeps them in the attendance list (not deleted)', function () {
+    if (!playingTimeSource) this.skip();
+    const hasAbsentLogic = playingTimeSource.match(
+      /absent[\s\S]{0,300}guest|guest[\s\S]{0,300}absent/i
+    );
+    expect(hasAbsentLogic, 'unchecking guest should mark absent, not delete').to.not.be.null;
   });
 });
 

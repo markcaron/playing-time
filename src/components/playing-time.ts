@@ -21,7 +21,7 @@ import { GameClock } from '../lib/game-clock.js';
 import { applyTimeDelta } from '../lib/player-times.js';
 import { PositionTracker } from '../lib/position-tracker.js';
 import type { RosterEntry, FieldPlayer, FormationKey, GameFormat, StoredTeam, StoredAppState, GameEvent, StoredHalfPlan, LineupSlot, TimeDisplayFormat, RosterSortOrder } from '../lib/types.js';
-import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, FORMATIONS_BY_FORMAT, getPlayerCount, getDefaultFormation, formatTime } from '../lib/types.js';
+import { PLAYER_RADIUS, PLAYER_HIT_RADIUS, PLAYER_FONT_SIZE, NAME_FONT_SIZE, FORMATIONS_BY_FORMAT, POSITIONS, getPlayerCount, getDefaultFormation, formatTime } from '../lib/types.js';
 import type {
   RosterUpdatedEvent, FormationChangedEvent, SettingsChangedEvent,
   GameFormatChangedEvent, TeamSwitchedEvent, TeamAddedEvent, TeamDeletedEvent,
@@ -158,6 +158,8 @@ export class PlayingTime extends LitElement {
     .attendance-btn:hover {
       background: var(--pt-btn-hover);
     }
+
+    /* guest attendance: number, name, nickname, primaryPos, secondaryPos fields */
 
     .reset-positions-btn,
     .edit-lineup-btn {
@@ -417,6 +419,94 @@ export class PlayingTime extends LitElement {
       min-width: 0;
     }
 
+    .guest-badge {
+      display: inline-block;
+      background: var(--pt-accent);
+      color: var(--pt-accent-solid-text);
+      font-size: 0.65rem;
+      font-weight: bold;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .guest-fieldset {
+      border: 1px solid var(--pt-border-subtle);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 8px 0;
+    }
+
+    .guest-fieldset legend {
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 0 6px;
+      color: var(--pt-text);
+    }
+
+    .guest-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .guest-form input,
+    .guest-form select {
+      padding: 6px 8px;
+      min-height: 36px;
+      border: 1px solid var(--pt-text-muted);
+      border-radius: 6px;
+      background: var(--pt-bg-primary);
+      color: var(--pt-text);
+      font: inherit;
+      font-size: 0.8rem;
+    }
+
+    .guest-form .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .add-guest-btn {
+      grid-column: 1 / -1;
+      padding: 8px;
+      min-height: 40px;
+      background: var(--pt-accent-solid);
+      color: var(--pt-accent-solid-text);
+      border: none;
+      border-radius: 6px;
+      font: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .add-guest-btn:hover {
+      background: var(--pt-accent-solid-hover);
+    }
+
+    .delete-guest-btn {
+      background: transparent;
+      border: none;
+      color: var(--pt-danger);
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .delete-guest-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .delete-guest-btn:hover {
+      background: var(--pt-hover-overlay);
+    }
+
     .attendance-footer {
       padding: 12px 16px;
       border-top: 1px solid var(--pt-border-subtle);
@@ -491,10 +581,12 @@ export class PlayingTime extends LitElement {
   @query('#attendance-dialog') accessor attendanceDialog!: HTMLDialogElement;
   @query('#leave-game-dialog') accessor leaveGameDialog!: HTMLDialogElement;
   @state() accessor _attendanceAbsentIds: Set<string> = new Set();
+  @state() accessor _pendingDeleteGuestId: string | null = null;
+  @query('#delete-guest-dialog') accessor deleteGuestDialog!: HTMLDialogElement;
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    window.removeEventListener('beforeunload', this.#onBeforeUnload); // saves careerTimes via saveState
+    window.removeEventListener('beforeunload', this.#onBeforeUnload); // saves careerTimes via saveState (guest players excluded)
     this.#stopPolling();
   }
 
@@ -1020,6 +1112,8 @@ export class PlayingTime extends LitElement {
     if (!team) return;
     const careerTimes = { ...(team.careerTimes ?? {}) };
     for (const p of this.roster) {
+      // Skip guest players — isGuest players are excluded from careerTimes
+      if (p.isGuest) continue;
       const totalTime = p.half1Time + p.half2Time;
       if (totalTime <= 0 && !p.positionTimes) continue;
       const existing = careerTimes[p.id] ?? { totalTime: 0, positionTimes: {} };
@@ -1433,6 +1527,65 @@ export class PlayingTime extends LitElement {
     this.#rebuildSubPlayers();
     this.#saveState();
     this.selectedId = null;
+  }
+
+  #addGuestPlayer() {
+    const root = this.shadowRoot!;
+    const numberInput = root.querySelector('#guest-number') as HTMLInputElement;
+    const nameInput = root.querySelector('#guest-name') as HTMLInputElement;
+    const nicknameInput = root.querySelector('#guest-nickname') as HTMLInputElement;
+    const primaryPosInput = root.querySelector('#guest-primarypos') as HTMLSelectElement;
+    const secondaryPosInput = root.querySelector('#guest-secondarypos') as HTMLSelectElement;
+
+    const name = nameInput?.value?.trim();
+    if (!name) return;
+
+    const guest: RosterEntry = {
+      id: uid('guest'),
+      number: numberInput?.value?.trim() || '',
+      name,
+      nickname: nicknameInput?.value?.trim() || undefined,
+      primaryPos: (primaryPosInput?.value as any) || undefined,
+      secondaryPos: (secondaryPosInput?.value as any) || undefined,
+      isGuest: true,
+      half1Time: 0,
+      half2Time: 0,
+      benchTime: 0,
+      onFieldTime: 0,
+    };
+
+    this.roster = [...this.roster, guest];
+    // Guest players are added to bench (sub players) and start as present (checked in attendance)
+    this.#rebuildSubPlayers();
+    this.#saveState();
+
+    if (numberInput) numberInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (nicknameInput) nicknameInput.value = '';
+    if (primaryPosInput) primaryPosInput.value = '';
+    if (secondaryPosInput) secondaryPosInput.value = '';
+  }
+
+  #requestDeleteGuest(playerId: string) {
+    this._pendingDeleteGuestId = playerId;
+    this.deleteGuestDialog?.showModal();
+  }
+
+  #confirmDeleteGuest() {
+    const id = this._pendingDeleteGuestId;
+    this.deleteGuestDialog?.close();
+    this._pendingDeleteGuestId = null;
+    if (!id) return;
+
+    this.roster = this.roster.filter(p => p.id !== id);
+    this.fieldPlayers = this.fieldPlayers.filter(fp => fp.id !== id);
+    this.#rebuildSubPlayers();
+    this.#saveState();
+  }
+
+  #cancelDeleteGuest() {
+    this.deleteGuestDialog?.close();
+    this._pendingDeleteGuestId = null;
   }
 
   #repositionFieldPlayers() {
@@ -2213,12 +2366,58 @@ export class PlayingTime extends LitElement {
                        .checked="${!this._attendanceAbsentIds.has(p.id)}"
                        @change="${() => this.#toggleAttendance(p.id)}" />
                 <span class="attendance-number">${p.number || ''}</span>
-                <span class="attendance-name">${p.name}</span>
+                <span class="attendance-name">
+                  ${p.name}
+                  ${p.isGuest ? html`<span class="guest-badge">Guest</span>` : nothing}
+                </span>
+                ${p.isGuest ? html`
+                  <button class="delete-guest-btn"
+                          title="Delete guest player"
+                          aria-label="Delete guest player"
+                          @click="${(e: Event) => { e.preventDefault(); e.stopPropagation(); this.#requestDeleteGuest(p.id); }}">
+                    <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m300 393.61 55.172 618.74h489.74l55.078-618.74zm123.14 117.33h75.094v374.76h-75.094zm139.22 0h75.094v374.76h-75.094zm139.55 0h75.094v374.76h-75.094z" fill="currentColor"/><path d="m410.44 149.95v112.41h-147.89v75h674.9v-75h-147.89v-112.41zm75 75h229.18v37.406h-229.18z" fill="currentColor"/></svg>
+                  </button>
+                ` : nothing}
               </label>
             `)}
+            <fieldset class="guest-fieldset">
+              <legend>Add Guest Player</legend>
+              <div class="guest-form">
+                <input id="guest-number" type="text" placeholder="Number" />
+                <input id="guest-name" type="text" placeholder="Name" />
+                <input id="guest-nickname" type="text" placeholder="Nickname" />
+                <select id="guest-primarypos">
+                  <option value="">Primary Pos</option>
+                  ${POSITIONS.map(pos => html`<option value="${pos}">${pos}</option>`)}
+                </select>
+                <select id="guest-secondarypos">
+                  <option value="">Secondary Pos</option>
+                  ${POSITIONS.map(pos => html`<option value="${pos}">${pos}</option>`)}
+                </select>
+                <button class="add-guest-btn" @click="${this.#addGuestPlayer}">Add Guest</button>
+              </div>
+            </fieldset>
           </div>
           <div class="attendance-footer">
             <button class="attendance-done" @click="${this.#confirmAttendance}">Done</button>
+          </div>
+        </dialog>
+
+        <dialog id="delete-guest-dialog" class="confirm-dialog">
+          <div class="dialog-header">
+            <h2>Delete Guest Player</h2>
+            <button class="dialog-close" @click="${this.#cancelDeleteGuest}" aria-label="Close" title="Close">
+              <svg viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg"><line x1="2" y1="2" x2="10" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="2" x2="2" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="dialog-body">
+            <p>Are you sure you want to delete this guest player? This cannot be undone.</p>
+            <div class="confirm-actions">
+              <button class="cancel-btn" @click="${this.#cancelDeleteGuest}">Cancel</button>
+              <div class="confirm-actions-right">
+                <button class="confirm-danger" @click="${this.#confirmDeleteGuest}">Delete</button>
+              </div>
+            </div>
           </div>
         </dialog>
 

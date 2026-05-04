@@ -11,6 +11,7 @@ export interface RosterEntry {
   nickname?: string;
   primaryPos?: Position;
   secondaryPos?: Position;
+  isGuest?: boolean;
   half1Time: number;
   half2Time: number;
   benchTime: number;
@@ -98,6 +99,7 @@ export interface StoredPlayer {
   nickname?: string;
   primaryPos?: Position;
   secondaryPos?: Position;
+  isGuest?: boolean;
   half1Time?: number;
   half2Time?: number;
   benchTime?: number;

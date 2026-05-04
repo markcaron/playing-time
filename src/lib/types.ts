@@ -161,6 +161,7 @@ export interface StoredTeam {
   rosterSort?: RosterSortOrder;
   playerDisplayMode?: PlayerDisplayMode;
   gamePlans?: StoredGamePlan[];
+  careerTimes?: Record<string, { totalTime: number; positionTimes: Partial<Record<Position, number>> }>;
   /** @deprecated Use lineup instead */
   fieldPositions?: StoredPosition[];
 }

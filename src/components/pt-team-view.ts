@@ -1,7 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import type { RosterEntry, FormationKey, GameFormat, StoredTeam, StoredGamePlan } from '../lib/types.js';
-import { FORMATIONS_BY_FORMAT } from '../lib/types.js';
+import type { RosterEntry, FormationKey, GameFormat, StoredTeam, StoredGamePlan, Position } from '../lib/types.js';
+import { FORMATIONS_BY_FORMAT, formatTime } from '../lib/types.js';
 
 function formationLabel(key: FormationKey, format: GameFormat): string {
   const entry = FORMATIONS_BY_FORMAT[format]?.find(f => f.key === key);
@@ -512,7 +512,9 @@ export class PtTeamView extends LitElement {
   @property({ type: String }) activeTeamId: string | null = null;
   @property({ type: Array }) gamePlans: StoredGamePlan[] = [];
 
-  @state() private _activeTab: 'roster' | 'plans' = 'plans';
+  @property({ type: Object }) careerTimes: Record<string, { totalTime: number; positionTimes: Partial<Record<Position, number>> }> = {};
+
+  @state() private _activeTab: 'roster' | 'plans' | 'stats' = 'plans';
 
   private _navigateBack() {
     this.dispatchEvent(new NavigateBackEvent());
@@ -538,17 +540,39 @@ export class PtTeamView extends LitElement {
     this.dispatchEvent(new CreateGamePlanEvent());
   }
 
-  private _selectTab(tab: 'roster' | 'plans') {
+  private _selectTab(tab: 'roster' | 'plans' | 'stats') {
     this._activeTab = tab;
   }
 
   private _onTabKeydown(e: KeyboardEvent) {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-      e.preventDefault();
-      this._activeTab = this._activeTab === 'roster' ? 'plans' : 'roster';
-      const next = this.shadowRoot?.querySelector(`[role="tab"][aria-selected="true"]`) as HTMLElement;
-      next?.focus();
+    const tabs: ('plans' | 'roster' | 'stats')[] = ['plans', 'roster', 'stats'];
+    const currentIndex = tabs.indexOf(this._activeTab);
+    let newIndex = currentIndex;
+
+    switch (e.key) {
+      case 'ArrowRight':
+        e.preventDefault();
+        newIndex = (currentIndex + 1) % tabs.length;
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        newIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        break;
+      case 'Home':
+        e.preventDefault();
+        newIndex = 0;
+        break;
+      case 'End':
+        e.preventDefault();
+        newIndex = tabs.length - 1;
+        break;
+      default:
+        return;
     }
+
+    this._activeTab = tabs[newIndex];
+    const next = this.shadowRoot?.querySelector(`[role="tab"][aria-selected="true"]`) as HTMLElement;
+    next?.focus();
   }
 
   render() {
@@ -590,6 +614,12 @@ export class PtTeamView extends LitElement {
                 aria-controls="panel-roster"
                 tabindex="${this._activeTab === 'roster' ? 0 : -1}"
                 @click="${() => this._selectTab('roster')}">Roster</button>
+        <button role="tab"
+                id="tab-stats"
+                aria-selected="${this._activeTab === 'stats'}"
+                aria-controls="panel-stats"
+                tabindex="${this._activeTab === 'stats' ? 0 : -1}"
+                @click="${() => this._selectTab('stats')}">Stats</button>
       </div>
 
       <div role="tabpanel"
@@ -643,6 +673,40 @@ export class PtTeamView extends LitElement {
                   <td class="pos-col">${p.primaryPos ?? ''}${p.secondaryPos ? html` / ${p.secondaryPos}` : nothing}</td>
                 </tr>
               `)}
+            </tbody>
+          </table>
+        `}
+      </div>
+
+      <div role="tabpanel"
+           id="panel-stats"
+           aria-labelledby="tab-stats"
+           tabindex="0"
+           ?hidden="${this._activeTab !== 'stats'}">
+        <h3 class="panel-heading">Career Times</h3>
+        ${this.roster.length === 0 ? html`
+          <p class="empty-plans">No players to show.</p>
+        ` : html`
+          <table class="roster-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Total Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${sortRoster(this.roster, this.rosterSort).map(p => {
+                const career = this.careerTimes?.[p.id];
+                const totalTime = career?.totalTime ?? 0;
+                return html`
+                  <tr>
+                    <td class="jersey-col">${p.number}</td>
+                    <td>${p.name}</td>
+                    <td>${formatTime(totalTime, 'mm:ss')}</td>
+                  </tr>
+                `;
+              })}
             </tbody>
           </table>
         `}

@@ -105,6 +105,7 @@ export class PtSettingsView extends LitElement {
 
     .settings-row {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 8px;
       margin-bottom: 12px;

@@ -105,9 +105,9 @@ before(async function () {
 describe('playing-time.ts — guest player support', function () {
   it('has a guest player section within the attendance dialog template', function () {
     if (!playingTimeSource) this.skip();
-    const attendIdx = playingTimeSource.indexOf('attendance');
-    expect(attendIdx, 'attendance section should exist').to.be.greaterThan(-1);
-    const attendSection = playingTimeSource.slice(attendIdx, attendIdx + 5000);
+    const attendIdx = playingTimeSource.indexOf('attendance-dialog');
+    expect(attendIdx, 'attendance-dialog should exist in source').to.be.greaterThan(-1);
+    const attendSection = playingTimeSource.slice(attendIdx, attendIdx + 10000);
     expect(attendSection.toLowerCase()).to.include('guest');
   });
 
@@ -133,13 +133,9 @@ describe('playing-time.ts — guest player support', function () {
 
   it('guest form has inputs for number, name, nickname, primaryPos, secondaryPos', function () {
     if (!playingTimeSource) this.skip();
-    const attendIdx = playingTimeSource.indexOf('attendance');
-    if (attendIdx === -1) this.skip();
-    const section = playingTimeSource.slice(attendIdx, attendIdx + 5000).toLowerCase();
-    const fields = ['number', 'name', 'nickname', 'primarypos', 'secondarypos'];
-    for (const field of fields) {
-      const hasField = section.includes(field) || section.includes(field.replace('pos', ''));
-      expect(hasField, `guest form must include ${field} input`).to.be.true;
+    const ids = ['guest-number', 'guest-name', 'guest-nickname', 'guest-primarypos', 'guest-secondarypos'];
+    for (const id of ids) {
+      expect(playingTimeSource, `must have input/select with id="${id}"`).to.include(id);
     }
   });
 

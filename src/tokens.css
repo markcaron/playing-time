@@ -93,11 +93,14 @@
   --pt-accent-solid-hover: light-dark(var(--pt-blue-700), #dbeafe);
   --pt-accent-solid-text: light-dark(var(--pt-white), var(--pt-navy-800));
 
-  /* Danger */
-  --pt-danger: light-dark(var(--pt-red-700), var(--pt-red-400));
-  --pt-danger-hover: light-dark(var(--pt-red-800), var(--pt-red-500));
+  /* Danger
+     Solid (--pt-danger): dark uses deeper red so white label text is ≥4.5:1.
+     Light text/border on panels (--pt-danger-light): dark uses #f87171 so type on
+     --pt-bg-surface meets AA; light mode stays red-700. */
+  --pt-danger: light-dark(var(--pt-red-700), var(--pt-red-600));
+  --pt-danger-hover: light-dark(var(--pt-red-800), var(--pt-red-700));
   --pt-danger-light: light-dark(var(--pt-red-700), var(--pt-red-300));
-  --pt-danger-on-light: light-dark(var(--pt-red-700), var(--pt-red-600));
+  --pt-danger-on-light: light-dark(var(--pt-red-700), var(--pt-red-300));
 
   /* Success */
   --pt-success: var(--pt-green-700);

@@ -177,6 +177,22 @@ export class PtStatsView extends LitElement {
       padding: 6px 8px;
       border-bottom: 1px solid var(--pt-border-subtle);
     }
+
+    .sub-arrows {
+      display: inline;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .sub-arrow-down {
+      color: var(--pt-danger-light);
+      margin: 0 0.2em;
+    }
+
+    .sub-arrow-up {
+      color: var(--pt-success);
+      margin: 0 0.2em;
+    }
   `;
 
   @property({ type: String }) teamName = '';
@@ -232,6 +248,14 @@ export class PtStatsView extends LitElement {
     return entries.map(([pos, time]) =>
       html`<span class="position-tag">${formatTime(time, this.timeDisplayFormat)} (${pos})</span>`
     );
+  }
+
+  /** Sub: playerB leaves field (↓), playerA enters (↑). Swap: symmetric ↔. */
+  private _renderEventPlayers(ev: GameEvent) {
+    if (ev.type === 'swap') {
+      return html`${ev.playerA} ↔ ${ev.playerB}`;
+    }
+    return html`${ev.playerB} <span class="sub-arrows" aria-hidden="true"><span class="sub-arrow-down">↓</span><span class="sub-arrow-up">↑</span></span> ${ev.playerA}`;
   }
 
   render() {
@@ -359,7 +383,7 @@ export class PtStatsView extends LitElement {
                   <td>${ev.half === 1 ? '1st' : '2nd'}</td>
                   <td>${formatTime(ev.elapsed, 'mm:ss')}</td>
                   <td>${ev.type === 'sub' ? 'Sub' : 'Swap'}</td>
-                  <td>${ev.playerA} ↔ ${ev.playerB}</td>
+                  <td>${this._renderEventPlayers(ev)}</td>
                 </tr>
               `)}
             </tbody>

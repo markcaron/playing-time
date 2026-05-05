@@ -159,7 +159,7 @@ export class PlayingTime extends LitElement {
       background: var(--pt-btn-hover);
     }
 
-    /* guest attendance: number, name, nickname, primaryPos, secondaryPos fields */
+    /* guest add card: mirrors pt-edit-team-view Add player row (labels, widths, flex-wrap) */
 
     .reset-positions-btn,
     .edit-lineup-btn {
@@ -391,6 +391,7 @@ export class PlayingTime extends LitElement {
       padding: 8px 16px;
       overflow-y: auto;
       flex: 1;
+      min-width: 0;
     }
 
     .attendance-row {
@@ -438,64 +439,187 @@ export class PlayingTime extends LitElement {
       vertical-align: middle;
     }
 
-    .guest-fieldset {
+    /* Guest add form — matches pt-edit-team-view “Add player” card (field widths, labels, selects) */
+
+    .guest-add-card {
+      box-sizing: border-box;
+      margin-top: 12px;
+      padding: 16px;
+      background: var(--pt-bg-primary);
       border: 1px solid var(--pt-border-subtle);
-      border-radius: 8px;
-      padding: 12px;
-      margin: 8px 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px var(--pt-shadow);
     }
 
-    .guest-fieldset legend {
+    .guest-add-card *,
+    .guest-add-card *::before,
+    .guest-add-card *::after {
+      box-sizing: border-box;
+    }
+
+    .guest-player-fieldset {
+      border: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .guest-player-legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       font-size: 0.85rem;
       font-weight: bold;
-      padding: 0 6px;
       color: var(--pt-text);
+      padding: 0;
+      margin-bottom: 12px;
     }
 
-    .guest-form {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+    .guest-player-legend svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
     }
 
-    .guest-form input,
-    .guest-form select {
-      padding: 6px 8px;
-      min-height: 36px;
+    .guest-add-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .guest-add-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .guest-add-field label {
+      font-size: 0.75rem;
+      color: var(--pt-text-muted);
+      font-weight: normal;
+      white-space: nowrap;
+    }
+
+    .guest-add-field.guest-num-field {
+      width: 52px;
+      flex-shrink: 0;
+    }
+
+    .guest-add-field.guest-name-field {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .guest-add-field.guest-nickname-field {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .guest-add-field.guest-pos-field {
+      width: 90px;
+      flex-shrink: 0;
+    }
+
+    .guest-add-card .player-input {
+      width: 100%;
+      padding: 6px 10px;
+      min-height: 44px;
       border: 1px solid var(--pt-text-muted);
       border-radius: 6px;
-      background: var(--pt-bg-primary);
+      background: transparent;
       color: var(--pt-text);
       font: inherit;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
     }
 
-    .guest-form .full-width {
-      grid-column: 1 / -1;
+    .guest-add-card .player-input:focus {
+      outline: none;
+      border-color: var(--pt-accent);
+    }
+
+    .guest-add-card .player-input:focus-visible {
+      outline: 2px solid var(--pt-accent);
+      outline-offset: 2px;
+    }
+
+    .guest-add-card select {
+      appearance: none;
+      -webkit-appearance: none;
+      padding: 6px 26px 6px 10px;
+      min-height: 44px;
+      border: 1px solid var(--pt-text-muted);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--pt-text);
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      background-image: none;
+    }
+
+    .guest-add-card select:focus {
+      outline: none;
+      border-color: var(--pt-accent);
+    }
+
+    .guest-add-card select:focus-visible {
+      outline: 2px solid var(--pt-accent);
+      outline-offset: 2px;
+    }
+
+    .guest-add-card .select-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .guest-add-card .select-wrap select {
+      width: 100%;
+      padding-right: 26px;
+    }
+
+    .guest-add-card .add-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
     }
 
     .add-guest-btn {
-      grid-column: 1 / -1;
-      padding: 8px;
-      min-height: 40px;
-      background: var(--pt-accent-solid);
+      min-height: 44px;
+      padding: 6px 14px;
+      border: 1px solid var(--pt-success-light);
+      background: var(--pt-success-light);
       color: var(--pt-accent-solid-text);
-      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
       border-radius: 6px;
       font: inherit;
-      font-size: 0.8rem;
-      cursor: pointer;
-      transition: background 0.15s;
+      font-size: 0.85rem;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+      margin-left: auto;
     }
 
     .add-guest-btn:hover {
-      background: var(--pt-accent-solid-hover);
+      background: var(--pt-success-hover);
+      border-color: var(--pt-success-hover);
+      color: var(--pt-accent-solid-text);
+    }
+
+    .add-guest-btn:focus-visible {
+      outline: 2px solid var(--pt-accent);
+      outline-offset: 2px;
     }
 
     .delete-guest-btn {
       background: transparent;
       border: none;
-      color: var(--pt-danger);
+      color: var(--pt-danger-light);
       cursor: pointer;
       padding: 4px;
       display: flex;
@@ -2387,23 +2511,67 @@ export class PlayingTime extends LitElement {
                 ` : nothing}
               </label>
             `)}
-            <fieldset class="guest-fieldset">
-              <legend>Add Guest Player</legend>
-              <div class="guest-form">
-                <input id="guest-number" type="text" placeholder="Number" />
-                <input id="guest-name" type="text" placeholder="Name" />
-                <input id="guest-nickname" type="text" placeholder="Nickname" />
-                <select id="guest-primarypos">
-                  <option value="">Primary Pos</option>
-                  ${POSITIONS.map(pos => html`<option value="${pos}">${pos}</option>`)}
-                </select>
-                <select id="guest-secondarypos">
-                  <option value="">Secondary Pos</option>
-                  ${POSITIONS.map(pos => html`<option value="${pos}">${pos}</option>`)}
-                </select>
-                <button class="add-guest-btn" @click="${this.#addGuestPlayer}">Add Guest</button>
-              </div>
-            </fieldset>
+            <div class="guest-add-card">
+              <fieldset class="guest-player-fieldset">
+                <legend class="guest-player-legend">
+                  <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m600 600c110.44 0 200.02-89.531 200.02-200.02 0-110.44-89.578-199.97-200.02-199.97s-200.02 89.531-200.02 199.97c0 110.48 89.578 200.02 200.02 200.02z" fill="currentColor" fill-rule="evenodd"/><path d="m944.58 901.5c3 16.5 4.5 32.484 5.0156 48.984 0.42188-0.46875 0.46875 29.156 0.46875 35.531 0 8.4844-6.4688 15-15 15h-669.98c-8.4844 0-15-6.5156-15-15 0-17.016-0.51562-33.516 0.98438-50.016 1.0312-8.4844 2.0156-20.016 5.0156-33.984 5.4844-27.516 16.5-64.5 39-102 46.5-78.516 138-150 305.02-150 166.97 0 258.47 71.484 305.48 149.48 22.5 37.5 33.516 74.484 39 102z" fill="currentColor"/></svg>
+                  Add Guest Player
+                </legend>
+                <div class="guest-add-row">
+                  <div class="guest-add-field guest-num-field">
+                    <label for="guest-number">Num.</label>
+                    <input id="guest-number"
+                           class="player-input"
+                           type="text"
+                           inputmode="numeric"
+                           maxlength="2"
+                           placeholder="#" />
+                  </div>
+                  <div class="guest-add-field guest-name-field">
+                    <label for="guest-name">Player Name</label>
+                    <input id="guest-name"
+                           class="player-input"
+                           type="text"
+                           placeholder="Name" />
+                  </div>
+                  <div class="guest-add-field guest-nickname-field">
+                    <label for="guest-nickname">Nickname</label>
+                    <input id="guest-nickname"
+                           class="player-input"
+                           type="text"
+                           placeholder="Optional" />
+                  </div>
+                  <div class="guest-add-field guest-pos-field">
+                    <label for="guest-primarypos">Position 1</label>
+                    <span class="select-wrap">
+                      <select id="guest-primarypos" class="player-input">
+                        <option value="">—</option>
+                        ${POSITIONS.map(pos => html`<option value="${pos}">${pos}</option>`)}
+                      </select>
+                      <span class="caret"></span>
+                    </span>
+                  </div>
+                  <div class="guest-add-field guest-pos-field">
+                    <label for="guest-secondarypos">Position 2</label>
+                    <span class="select-wrap">
+                      <select id="guest-secondarypos" class="player-input">
+                        <option value="">—</option>
+                        ${POSITIONS.map(pos => html`<option value="${pos}">${pos}</option>`)}
+                      </select>
+                      <span class="caret"></span>
+                    </span>
+                  </div>
+                  <button class="add-guest-btn"
+                          type="button"
+                          @click="${this.#addGuestPlayer}"
+                          aria-label="Add Guest Player"
+                          title="Add Guest Player">
+                    <svg class="add-icon" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m600 99.984c275.95 0 500.02 224.06 500.02 500.02s-224.06 500.02-500.02 500.02-500.02-224.06-500.02-500.02 224.06-500.02 500.02-500.02zm0 100.03c-220.78 0-399.98 179.26-399.98 399.98 0 220.78 179.26 399.98 399.98 399.98 220.78 0 399.98-179.26 399.98-399.98 0-220.78-179.26-399.98-399.98-399.98zm-50.016 450h-150c-27.609 0-49.969-22.406-49.969-50.016s22.406-50.016 49.969-50.016h150v-150c0-27.609 22.406-49.969 50.016-49.969s50.016 22.406 50.016 49.969v150h150c27.609 0 49.969 22.406 49.969 50.016s-22.406 50.016-49.969 50.016h-150v150c0 27.609-22.406 49.969-50.016 49.969s-50.016-22.406-50.016-49.969z" fill-rule="evenodd" fill="currentColor"/></svg>
+                    Add Guest
+                  </button>
+                </div>
+              </fieldset>
+            </div>
           </div>
           <div class="attendance-footer">
             <button class="attendance-done" @click="${this.#confirmAttendance}">Done</button>

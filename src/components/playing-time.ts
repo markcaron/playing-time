@@ -790,7 +790,7 @@ export class PlayingTime extends LitElement {
 
   #onTeamSelected(e: TeamSelectedEvent) {
     this.#loadTeam(e.teamId);
-    this.#saveState();
+    this.#saveState(); // players: roster.filter(!isGuest) excludes guest players
     this.#navigateTo('team', 'slide-to-left', 'slide-from-right');
   }
 
@@ -806,7 +806,7 @@ export class PlayingTime extends LitElement {
     this.leaveGameDialog?.close();
     this.#stopPolling();
     this.#updateCareerTimes(); // checks careerTimesApplied guard, accumulates career totalTime + positionTimes
-    this.#saveState();
+    this.#saveState(); // players: roster.filter(!isGuest) excludes guest players
     this.#navigateTo('team', 'slide-to-right', 'slide-from-left');
   }
 
@@ -1288,7 +1288,7 @@ export class PlayingTime extends LitElement {
     const updatedTeam: StoredTeam = {
       id: this.activeTeamId,
       teamName: this.teamName,
-      players: this.roster.map(p => ({
+      players: this.roster.filter(p => !p.isGuest).map(p => ({
         id: p.id,
         number: p.number,
         name: p.name,
@@ -1837,13 +1837,15 @@ export class PlayingTime extends LitElement {
 
     const dragged = this.fieldPlayers[draggedIdx];
     const target = this.fieldPlayers[targetIdx];
-    this.gameEvents = [...this.gameEvents, {
-      type: 'swap',
-      half: this.gameHalf,
-      elapsed: this.#gameClock.elapsed,
-      playerA: dragged.name,
-      playerB: target.name,
-    }];
+    if (this.matchPhase === 'game') {
+      this.gameEvents = [...this.gameEvents, {
+        type: 'swap',
+        half: this.gameHalf,
+        elapsed: this.#gameClock.elapsed,
+        playerA: dragged.name,
+        playerB: target.name,
+      }];
+    }
 
     this.#positionTracker.onSwapOrSub();
 
@@ -1868,10 +1870,12 @@ export class PlayingTime extends LitElement {
     const slotPos = slotIdx >= 0 ? getSlotPositions(this.formation)[slotIdx] : undefined;
     if (slotPos) this.#positionTracker.transferGraceTime(subId, slotPos);
 
-    this.gameEvents = [...this.gameEvents, {
-      type: 'sub', half: this.gameHalf, elapsed: this.#gameClock.elapsed,
-      playerA: subEntry.name, playerB: fieldEntry.name,
-    }];
+    if (this.matchPhase === 'game') {
+      this.gameEvents = [...this.gameEvents, {
+        type: 'sub', half: this.gameHalf, elapsed: this.#gameClock.elapsed,
+        playerA: subEntry.name, playerB: fieldEntry.name,
+      }];
+    }
 
     const positions = getFormationPositions(this.formation);
     this.fieldPlayers = this.fieldPlayers.map((fp, i) => {
@@ -2511,7 +2515,7 @@ export class PlayingTime extends LitElement {
                 ` : nothing}
               </label>
             `)}
-            <div class="guest-add-card">
+            <div class="guest-add-card attendance-guest-section">
               <fieldset class="guest-player-fieldset">
                 <legend class="guest-player-legend">
                   <svg viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg"><path d="m600 600c110.44 0 200.02-89.531 200.02-200.02 0-110.44-89.578-199.97-200.02-199.97s-200.02 89.531-200.02 199.97c0 110.48 89.578 200.02 200.02 200.02z" fill="currentColor" fill-rule="evenodd"/><path d="m944.58 901.5c3 16.5 4.5 32.484 5.0156 48.984 0.42188-0.46875 0.46875 29.156 0.46875 35.531 0 8.4844-6.4688 15-15 15h-669.98c-8.4844 0-15-6.5156-15-15 0-17.016-0.51562-33.516 0.98438-50.016 1.0312-8.4844 2.0156-20.016 5.0156-33.984 5.4844-27.516 16.5-64.5 39-102 46.5-78.516 138-150 305.02-150 166.97 0 258.47 71.484 305.48 149.48 22.5 37.5 33.516 74.484 39 102z" fill="currentColor"/></svg>

@@ -100,6 +100,8 @@
   --pt-danger: light-dark(var(--pt-red-700), var(--pt-red-600));
   --pt-danger-hover: light-dark(var(--pt-red-800), var(--pt-red-700));
   --pt-danger-light: light-dark(var(--pt-red-700), var(--pt-red-300));
+  /* Dark: --pt-red-300 is #f87171 (see primitives). Used for stoppage on timer bar
+     (--pt-navy-800); contrast ~5.75:1 — not the lighter Tailwind-style red-300. */
   --pt-danger-on-light: light-dark(var(--pt-red-700), var(--pt-red-300));
 
   /* Success */

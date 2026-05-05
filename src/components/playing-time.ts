@@ -876,7 +876,7 @@ export class PlayingTime extends LitElement {
   #onGamePlanSelected(e: GamePlanSelectedEvent) {
     this.activeGamePlanId = e.planId;
     localStorage.setItem('pt-active-plan-id', e.planId);
-    this.#loadGamePlan(e.planId);
+    this.#loadGamePlan(e.planId); // resets: #stopPolling, #gameClock.reset(), #lastTickElapsed = 0
     this.#navigateTo('game', 'slide-to-left', 'slide-from-right');
   }
 
@@ -885,6 +885,10 @@ export class PlayingTime extends LitElement {
   #onCreateGamePlan(_e: CreateGamePlanEvent) {
     const team = this.teams.find(t => t.id === this.activeTeamId);
     if (!team) return;
+
+    this.#stopPolling();
+    this.#gameClock.reset();
+    this.#lastTickElapsed = 0;
 
     const existingPlans = team.gamePlans ?? [];
     this.#initNewMatch(team);
@@ -949,6 +953,10 @@ export class PlayingTime extends LitElement {
     if (!team) return;
     const plan = team.gamePlans?.find(p => p.id === planId);
     if (!plan) return;
+
+    this.#stopPolling();
+    this.#gameClock.reset();
+    this.#lastTickElapsed = 0;
 
     this.formation = plan.formation;
     this.matchPhase = plan.phase ?? 'plan';

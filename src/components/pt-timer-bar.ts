@@ -452,8 +452,8 @@ export class PtTimerBar extends LitElement {
     }
 
     .confirm-actions .confirm-danger-outline {
-      border: 1px solid var(--pt-danger);
-      color: var(--pt-danger);
+      border: 1px solid var(--pt-danger-light);
+      color: var(--pt-danger-light);
       background: transparent;
     }
 
@@ -526,8 +526,8 @@ export class PtTimerBar extends LitElement {
     }
 
     .clock-option-danger {
-      color: var(--pt-danger);
-      border-color: var(--pt-danger);
+      color: var(--pt-danger-light);
+      border-color: var(--pt-danger-light);
     }
 
     .clock-option-danger:hover {

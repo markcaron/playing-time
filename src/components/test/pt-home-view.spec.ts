@@ -199,10 +199,9 @@ describe('<pt-home-view>', function () {
       expect(btn!.getAttribute('aria-label')).to.equal('Settings');
     });
 
-    it('has an Add Team button in the header', function () {
+    it('does not show Add Team in the header', function () {
       const btn = element.shadowRoot!.querySelector('.header .add-btn');
-      expect(btn).to.exist;
-      expect(btn!.getAttribute('aria-label')).to.equal('Add Team');
+      expect(btn).to.be.null;
     });
   });
 

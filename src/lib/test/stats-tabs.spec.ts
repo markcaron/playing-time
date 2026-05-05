@@ -40,6 +40,7 @@ const ROSTER: RosterEntry[] = [
 
 const EVENTS: GameEvent[] = [
   { type: 'sub', half: 2, elapsed: 600, playerA: 'Sub Sam', playerB: 'Defender Dee' },
+  { type: 'swap', half: 2, elapsed: 900, playerA: 'Keeper Kim', playerB: 'Defender Dee' },
 ];
 
 describe('<pt-stats-view> — tabbed layout', function () {
@@ -434,6 +435,29 @@ describe('<pt-stats-view> — tabbed layout', function () {
       expect(panel).to.exist;
       expect(panel!.textContent).to.include('Sub Sam');
       expect(panel!.textContent).to.include('Defender Dee');
+    });
+  });
+
+  it('Subs tab shows ↓/↑ and styled arrows for substitutions, ↔ for swaps', function () {
+    const tabs = Array.from(el.shadowRoot!.querySelectorAll('[role="tab"]'));
+    const subsTab = tabs.find(t => t.textContent!.trim().toLowerCase().includes('sub')) as HTMLElement;
+    subsTab.click();
+
+    return el.updateComplete.then(() => {
+      const panel = Array.from(el.shadowRoot!.querySelectorAll('[role="tabpanel"]')).find(p => !p.hasAttribute('hidden'));
+      const rows = Array.from(panel!.querySelectorAll('tbody tr'));
+      expect(rows.length).to.equal(2);
+
+      const subRow = rows[0];
+      expect(subRow.querySelector('.sub-arrow-down')?.textContent).to.equal('↓');
+      expect(subRow.querySelector('.sub-arrow-up')?.textContent).to.equal('↑');
+      expect(subRow.textContent).to.include('Defender Dee');
+      expect(subRow.textContent).to.include('Sub Sam');
+
+      const swapRow = rows[1];
+      expect(swapRow.textContent).to.include('Swap');
+      expect(swapRow.textContent).to.include('↔');
+      expect(swapRow.querySelector('.sub-arrow-down'), 'swap row must not use sub-only arrows').to.be.null;
     });
   });
 
